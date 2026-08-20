@@ -1,0 +1,11 @@
+{
+  "name": "kintree",
+  "private": true,
+  "workspaces": [
+    "apps/*"
+  ],
+  "scripts": {
+    "dev:client": "npm run dev --workspace=client",
+    "dev:server": "npm run start:dev --workspace=server"
+  }
+}
