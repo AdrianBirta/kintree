@@ -8,24 +8,70 @@ datasource db {
   directUrl = env("DIRECT_URL")
 }
 
+enum Role {
+  USER
+  ADMIN
+}
+
+model User {
+  id        String @id @default(uuid())
+  email     String @unique
+  password  String
+  firstName String
+  lastName  String
+  role      Role   @default(USER)
+
+  refreshToken String? // hash-uit, folosit pentru validarea refresh-ului
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  familyMembers FamilyMember[]
+
+  @@map("users")
+}
+
 enum Gender {
   MALE
   FEMALE
   OTHER
 }
 
+enum BloodType {
+  A_POSITIVE
+  A_NEGATIVE
+  B_POSITIVE
+  B_NEGATIVE
+  AB_POSITIVE
+  AB_NEGATIVE
+  O_POSITIVE
+  O_NEGATIVE
+}
+
 model FamilyMember {
-  id        String    @id @default(uuid())
-  firstName String
-  lastName  String
+  id String @id @default(uuid())
+
+  firstName  String
+  lastName   String
+  maidenName String? // numele purtat înainte de căsătorie / schimbare
+
   gender    Gender?
   birthDate DateTime?
   deathDate DateTime?
-  bio       String?
-  imageUrl  String?
+
+  imageUrl String?
+  bio      String?
+
+  education  String?
+  occupation String?
+  bloodType  BloodType?
+  heightCm   Int?
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+
+  owner   User   @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  ownerId String
 
   parents  ParentChild[] @relation("ChildRelation")
   children ParentChild[] @relation("ParentRelation")
