@@ -7,13 +7,73 @@ const NODE_WIDTH = 192;
 const NODE_HEIGHT = 130;
 const UNION_SIZE = 12;
 
+/**
+ * După ce dagre a calculat layout-ul, parcurgem fiecare "rank" (nivel/generație)
+ * și, dacă doi parteneri sunt pe același rank dar nu sunt adiacenți, îi lipim
+ * unul lângă altul — păstrând EXACT aceleași poziții x calculate de dagre
+ * (doar reasignăm cine ocupă care slot). Nu modificăm graful, deci nu poate
+ * crăpa layout-ul dagre.
+ */
+function reorderPartnersWithinRanks(
+  g: any,
+  members: { id: string }[],
+  partnerships: { partnerAId: string; partnerBId: string }[],
+) {
+  // grupăm membrii (doar noduri de tip persoană, nu union) după rank-ul lor (y)
+  const rankGroups = new Map<number, string[]>();
+  members.forEach((m) => {
+    const pos = g.node(m.id);
+    if (!pos) return;
+    const y = Math.round(pos.y);
+    const list = rankGroups.get(y) ?? [];
+    list.push(m.id);
+    rankGroups.set(y, list);
+  });
+
+  const partnerOf = new Map<string, string>();
+  partnerships.forEach((p) => {
+    partnerOf.set(p.partnerAId, p.partnerBId);
+    partnerOf.set(p.partnerBId, p.partnerAId);
+  });
+
+  rankGroups.forEach((ids) => {
+    if (ids.length < 2) return;
+
+    const idsSet = new Set(ids);
+    // ordinea curentă (de la dagre), stânga → dreapta
+    const sortedByX = [...ids].sort((a, b) => g.node(a).x - g.node(b).x);
+    // slot-urile de x rămân fixe — doar schimbăm cine stă în care slot
+    const xSlots = sortedByX.map((id) => g.node(id).x);
+
+    const newOrder: string[] = [];
+    const placed = new Set<string>();
+
+    sortedByX.forEach((id) => {
+      if (placed.has(id)) return;
+      newOrder.push(id);
+      placed.add(id);
+
+      const partnerId = partnerOf.get(id);
+      // dacă partenerul e pe același rank și nu a fost deja plasat, îl lipim imediat lângă
+      if (partnerId && idsSet.has(partnerId) && !placed.has(partnerId)) {
+        newOrder.push(partnerId);
+        placed.add(partnerId);
+      }
+    });
+
+    // reasignăm coordonatele x păstrate, în noua ordine
+    newOrder.forEach((id, i) => {
+      g.node(id).x = xSlots[i];
+    });
+  });
+}
+
 export function useTreeLayout(treeData: FamilyTreeData | undefined) {
   return useMemo(() => {
     if (!treeData) return { nodes: [], edges: [] };
 
     const { members, relations, partnerships } = treeData;
 
-    // Pentru fiecare copil, găsim toți părinții lui
     const parentsByChild = new Map<string, string[]>();
     relations.forEach((rel) => {
       const list = parentsByChild.get(rel.childId) ?? [];
@@ -21,7 +81,6 @@ export function useTreeLayout(treeData: FamilyTreeData | undefined) {
       parentsByChild.set(rel.childId, list);
     });
 
-    // Găsim, pentru o pereche de părinți, dacă există un parteneriat între ei
     const partnershipByPair = new Map<string, string>();
     partnerships.forEach((p) => {
       partnershipByPair.set(`${p.partnerAId}|${p.partnerBId}`, p.id);
@@ -48,7 +107,7 @@ export function useTreeLayout(treeData: FamilyTreeData | undefined) {
     }[] = [];
 
     const pushEdge = (edge: (typeof edgesToCreate)[number]) => {
-      if (edgeIds.has(edge.id)) return; // evită dubluri când doi părinți au mai mulți copii comuni
+      if (edgeIds.has(edge.id)) return;
       edgeIds.add(edge.id);
       edgesToCreate.push(edge);
     };
@@ -79,7 +138,7 @@ export function useTreeLayout(treeData: FamilyTreeData | undefined) {
       }
     });
 
-    // Cazul 2: restul relațiilor părinte-copil (un singur părinte, sau doi părinți fără parteneriat înregistrat) → edge direct
+    // Cazul 2: restul relațiilor părinte-copil
     relations.forEach((rel) => {
       const unionHandled = parentsByChild.get(rel.childId)?.length === 2 && processedChildren.has(rel.childId);
       if (!unionHandled) {
@@ -88,7 +147,11 @@ export function useTreeLayout(treeData: FamilyTreeData | undefined) {
       }
     });
 
+    // NU mai adăugăm edge-uri de partener în graful lui dagre — asta cauza crash-ul.
     dagre.layout(g);
+
+    // FIX: după layout, mutăm partenerii adiacenți unul lângă altul (fără să atingem dagre)
+    reorderPartnersWithinRanks(g, members, partnerships);
 
     const nodes: Node[] = members.map((member) => {
       const pos = g.node(member.id);
@@ -113,8 +176,8 @@ export function useTreeLayout(treeData: FamilyTreeData | undefined) {
       });
     });
 
-    // Parteneriate fără copii comuni → linie punctată directă, orientată corect
-    // stânga-dreapta după poziția reală calculată de dagre (nu presupunem ordinea A/B).
+    // Parteneriate fără copii comuni → linie punctată directă
+    // acum poziția reală (după reorder) e corectă, deci left/right va reflecta adiacența reală
     const usedUnionPartnerships = new Set([...unionNodeIds].map((u) => u.replace('union-', '')));
     partnerships.forEach((p) => {
       if (usedUnionPartnerships.has(p.id)) return;

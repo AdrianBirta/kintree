@@ -23,6 +23,7 @@ export interface FamilyMember {
   ownerId: string;
   createdAt: string;
   updatedAt: string;
+  manualOrder?: number | null; // NOU: poziția salvată manual în cadrul generației (rank-ului) ei
 }
 
 export interface ParentChildRelation {

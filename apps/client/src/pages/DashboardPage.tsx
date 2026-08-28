@@ -1,34 +1,10 @@
 import React, { useEffect, useState, useCallback } from 'react';
-import { ReactFlow, Background, Controls, MiniMap, type NodeTypes } from '@xyflow/react';
-import '@xyflow/react/dist/style.css';
 import { familyMembersService } from '../api/familyMembersService';
 import type { FamilyTreeData } from '../types/family';
-import { useTreeLayout } from '../hooks/useTreeLayout';
-import MemberNode from '../components/tree/MemberNode';
-import UnionNode from '../components/tree/UnionNode';
 import Header from '../components/layout/Header';
 import AddMemberModal from '../components/tree/AddMemberModal';
 import LinkPartnersModal from '../components/tree/LinkPartnersModal';
-
-function PartnerGroupNode() {
-  return (
-    <div
-      style={{
-        width: '100%',
-        height: '100%',
-        border: '1.5px dashed #c9b3ec',
-        borderRadius: 16,
-        background: 'rgba(124, 77, 212, 0.03)',
-      }}
-    />
-  );
-}
-
-const nodeTypes = {
-  memberNode: MemberNode,
-  unionNode: UnionNode,
-  partnerGroupNode: PartnerGroupNode,
-};
+import FamilyTreeCanvas from '../components/tree/FamilyTreeCanvas';
 
 const DashboardPage: React.FC = () => {
   const [treeData, setTreeData] = useState<FamilyTreeData | undefined>();
@@ -50,7 +26,27 @@ const DashboardPage: React.FC = () => {
     loadTree();
   }, [loadTree]);
 
-  const { nodes, edges } = useTreeLayout(treeData);
+  // actualizare optimistă: layout-ul se recalculează instant din noile manualOrder;
+  // dacă salvarea pe server eșuează, resincronizăm cu ce e cu-adevărat acolo
+  const handleReorder = useCallback(
+    async (updates: { memberId: string; manualOrder: number }[]) => {
+      setTreeData((prev) => {
+        if (!prev) return prev;
+        const byId = new Map(updates.map((u) => [u.memberId, u.manualOrder]));
+        return {
+          ...prev,
+          members: prev.members.map((m) => (byId.has(m.id) ? { ...m, manualOrder: byId.get(m.id)! } : m)),
+        };
+      });
+
+      try {
+        await Promise.all(updates.map((u) => familyMembersService.update(u.memberId, { manualOrder: u.manualOrder })));
+      } catch {
+        loadTree();
+      }
+    },
+    [loadTree],
+  );
 
   return (
     <div className="h-screen flex flex-col bg-earbore-grayLight">
@@ -73,24 +69,7 @@ const DashboardPage: React.FC = () => {
           </div>
         ) : (
           <>
-            <ReactFlow
-              nodes={nodes}
-              edges={edges}
-              nodeTypes={nodeTypes}
-              fitView
-              minZoom={0.2}
-              maxZoom={1.5}
-              proOptions={{ hideAttribution: true }}
-            >
-              <Background color="#d6c3f2" gap={20} />
-              <Controls />
-              <MiniMap
-                nodeColor="#9b72e0"
-                maskColor="rgba(236, 224, 250, 0.6)"
-                className="!bg-white !border !border-earbore-border"
-              />
-            </ReactFlow>
-
+            <FamilyTreeCanvas treeData={treeData} onReorder={handleReorder} />
             <div className="absolute top-4 right-4 flex gap-2">
               <button onClick={() => setShowPartnerModal(true)} className="btn-outline text-sm py-2.5 px-4 bg-white shadow-md">
                 ⚭ Leagă parteneri

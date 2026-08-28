@@ -65,4 +65,8 @@ export class CreateFamilyMemberDto {
   @Min(30)
   @Max(260)
   heightCm?: number;
+
+  @IsInt()
+  @IsOptional()
+  manualOrder?: number | null;
 }

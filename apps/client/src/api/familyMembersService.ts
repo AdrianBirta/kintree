@@ -27,4 +27,8 @@ export const familyMembersService = {
 
   unlinkPartners: (partnerAId: string, partnerBId: string) =>
     apiClient.delete('/family-members/partnerships', { data: { partnerAId, partnerBId } }),
+
+  updatePosition: (id: string, manualOrder: number | null) =>
+    apiClient.patch<FamilyMember>(`/family-members/${id}`, { manualOrder }).then((r) => r.data),
+
 };

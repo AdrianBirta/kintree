@@ -79,6 +79,8 @@ model FamilyMember {
   partnersA Partnership[] @relation("PartnerA")
   partnersB Partnership[] @relation("PartnerB")
 
+  manualOrder Int?
+
   @@map("family_members")
 }
 
