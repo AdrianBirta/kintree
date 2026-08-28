@@ -23,7 +23,8 @@ export interface FamilyMember {
   ownerId: string;
   createdAt: string;
   updatedAt: string;
-  manualOrder?: number | null; // NOU: poziția salvată manual în cadrul generației (rank-ului) ei
+  manualOrder?: number | null;
+  manualRank?: number | null; // NOU: generația forțată manual prin drag vertical
 }
 
 export interface ParentChildRelation {
@@ -39,10 +40,20 @@ export interface Partnership {
   status: string;
 }
 
+// NOU
+export interface Alliance {
+  id: string;
+  memberAId: string;
+  memberBId: string;
+  type: 'CUSCRI';
+  viaPartnershipId?: string | null;
+}
+
 export interface FamilyTreeData {
   members: FamilyMember[];
   relations: ParentChildRelation[];
   partnerships: Partnership[];
+  alliances: Alliance[]; // NOU
 }
 
 export const BLOOD_TYPE_LABELS: Record<BloodType, string> = {

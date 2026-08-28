@@ -1,4 +1,4 @@
-import type { FamilyMember, FamilyTreeData, Partnership } from '../types/family';
+import type { FamilyMember, FamilyTreeData, Partnership, Alliance } from '../types/family';
 
 // ─────────────────────────────────────────────────────────────
 // CONSTANTE — reglează doar aici, algoritmul nu se schimbă
@@ -14,7 +14,7 @@ export const LAYOUT = {
   MAX_ORDER_PASSES: 12,
   MAX_COORD_PASSES: 8,
   COORD_EPSILON: 0.5,
-  MAX_TRANSPOSE_PASSES: 20, // de obicei converge în 2-5 treceri pt. un arbore de dimensiunea ta
+  MAX_TRANSPOSE_PASSES: 20,
 };
 
 // ─────────────────────────────────────────────────────────────
@@ -24,14 +24,14 @@ export interface LayoutMemberPosition {
   id: string;
   x: number;
   y: number;
-  rank: number;      // NOU
-  unitId: string;    // NOU
+  rank: number;
+  unitId: string;
   member: FamilyMember;
 }
 
 export interface LayoutCoupleFrame {
   unitId: string;
-  rank: number;       // NOU
+  rank: number;
   x: number;
   y: number;
   width: number;
@@ -43,8 +43,8 @@ export interface LayoutCoupleFrame {
 export interface LayoutEdge {
   id: string;
   path: string;
-  kind: 'parent-child' | 'union-child' | 'secondary-partner';
-  long?: boolean; // NOU: sare peste >1 generație — semnul vizual al "cuscrilor din ramuri diferite"
+  kind: 'parent-child' | 'union-child' | 'secondary-partner' | 'alliance'; // NOU: 'alliance'
+  long?: boolean;
 }
 
 export interface FamilyTreeLayout {
@@ -59,9 +59,9 @@ export interface FamilyTreeLayout {
 // TIPURI INTERNE
 // ─────────────────────────────────────────────────────────────
 interface Unit {
-  id: string;                 // 'u-<partnershipId>' sau 'm-<memberId>'
+  id: string;
   rank: number;
-  memberIds: string[];        // 1 sau 2 elemente
+  memberIds: string[];
   partnershipId?: string;
 }
 
@@ -100,13 +100,16 @@ function computeRanks(
   members: FamilyMember[],
   relations: { parentId: string; childId: string }[],
   partnerships: Partnership[],
+  alliances: Alliance[], // NOU
 ): Map<string, number> {
   const rank = new Map<string, number>();
-  members.forEach((m) => rank.set(m.id, 0));
+  // NOU: dacă un membru are manualRank (mutat manual prin drag pe verticală),
+  // pornim de acolo în loc de 0 — restul relaxării (regulile de mai jos) se ocupă
+  // automat de "cascadă" (copiii/partenerii/cuscrii sunt împinși după el).
+  members.forEach((m) => rank.set(m.id, m.manualRank ?? 0));
 
-  // ignorăm relații evident corupte (cineva "propriul părinte") ca să nu strice iterația
   const validRelations = relations.filter((r) => r.parentId !== r.childId);
-  const maxIter = members.length + partnerships.length + 5; // limită de siguranță anti-buclă
+  const maxIter = members.length + partnerships.length + alliances.length + 5;
 
   let stabilized = false;
 
@@ -124,8 +127,7 @@ function computeRanks(
       }
     }
 
-    // regula 2: partenerii sunt mereu pe același nivel (egalăm la maxim) —
-    // asta ridică automat partenerul "din afară", fără părinți proprii, la rank-ul corect
+    // regula 2: partenerii sunt mereu pe același nivel (egalăm la maxim)
     for (const p of partnerships) {
       if (p.partnerAId === p.partnerBId) continue;
       const ra = rank.get(p.partnerAId);
@@ -134,6 +136,18 @@ function computeRanks(
       const maxR = Math.max(ra, rb);
       if (ra !== maxR) { rank.set(p.partnerAId, maxR); changed = true; }
       if (rb !== maxR) { rank.set(p.partnerBId, maxR); changed = true; }
+    }
+
+    // regula 3 (NOU): alianțele — "cuscrii" (părinții a doi parteneri) sunt aduși
+    // pe același nivel, exact ca partenerii, dar NU formează o unitate/cuplu în layout
+    for (const al of alliances) {
+      if (al.memberAId === al.memberBId) continue;
+      const ra = rank.get(al.memberAId);
+      const rb = rank.get(al.memberBId);
+      if (ra === undefined || rb === undefined) continue;
+      const maxR = Math.max(ra, rb);
+      if (ra !== maxR) { rank.set(al.memberAId, maxR); changed = true; }
+      if (rb !== maxR) { rank.set(al.memberBId, maxR); changed = true; }
     }
 
     if (!changed) { stabilized = true; break; }
@@ -151,7 +165,6 @@ function computeRanks(
 
 // ─────────────────────────────────────────────────────────────
 // PASUL 2 — alegerea parteneriatului "primar" per persoană
-// (parteneriatele în plus, ex. o căsătorie anterioară, devin conectori secundari mai jos)
 // ─────────────────────────────────────────────────────────────
 const PARTNERSHIP_STATUS_PRIORITY: Record<string, number> = {
   MARRIED: 0,
@@ -196,7 +209,7 @@ function buildUnits(
   const used = new Set<string>();
 
   for (const p of primaryPartnerships) {
-    if (used.has(p.partnerAId) || used.has(p.partnerBId)) continue; // siguranță
+    if (used.has(p.partnerAId) || used.has(p.partnerBId)) continue;
     const r = rank.get(p.partnerAId) ?? rank.get(p.partnerBId) ?? 0;
     const unitId = `u-${p.id}`;
     units.push({ id: unitId, rank: r, memberIds: [p.partnerAId, p.partnerBId], partnershipId: p.id });
@@ -218,7 +231,7 @@ function buildUnits(
 }
 
 // ─────────────────────────────────────────────────────────────
-// PASUL 4 — adiacența între UNITĂȚI (nu între persoane), pe baza relațiilor părinte-copil
+// PASUL 4 — adiacența între UNITĂȚI, pe baza relațiilor părinte-copil
 // ─────────────────────────────────────────────────────────────
 function buildUnitAdjacency(
   units: Unit[],
@@ -244,9 +257,7 @@ function buildUnitAdjacency(
 }
 
 // ─────────────────────────────────────────────────────────────
-// PASUL 5 — ORDONARE prin MEDIANĂ (nu medie), până la stabilizare
-// Mediana e mai robustă decât media: o singură rudă/cuscru foarte îndepărtat(ă)
-// nu mai trage tot grupul după el, cum s-ar întâmpla cu o medie aritmetică.
+// PASUL 5 — ORDONARE prin MEDIANĂ, până la stabilizare
 // ─────────────────────────────────────────────────────────────
 function orderLevels(
   levelsMap: Map<number, string[]>,
@@ -310,11 +321,7 @@ function orderLevels(
 }
 
 // ─────────────────────────────────────────────────────────────
-// PASUL 5B — RAFINARE PRIN TRANSPUNERE
-// Mediana de mai sus apropie unitățile de "medie", dar nu garantează zero
-// încrucișări. Aici numărăm EXACT intersecțiile dintre două niveluri vecine
-// și testăm explicit interschimbarea a doi vecini — păstrăm swap-ul DOAR
-// dacă reduce numărul real de intersecții. Repetăm până se stabilizează.
+// PASUL 5B — RAFINARE PRIN TRANSPUNERE (reduce încrucișările)
 // ─────────────────────────────────────────────────────────────
 function countCrossingsBetweenRanks(
   upperOrder: string[],
@@ -332,8 +339,6 @@ function countCrossingsBetweenRanks(
     });
   });
 
-  // două muchii se intersectează dacă ordinea lor se inversează între cele
-  // două niveluri — adică diferențele de poziție au semne opuse
   let crossings = 0;
   for (let i = 0; i < edgePositions.length; i++) {
     for (let j = i + 1; j < edgePositions.length; j++) {
@@ -375,9 +380,9 @@ function transposeReduceCrossings(
           (lowerOrder ? countCrossingsBetweenRanks(order, lowerOrder, childUnitsOf) : 0);
 
         if (costAfter < costBefore) {
-          improved = true; // chiar ajută — păstrăm
+          improved = true;
         } else {
-          [order[i], order[i + 1]] = [order[i + 1], order[i]]; // nu ajută — revenim
+          [order[i], order[i + 1]] = [order[i + 1], order[i]];
         }
       }
     }
@@ -387,7 +392,50 @@ function transposeReduceCrossings(
 }
 
 // ─────────────────────────────────────────────────────────────
-// PASUL 6 — COORDONATE X, cu rezolvare bidirecțională a suprapunerilor
+// PASUL 5C (NOU) — APROPIEREA CUSCRILOR PE ACELAȘI RÂND
+// După ce ordinea e stabilă, apropiem unitățile legate printr-o alianță (cuscri)
+// una de alta pe rândul lor comun, mutând doar unitatea B lângă A (fără să atingem
+// alte rânduri și fără să reordonăm restul rândului mai mult decât e nevoie).
+// ─────────────────────────────────────────────────────────────
+function clusterAlliancesWithinRanks(
+  levelsMap: Map<number, string[]>,
+  memberToUnit: Map<string, string>,
+  alliances: Alliance[],
+) {
+  const allianceUnitPairs: [string, string][] = [];
+  alliances.forEach((a) => {
+    const uA = memberToUnit.get(a.memberAId);
+    const uB = memberToUnit.get(a.memberBId);
+    if (uA && uB && uA !== uB) allianceUnitPairs.push([uA, uB]);
+  });
+  if (allianceUnitPairs.length === 0) return levelsMap;
+
+  for (const [rank, order] of levelsMap) {
+    const positionOf = new Map(order.map((id, i) => [id, i]));
+    const pairsHere = allianceUnitPairs.filter(([a, b]) => positionOf.has(a) && positionOf.has(b));
+    if (pairsHere.length === 0) continue;
+
+    const moved = new Set<string>();
+    for (const [a, b] of pairsHere) {
+      if (moved.has(a) || moved.has(b)) continue; // evităm conflicte cu mai multe alianțe pe același rând
+      const idxA = order.indexOf(a);
+      const idxB = order.indexOf(b);
+      if (Math.abs(idxA - idxB) === 1) continue; // deja adiacente
+
+      order.splice(idxB, 1);
+      const newIdxA = order.indexOf(a);
+      order.splice(newIdxA + 1, 0, b);
+      moved.add(a);
+      moved.add(b);
+    }
+    levelsMap.set(rank, order);
+  }
+
+  return levelsMap;
+}
+
+// ─────────────────────────────────────────────────────────────
+// PASUL 6 — COORDONATE X
 // ─────────────────────────────────────────────────────────────
 function unitWidth(unit: Unit) {
   return unit.memberIds.length === 2
@@ -413,13 +461,6 @@ function assignCoordinates(
     }
   }
 
-  // Aliniază un nivel spre media unităților de referință (părinți sau copii), rezolvând
-  // suprapunerile din AMBELE direcții și mediind rezultatul.
-  // De ce: o rezolvare doar stânga→dreapta împinge tot ce urmează la fiecare suprapunere,
-  // iar pe seturi mari arborele "driftează" constant spre dreapta. Trecerea inversă
-  // (dreapta→stânga) + media celor două anulează driftul — și matematic media a două
-  // șiruri care respectă AMÂNDOUĂ distanța minimă între vecini respectă automat aceeași
-  // distanță minimă (media a două numere ≥ X e tot ≥ X), deci nu reapar suprapuneri.
   const alignRow = (r: number, refMap: Map<string, Set<string>>): number => {
     const levelUnits = levelsMap.get(r)!;
     const desired = levelUnits.map((id) => {
@@ -466,7 +507,7 @@ function assignCoordinates(
     for (let i = ranks.length - 2; i >= 0; i--) {
       maxDelta = Math.max(maxDelta, alignRow(ranks[i], childUnitsOf));
     }
-    if (maxDelta < LAYOUT.COORD_EPSILON) break; // convergență
+    if (maxDelta < LAYOUT.COORD_EPSILON) break;
   }
 
   return centerX;
@@ -492,7 +533,7 @@ function partnerConnectorPath(ax: number, ay: number, bx: number, by: number): s
 }
 
 // ─────────────────────────────────────────────────────────────
-// FUNCȚIA PRINCIPALĂ — pură: primește FamilyTreeData, întoarce layout complet
+// FUNCȚIA PRINCIPALĂ
 // ─────────────────────────────────────────────────────────────
 export function layoutFamilyTree(data: FamilyTreeData | undefined): FamilyTreeLayout {
   if (!data || data.members.length === 0) {
@@ -500,9 +541,10 @@ export function layoutFamilyTree(data: FamilyTreeData | undefined): FamilyTreeLa
   }
 
   const { members, relations, partnerships } = data;
+  const alliances = data.alliances ?? []; // NOU
   const membersById = new Map(members.map((m) => [m.id, m]));
 
-  const rank = computeRanks(members, relations, partnerships);
+  const rank = computeRanks(members, relations, partnerships, alliances);
   const { primary, secondary } = pickPrimaryPartnerships(partnerships);
   const { units, memberToUnit } = buildUnits(members, primary, rank);
   const manualOrderByUnit = getManualOrderByUnit(units, membersById);
@@ -517,7 +559,8 @@ export function layoutFamilyTree(data: FamilyTreeData | undefined): FamilyTreeLa
   });
 
   orderLevels(levelsMap, parentUnitsOf, childUnitsOf, manualOrderByUnit);
-  transposeReduceCrossings(levelsMap, childUnitsOf); // NOU — elimină încrucișările rămase
+  transposeReduceCrossings(levelsMap, childUnitsOf);
+  clusterAlliancesWithinRanks(levelsMap, memberToUnit, alliances); // NOU
   const centerX = assignCoordinates(unitsById, levelsMap, parentUnitsOf, childUnitsOf);
 
   const memberPositions: LayoutMemberPosition[] = [];
@@ -613,8 +656,6 @@ export function layoutFamilyTree(data: FamilyTreeData | undefined): FamilyTreeLa
     });
   });
 
-  // parteneriate secundare (ex. căsătorie anterioară) — doar conector punctat, informativ,
-  // fără impact asupra pozițiilor calculate mai sus
   secondary.forEach((p) => {
     const posA = posById.get(p.partnerAId);
     const posB = posById.get(p.partnerBId);
@@ -622,6 +663,27 @@ export function layoutFamilyTree(data: FamilyTreeData | undefined): FamilyTreeLa
     edges.push({
       id: `secondary-${p.id}`,
       kind: 'secondary-partner',
+      path: partnerConnectorPath(
+        posA.x + LAYOUT.CARD_WIDTH / 2, posA.y + LAYOUT.CARD_HEIGHT / 2,
+        posB.x + LAYOUT.CARD_WIDTH / 2, posB.y + LAYOUT.CARD_HEIGHT / 2,
+      ),
+    });
+  });
+
+  // NOU — muchii vizuale pentru alianțele de tip "cuscri"
+  const drawnAllianceKeys = new Set<string>();
+  alliances.forEach((a) => {
+    const key = [a.memberAId, a.memberBId].sort().join('|');
+    if (drawnAllianceKeys.has(key)) return;
+    drawnAllianceKeys.add(key);
+
+    const posA = posById.get(a.memberAId);
+    const posB = posById.get(a.memberBId);
+    if (!posA || !posB) return;
+
+    edges.push({
+      id: `alliance-${key}`,
+      kind: 'alliance',
       path: partnerConnectorPath(
         posA.x + LAYOUT.CARD_WIDTH / 2, posA.y + LAYOUT.CARD_HEIGHT / 2,
         posB.x + LAYOUT.CARD_WIDTH / 2, posB.y + LAYOUT.CARD_HEIGHT / 2,

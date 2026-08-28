@@ -49,39 +49,53 @@ enum BloodType {
 }
 
 model FamilyMember {
-  id String @id @default(uuid())
-
-  firstName  String
-  lastName   String
-  maidenName String? // numele purtat înainte de căsătorie / schimbare
-
-  gender    Gender?
-  birthDate DateTime?
-  deathDate DateTime?
-
-  imageUrl String?
-  bio      String?
-
-  education  String?
-  occupation String?
-  bloodType  BloodType?
-  heightCm   Int?
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  owner   User   @relation(fields: [ownerId], references: [id], onDelete: Cascade)
-  ownerId String
-
-  parents  ParentChild[] @relation("ChildRelation")
-  children ParentChild[] @relation("ParentRelation")
-
-  partnersA Partnership[] @relation("PartnerA")
-  partnersB Partnership[] @relation("PartnerB")
-
+  id          String           @id @default(uuid())
+  firstName   String
+  lastName    String
+  maidenName  String?
+  gender      Gender?
+  birthDate   DateTime?
+  deathDate   DateTime?
+  imageUrl    String?
+  bio         String?
+  education   String?
+  occupation  String?
+  bloodType   BloodType?
+  heightCm    Int?
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
+  owner       User             @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  ownerId     String
+  parents     ParentChild[]    @relation("ChildRelation")
+  children    ParentChild[]    @relation("ParentRelation")
+  partnersA   Partnership[]    @relation("PartnerA")
+  partnersB   Partnership[]    @relation("PartnerB")
   manualOrder Int?
+  manualRank  Int? // NOU: generația (rank-ul) forțată manual prin drag vertical
+  alliancesA  FamilyAlliance[] @relation("AllianceA") // NOU
+  alliancesB  FamilyAlliance[] @relation("AllianceB") // NOU
 
   @@map("family_members")
+}
+
+// NOU — de aici în jos, adăugat la finalul fișierului
+enum AllianceType {
+  CUSCRI
+}
+
+model FamilyAlliance {
+  id               String       @id @default(uuid())
+  memberA          FamilyMember @relation("AllianceA", fields: [memberAId], references: [id], onDelete: Cascade)
+  memberAId        String
+  memberB          FamilyMember @relation("AllianceB", fields: [memberBId], references: [id], onDelete: Cascade)
+  memberBId        String
+  type             AllianceType @default(CUSCRI)
+  viaPartnershipId String? // parteneriatul copiilor care a generat această alianță
+  createdAt        DateTime     @default(now())
+  updatedAt        DateTime     @updatedAt
+
+  @@unique([memberAId, memberBId])
+  @@map("family_alliances")
 }
 
 model ParentChild {

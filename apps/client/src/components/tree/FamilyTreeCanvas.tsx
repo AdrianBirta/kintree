@@ -10,7 +10,7 @@ import { useHighlightedLineage } from '../../hooks/useHighlightedLineage';
 
 interface Props {
   treeData?: FamilyTreeData;
-  onReorder: (updates: { memberId: string; manualOrder: number }[]) => void;
+  onReorder: (updates: { memberId: string; manualOrder: number; manualRank?: number }[]) => void;
 }
 
 const FamilyTreeCanvas: React.FC<Props> = ({ treeData, onReorder }) => {
@@ -40,12 +40,27 @@ const FamilyTreeCanvas: React.FC<Props> = ({ treeData, onReorder }) => {
     return map;
   }, [layout]);
 
+  // NOU: acum primim și rank-ul țintă (targetRank) + rank-ul de plecare (sourceRank).
+  // Dacă rank-ul s-a schimbat, doar unitatea mutată primește manualRank — restul
+  // arborelui (copii, partener, cuscri) se recalculează automat prin computeRanks.
   const handleDrop = useCallback(
-    (_rank: number, orderedUnitIds: string[]) => {
-      const updates: { memberId: string; manualOrder: number }[] = [];
+    (targetRank: number, orderedUnitIds: string[], movedUnitId: string, sourceRank: number) => {
+      const updates: { memberId: string; manualOrder: number; manualRank?: number }[] = [];
+
       orderedUnitIds.forEach((unitId, index) => {
-        (memberIdsByUnit.get(unitId) ?? []).forEach((memberId) => updates.push({ memberId, manualOrder: index }));
+        const memberIds = memberIdsByUnit.get(unitId) ?? [];
+        memberIds.forEach((memberId) => {
+          const update: { memberId: string; manualOrder: number; manualRank?: number } = {
+            memberId,
+            manualOrder: index,
+          };
+          if (unitId === movedUnitId && targetRank !== sourceRank) {
+            update.manualRank = targetRank;
+          }
+          updates.push(update);
+        });
       });
+
       onReorder(updates);
     },
     [memberIdsByUnit, onReorder],
@@ -78,12 +93,13 @@ const FamilyTreeCanvas: React.FC<Props> = ({ treeData, onReorder }) => {
         {layout.members.map((m) => {
           const isDraggingThis = dragState?.unitId === m.unitId;
           const dx = isDraggingThis ? dragState!.currentX - dragState!.originalCenterX : 0;
+          const dy = isDraggingThis ? dragState!.currentY - dragState!.originalTopY : 0; // NOU
           return (
             <MemberCard
               key={m.id}
               member={m.member}
               x={m.x + dx}
-              y={m.y}
+              y={m.y + dy}
               unitId={m.unitId}
               onClick={handleCardClick}
               onDragStart={startDrag}
@@ -101,10 +117,12 @@ const FamilyTreeCanvas: React.FC<Props> = ({ treeData, onReorder }) => {
           <div
             style={{
               position: 'absolute',
-              left: dragState.slot.x - LAYOUT.CARD_WIDTH / 2,
+              // FIX: lățimea/înălțimea vin acum din unitatea REALĂ mutată (cuplu sau
+              // persoană singură), nu mai sunt hardcodate — asta rezolvă decalajul
+              left: dragState.slot.x - dragState.slot.width / 2,
               top: dragState.slot.y,
-              width: LAYOUT.CARD_WIDTH,
-              height: LAYOUT.CARD_HEIGHT,
+              width: dragState.slot.width,
+              height: dragState.slot.height,
               border: '2px dashed var(--color-earbore-400)',
               borderRadius: 16,
               background: 'rgba(124, 77, 212, 0.06)',

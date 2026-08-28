@@ -52,7 +52,9 @@ export class FamilyMembersService {
 
   async remove(userId: string, id: string) {
     await this.findOne(userId, id);
-    return this.prisma.familyMember.delete({ where: { id } });
+    const removed = await this.prisma.familyMember.delete({ where: { id } });
+    await this.syncAlliances(userId);
+    return removed;
   }
 
   async getFamilyTree(userId: string) {
@@ -68,25 +70,35 @@ export class FamilyMembersService {
       where: { partnerA: { ownerId: userId } },
     });
 
-    return { members, relations, partnerships };
+    const alliances = await this.prisma.familyAlliance.findMany({
+      where: { memberA: { ownerId: userId } },
+    });
+
+    return { members, relations, partnerships, alliances };
   }
 
   async linkParentChild(userId: string, parentId: string, childId: string) {
     await this.findOne(userId, parentId);
     await this.findOne(userId, childId);
 
-    return this.prisma.parentChild.create({
+    const relation = await this.prisma.parentChild.create({
       data: { parentId, childId },
     });
+
+    await this.syncAlliances(userId);
+    return relation;
   }
 
   async unlinkParentChild(userId: string, parentId: string, childId: string) {
     await this.findOne(userId, parentId);
     await this.findOne(userId, childId);
 
-    return this.prisma.parentChild.deleteMany({
+    const result = await this.prisma.parentChild.deleteMany({
       where: { parentId, childId },
     });
+
+    await this.syncAlliances(userId);
+    return result;
   }
 
   async linkPartners(userId: string, partnerAId: string, partnerBId: string, status?: string) {
@@ -103,23 +115,24 @@ export class FamilyMembersService {
       where: { partnerAId_partnerBId: { partnerAId: a, partnerBId: b } },
     });
 
-    if (existing) {
-      return this.prisma.partnership.update({
+    const partnership = existing
+      ? await this.prisma.partnership.update({
         where: { id: existing.id },
         data: { status: (status as any) ?? existing.status },
+      })
+      : await this.prisma.partnership.create({
+        data: { partnerAId: a, partnerBId: b, status: (status as any) ?? 'MARRIED' },
       });
-    }
 
-    return this.prisma.partnership.create({
-      data: { partnerAId: a, partnerBId: b, status: (status as any) ?? 'MARRIED' },
-    });
+    await this.syncAlliances(userId);
+    return partnership;
   }
 
   async unlinkPartners(userId: string, partnerAId: string, partnerBId: string) {
     await this.findOne(userId, partnerAId);
     await this.findOne(userId, partnerBId);
 
-    return this.prisma.partnership.deleteMany({
+    const result = await this.prisma.partnership.deleteMany({
       where: {
         OR: [
           { partnerAId, partnerBId },
@@ -127,5 +140,63 @@ export class FamilyMembersService {
         ],
       },
     });
+
+    await this.syncAlliances(userId);
+    return result;
+  }
+
+  /**
+   * Recalculează automat alianțele de tip "cuscri": pentru fiecare parteneriat
+   * (căsătorie/relație) dintre doi membri, părinții celor doi devin "cuscri" unii
+   * cu alții. Rulează din nou, de la zero, la fiecare schimbare de parteneriat sau
+   * relație părinte-copil a acestui user — arborii sunt suficient de mici încât
+   * recalcularea completă e mai simplă și mai sigură decât un update incremental
+   * (nu rămân niciodată alianțe vechi, nefolosite, în baza de date).
+   */
+  private async syncAlliances(userId: string) {
+    const [relations, partnerships] = await Promise.all([
+      this.prisma.parentChild.findMany({ where: { parent: { ownerId: userId } } }),
+      this.prisma.partnership.findMany({ where: { partnerA: { ownerId: userId } } }),
+    ]);
+
+    const parentsByChild = new Map<string, string[]>();
+    relations.forEach((r) => {
+      const list = parentsByChild.get(r.childId) ?? [];
+      list.push(r.parentId);
+      parentsByChild.set(r.childId, list);
+    });
+
+    const desired = new Map<string, { memberAId: string; memberBId: string; viaPartnershipId: string }>();
+
+    for (const p of partnerships) {
+      const parentsA = parentsByChild.get(p.partnerAId) ?? [];
+      const parentsB = parentsByChild.get(p.partnerBId) ?? [];
+      if (parentsA.length === 0 || parentsB.length === 0) continue;
+
+      for (const pa of parentsA) {
+        for (const pb of parentsB) {
+          if (pa === pb) continue;
+          const [memberAId, memberBId] = [pa, pb].sort();
+          desired.set(`${memberAId}|${memberBId}`, { memberAId, memberBId, viaPartnershipId: p.id });
+        }
+      }
+    }
+
+    const existingAlliances = await this.prisma.familyAlliance.findMany({
+      where: { memberA: { ownerId: userId } },
+    });
+
+    const toDelete = existingAlliances.filter((e) => !desired.has(`${e.memberAId}|${e.memberBId}`));
+    if (toDelete.length > 0) {
+      await this.prisma.familyAlliance.deleteMany({ where: { id: { in: toDelete.map((e) => e.id) } } });
+    }
+
+    for (const alliance of desired.values()) {
+      await this.prisma.familyAlliance.upsert({
+        where: { memberAId_memberBId: { memberAId: alliance.memberAId, memberBId: alliance.memberBId } },
+        update: { viaPartnershipId: alliance.viaPartnershipId },
+        create: { ...alliance, type: 'CUSCRI' },
+      });
+    }
   }
 }

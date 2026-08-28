@@ -9,8 +9,8 @@ interface Props {
   y: number;
   unitId: string;
   onClick: (id: string) => void;
-  onDragStart?: (unitId: string, clientX: number) => void;
-  onDragMove?: (clientX: number) => void;
+  onDragStart?: (unitId: string, clientX: number, clientY: number) => void;
+  onDragMove?: (clientX: number, clientY: number) => void;
   onDragEnd?: () => void;
   isDragging?: boolean;
   onMouseEnter?: () => void;
@@ -24,16 +24,16 @@ function MemberCard({ member, x, y, unitId, onClick, onDragStart, onDragMove, on
   const movedRef = useRef(false);
 
   const handlePointerDown = (e: React.PointerEvent) => {
-    e.stopPropagation(); // nu lăsăm cardul să pornească pan-ul containerului
+    e.stopPropagation();
     movedRef.current = false;
     e.currentTarget.setPointerCapture(e.pointerId);
-    onDragStart?.(unitId, e.clientX);
+    onDragStart?.(unitId, e.clientX, e.clientY);
   };
 
   const handlePointerMove = (e: React.PointerEvent) => {
     if (!onDragMove) return;
     movedRef.current = true;
-    onDragMove(e.clientX);
+    onDragMove(e.clientX, e.clientY);
   };
 
   const handlePointerUp = (e: React.PointerEvent) => {
@@ -45,7 +45,7 @@ function MemberCard({ member, x, y, unitId, onClick, onDragStart, onDragMove, on
     if (movedRef.current) {
       onDragEnd?.();
     } else {
-      onClick(member.id); // n-a fost nicio mișcare -> simplu click, navigare ca înainte
+      onClick(member.id);
     }
   };
 

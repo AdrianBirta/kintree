@@ -28,15 +28,29 @@ export function useHighlightedLineage(treeData: FamilyTreeData | undefined) {
       partnersOf.set(p.partnerBId, b);
     });
 
+    // NOU: alianțele (cuscri) intră și ele în lanțul evidențiat la hover
+    const alliancesOf = new Map<string, string[]>();
+    (treeData.alliances ?? []).forEach((al) => {
+      const a = alliancesOf.get(al.memberAId) ?? [];
+      a.push(al.memberBId);
+      alliancesOf.set(al.memberAId, a);
+      const b = alliancesOf.get(al.memberBId) ?? [];
+      b.push(al.memberAId);
+      alliancesOf.set(al.memberBId, b);
+    });
+
     const visited = new Set<string>();
     const queue = [focusId];
     while (queue.length > 0) {
       const id = queue.shift()!;
       if (visited.has(id)) continue;
       visited.add(id);
-      [...(parentsByChild.get(id) ?? []), ...(childrenByParent.get(id) ?? []), ...(partnersOf.get(id) ?? [])].forEach(
-        (relatedId) => queue.push(relatedId),
-      );
+      [
+        ...(parentsByChild.get(id) ?? []),
+        ...(childrenByParent.get(id) ?? []),
+        ...(partnersOf.get(id) ?? []),
+        ...(alliancesOf.get(id) ?? []),
+      ].forEach((relatedId) => queue.push(relatedId));
     }
     return visited;
   }, [focusId, treeData]);

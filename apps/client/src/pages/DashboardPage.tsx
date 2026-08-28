@@ -26,21 +26,36 @@ const DashboardPage: React.FC = () => {
     loadTree();
   }, [loadTree]);
 
-  // actualizare optimistă: layout-ul se recalculează instant din noile manualOrder;
+  // actualizare optimistă: layout-ul se recalculează instant din noile manualOrder/manualRank;
   // dacă salvarea pe server eșuează, resincronizăm cu ce e cu-adevărat acolo
   const handleReorder = useCallback(
-    async (updates: { memberId: string; manualOrder: number }[]) => {
+    async (updates: { memberId: string; manualOrder: number; manualRank?: number }[]) => {
       setTreeData((prev) => {
         if (!prev) return prev;
-        const byId = new Map(updates.map((u) => [u.memberId, u.manualOrder]));
+        const byId = new Map(updates.map((u) => [u.memberId, u]));
         return {
           ...prev,
-          members: prev.members.map((m) => (byId.has(m.id) ? { ...m, manualOrder: byId.get(m.id)! } : m)),
+          members: prev.members.map((m) => {
+            const u = byId.get(m.id);
+            if (!u) return m;
+            return {
+              ...m,
+              manualOrder: u.manualOrder,
+              ...(u.manualRank !== undefined ? { manualRank: u.manualRank } : {}),
+            };
+          }),
         };
       });
 
       try {
-        await Promise.all(updates.map((u) => familyMembersService.update(u.memberId, { manualOrder: u.manualOrder })));
+        await Promise.all(
+          updates.map((u) =>
+            familyMembersService.update(u.memberId, {
+              manualOrder: u.manualOrder,
+              ...(u.manualRank !== undefined ? { manualRank: u.manualRank } : {}),
+            }),
+          ),
+        );
       } catch {
         loadTree();
       }

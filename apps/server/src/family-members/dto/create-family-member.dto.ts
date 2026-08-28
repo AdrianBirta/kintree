@@ -69,4 +69,8 @@ export class CreateFamilyMemberDto {
   @IsInt()
   @IsOptional()
   manualOrder?: number | null;
+
+  @IsInt()
+  @IsOptional()
+  manualRank?: number | null; // NOU
 }
