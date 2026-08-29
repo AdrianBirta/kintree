@@ -1,4 +1,10 @@
 import React, { useState } from 'react';
+import {
+  Dialog, DialogTitle, DialogContent, DialogActions, Button, MenuItem,
+  Select, InputLabel, FormControl, Typography, Alert, CircularProgress, IconButton,
+} from '@mui/material';
+import CloseIcon from '@mui/icons-material/Close';
+import FavoriteIcon from '@mui/icons-material/Favorite';
 import { familyMembersService } from '../../api/familyMembersService';
 import type { FamilyMember } from '../../types/family';
 
@@ -34,55 +40,66 @@ const LinkPartnersModal: React.FC<Props> = ({ members, onClose, onLinked }) => {
   };
 
   return (
-    <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 px-4">
-      <div className="bg-white rounded-2xl shadow-xl w-full max-w-md p-6">
-        <h3 className="text-lg font-bold text-earbore-ink mb-1">Leagă parteneri</h3>
-        <p className="text-sm text-earbore-gray mb-4">Marchează doi membri ca soț și soție / parteneri.</p>
+    <Dialog
+      open
+      onClose={isSaving ? undefined : onClose}
+      maxWidth="xs"
+      fullWidth
+      sx={{ '& .MuiDialog-paper': { borderRadius: 4 } }}
+    >
+      <DialogTitle sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontWeight: 700 }}>
+        <span style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          <FavoriteIcon color="primary" fontSize="small" /> Leagă parteneri
+        </span>
+        <IconButton onClick={onClose} disabled={isSaving} size="small"><CloseIcon /></IconButton>
+      </DialogTitle>
 
-        <form onSubmit={handleSubmit} className="space-y-3">
-          <div>
-            <label className="block text-xs font-semibold text-earbore-gray uppercase tracking-wider mb-1.5">Primul membru</label>
-            <select value={partnerAId} onChange={(e) => setPartnerAId(e.target.value)} className="input-base" required disabled={isSaving}>
-              <option value="">Alege...</option>
-              {members.map((m) => (
-                <option key={m.id} value={m.id}>{m.firstName} {m.lastName}</option>
-              ))}
-            </select>
-          </div>
+      <form onSubmit={handleSubmit}>
+        <DialogContent dividers sx={{ display: 'flex', flexDirection: 'column', gap: 2.5 }}>
+          <Typography variant="body2" color="text.secondary">
+            Marchează doi membri ca soț și soție / parteneri.
+          </Typography>
 
-          <div>
-            <label className="block text-xs font-semibold text-earbore-gray uppercase tracking-wider mb-1.5">Al doilea membru</label>
-            <select value={partnerBId} onChange={(e) => setPartnerBId(e.target.value)} className="input-base" required disabled={isSaving}>
-              <option value="">Alege...</option>
-              {members.map((m) => (
-                <option key={m.id} value={m.id}>{m.firstName} {m.lastName}</option>
-              ))}
-            </select>
-          </div>
+          <FormControl fullWidth required disabled={isSaving}>
+            <InputLabel>Primul membru</InputLabel>
+            <Select label="Primul membru" value={partnerAId} onChange={(e) => setPartnerAId(e.target.value)}>
+              <MenuItem value="">Alege...</MenuItem>
+              {members.map((m) => <MenuItem key={m.id} value={m.id}>{m.firstName} {m.lastName}</MenuItem>)}
+            </Select>
+          </FormControl>
 
-          <div>
-            <label className="block text-xs font-semibold text-earbore-gray uppercase tracking-wider mb-1.5">Status</label>
-            <select value={status} onChange={(e) => setStatus(e.target.value)} className="input-base" disabled={isSaving}>
-              <option value="MARRIED">Căsătoriți</option>
-              <option value="PARTNER">Parteneri</option>
-              <option value="DIVORCED">Divorțați</option>
-              <option value="WIDOWED">Văduv/ă</option>
-            </select>
-          </div>
+          <FormControl fullWidth required disabled={isSaving}>
+            <InputLabel>Al doilea membru</InputLabel>
+            <Select label="Al doilea membru" value={partnerBId} onChange={(e) => setPartnerBId(e.target.value)}>
+              <MenuItem value="">Alege...</MenuItem>
+              {members.map((m) => <MenuItem key={m.id} value={m.id}>{m.firstName} {m.lastName}</MenuItem>)}
+            </Select>
+          </FormControl>
 
-          {error && <p className="text-earbore-danger text-sm text-center bg-red-50 p-2.5 rounded-xl">{error}</p>}
+          <FormControl fullWidth disabled={isSaving}>
+            <InputLabel>Status</InputLabel>
+            <Select label="Status" value={status} onChange={(e) => setStatus(e.target.value)}>
+              <MenuItem value="MARRIED">Căsătoriți</MenuItem>
+              <MenuItem value="PARTNER">Parteneri</MenuItem>
+              <MenuItem value="DIVORCED">Divorțați</MenuItem>
+              <MenuItem value="WIDOWED">Văduv/ă</MenuItem>
+            </Select>
+          </FormControl>
 
-          <div className="flex gap-3 pt-2">
-            <button type="button" onClick={onClose} disabled={isSaving} className="btn-outline flex-1">
-              Anulează
-            </button>
-            <button type="submit" disabled={isSaving} className="btn-primary flex-1 disabled:opacity-50">
-              {isSaving ? 'Se leagă...' : 'Leagă'}
-            </button>
-          </div>
-        </form>
-      </div>
-    </div>
+          {error && <Alert severity="error">{error}</Alert>}
+        </DialogContent>
+
+        <DialogActions sx={{ p: 2.5 }}>
+          <Button onClick={onClose} disabled={isSaving} variant="outlined" color="inherit">Anulează</Button>
+          <Button
+            type="submit" disabled={isSaving} variant="contained"
+            startIcon={isSaving ? <CircularProgress size={16} color="inherit" /> : undefined}
+          >
+            {isSaving ? 'Se leagă...' : 'Leagă'}
+          </Button>
+        </DialogActions>
+      </form>
+    </Dialog>
   );
 };
 

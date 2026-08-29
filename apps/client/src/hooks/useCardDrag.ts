@@ -39,8 +39,6 @@ export interface CardDragState {
   slot: DragSlot;
 }
 
-// distanța verticală dintre generații — trebuie să fie exact ca în treeLayout.ts,
-// unde `y = rank * (CARD_HEIGHT + RANK_GAP)`
 const RANK_STEP = LAYOUT.CARD_HEIGHT + LAYOUT.RANK_GAP;
 
 export function useCardDrag(
@@ -51,7 +49,6 @@ export function useCardDrag(
 ) {
   const [dragState, setDragState] = useState<CardDragState | null>(null);
   const unitsByRankRef = useRef<Map<number, RankUnit[]>>(new Map());
-  const maxRankRef = useRef(0);
 
   const toWorldX = useCallback(
     (clientX: number) => {
@@ -71,16 +68,11 @@ export function useCardDrag(
     [containerRef, transform],
   );
 
-  // instantaneu complet rank -> unități, construit o singură dată la începutul
-  // drag-ului; în timpul mutării lucrăm doar cu acest instantaneu (nu recalculăm
-  // layout-ul live la fiecare pixel mutat)
   const buildUnitsByRank = useCallback((): Map<number, RankUnit[]> => {
     const byRank = new Map<number, RankUnit[]>();
     const seenUnits = new Set<string>();
-    let maxRank = 0;
 
     layout.members.forEach((m) => {
-      maxRank = Math.max(maxRank, m.rank);
       if (seenUnits.has(m.unitId)) return;
       seenUnits.add(m.unitId);
 
@@ -94,7 +86,6 @@ export function useCardDrag(
       byRank.set(m.rank, list);
     });
 
-    maxRankRef.current = maxRank;
     byRank.forEach((list) => list.sort((a, b) => a.centerX - b.centerX));
     return byRank;
   }, [layout]);
@@ -143,19 +134,18 @@ export function useCardDrag(
         const currentX = toWorldX(clientX) - prev.offsetX;
         const currentY = toWorldY(clientY) - prev.offsetY;
 
-        // rank-ul țintă se deduce din poziția Y a cursorului, rotunjit la cea mai
-        // apropiată generație existentă (limitat la generațiile deja prezente în arbore)
-        const rawTargetRank = Math.round(currentY / RANK_STEP);
-        const targetRank = Math.min(Math.max(rawTargetRank, 0), maxRankRef.current);
+        // NOU — conversia Y -> rank ține cont de direcție: în 'bottom-up' rank-ul 0
+        // (strămoșii) e jos de tot, deci Y mare, iar rank-ul maxim e sus (Y mic).
+        const maxRank = layout.maxRank;
+        const rawRank = Math.round(currentY / RANK_STEP);
+        const rawTargetRank = layout.direction === 'bottom-up' ? maxRank - rawRank : rawRank;
+        const targetRank = Math.min(Math.max(rawTargetRank, 0), maxRank);
 
         const others = (unitsByRankRef.current.get(targetRank) ?? []).filter((u) => u.unitId !== prev.unitId);
         const centerXNow = currentX + prev.width / 2;
 
         const insertIndex = others.filter((u) => u.centerX < centerXNow).length;
 
-        // FIX: calculul de mai jos ține cont de lățimea REALĂ a fiecărei unități
-        // (cuplu vs. persoană singură) — asta era cauza dreptunghiului "decalat":
-        // înainte se presupunea că toate unitățile au aceeași lățime (un card)
         let slotX = centerXNow;
         if (others.length > 0) {
           if (insertIndex === 0) {
@@ -171,11 +161,14 @@ export function useCardDrag(
           }
         }
 
-        // dacă unitatea mutată e un cuplu, cadrul are un mic padding față de card
-        // (COUPLE_FRAME_PADDING) — îl reflectăm și pe Y ca placeholder-ul să se
-        // alinieze exact cu cadrul punctat al cuplurilor din TreeEdgesLayer
+        // NOU — Y-ul placeholder-ului trebuie calculat cu aceeași formulă rank -> Y
+        // folosită de treeLayout.ts (rankToY), altfel dreptunghiul punctat "sare"
+        // pe direcție greșită când arborele e inversat.
         const verticalPad = (prev.height - LAYOUT.CARD_HEIGHT) / 2;
-        const slotY = targetRank * RANK_STEP - verticalPad;
+        const rankTopY = layout.direction === 'bottom-up'
+          ? (maxRank - targetRank) * RANK_STEP
+          : targetRank * RANK_STEP;
+        const slotY = rankTopY - verticalPad;
 
         return {
           ...prev,
@@ -185,7 +178,7 @@ export function useCardDrag(
         };
       });
     },
-    [toWorldX, toWorldY],
+    [toWorldX, toWorldY, layout.direction, layout.maxRank],
   );
 
   const endDrag = useCallback(() => {

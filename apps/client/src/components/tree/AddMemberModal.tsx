@@ -1,4 +1,11 @@
 import React, { useState } from 'react';
+import {
+  Dialog, DialogTitle, DialogContent, DialogActions, Button, TextField, MenuItem,
+  Select, InputLabel, FormControl, Avatar, IconButton, Checkbox, FormControlLabel,
+  FormGroup, Divider, Typography, Alert, CircularProgress, Box,
+} from '@mui/material';
+import PhotoCameraIcon from '@mui/icons-material/PhotoCamera';
+import CloseIcon from '@mui/icons-material/Close';
 import { familyMembersService } from '../../api/familyMembersService';
 import type { FamilyMember } from '../../types/family';
 
@@ -10,25 +17,32 @@ interface Props {
 
 const AddMemberModal: React.FC<Props> = ({ members, onClose, onCreated }) => {
   const [form, setForm] = useState({
-    firstName: '',
-    lastName: '',
-    gender: '',
-    birthDate: '',
-    fatherId: '',
-    motherId: '',
-    partnerId: '',
-    partnerStatus: 'MARRIED',
+    firstName: '', lastName: '', gender: '', birthDate: '',
+    fatherId: '', motherId: '', partnerId: '', partnerStatus: 'MARRIED',
   });
   const [childrenIds, setChildrenIds] = useState<string[]>([]);
+  const [photoFile, setPhotoFile] = useState<File | null>(null);
+  const [photoPreview, setPhotoPreview] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState('');
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setForm({ ...form, [e.target.name]: e.target.value });
+  };
+
+  const handleSelectChange = (name: string) => (e: any) => {
+    setForm({ ...form, [name]: e.target.value });
   };
 
   const toggleChild = (id: string) => {
     setChildrenIds((prev) => (prev.includes(id) ? prev.filter((c) => c !== id) : [...prev, id]));
+  };
+
+  const handlePhotoSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setPhotoFile(file);
+    setPhotoPreview(URL.createObjectURL(file));
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -43,17 +57,13 @@ const AddMemberModal: React.FC<Props> = ({ members, onClose, onCreated }) => {
         birthDate: form.birthDate || undefined,
       });
 
-      if (form.fatherId) {
-        await familyMembersService.linkParentChild(form.fatherId, newMember.id);
-      }
-      if (form.motherId) {
-        await familyMembersService.linkParentChild(form.motherId, newMember.id);
-      }
-      if (form.partnerId) {
-        await familyMembersService.linkPartners(newMember.id, form.partnerId, form.partnerStatus);
-      }
-      for (const childId of childrenIds) {
-        await familyMembersService.linkParentChild(newMember.id, childId);
+      if (form.fatherId) await familyMembersService.linkParentChild(form.fatherId, newMember.id);
+      if (form.motherId) await familyMembersService.linkParentChild(form.motherId, newMember.id);
+      if (form.partnerId) await familyMembersService.linkPartners(newMember.id, form.partnerId, form.partnerStatus);
+      for (const childId of childrenIds) await familyMembersService.linkParentChild(newMember.id, childId);
+
+      if (photoFile) {
+        await familyMembersService.uploadPhoto(newMember.id, photoFile);
       }
 
       onCreated();
@@ -68,126 +78,134 @@ const AddMemberModal: React.FC<Props> = ({ members, onClose, onCreated }) => {
   const motherOptions = members.filter((m) => m.gender !== 'MALE');
 
   return (
-    <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 px-4">
-      <div className="bg-white rounded-2xl shadow-xl w-full max-w-md p-6 max-h-[90vh] overflow-y-auto">
-        <h3 className="text-lg font-bold text-earbore-ink mb-4">Adaugă membru</h3>
+    <Dialog open onClose={isSaving ? undefined : onClose} maxWidth="sm" fullWidth slotProps={{ paper: { sx: { borderRadius: 4 } } }}>
+      <DialogTitle sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontWeight: 700 }}>
+        Adaugă membru
+        <IconButton onClick={onClose} disabled={isSaving} size="small"><CloseIcon /></IconButton>
+      </DialogTitle>
 
-        <form onSubmit={handleSubmit} className="space-y-3">
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <label className="block text-xs font-semibold text-earbore-gray uppercase tracking-wider mb-1.5">Prenume</label>
-              <input name="firstName" value={form.firstName} onChange={handleChange} className="input-base" required disabled={isSaving} />
-            </div>
-            <div>
-              <label className="block text-xs font-semibold text-earbore-gray uppercase tracking-wider mb-1.5">Nume</label>
-              <input name="lastName" value={form.lastName} onChange={handleChange} className="input-base" required disabled={isSaving} />
-            </div>
-          </div>
+      <form onSubmit={handleSubmit}>
+        <DialogContent dividers sx={{ display: 'flex', flexDirection: 'column', gap: 2.5 }}>
 
-          <div>
-            <label className="block text-xs font-semibold text-earbore-gray uppercase tracking-wider mb-1.5">Gen</label>
-            <select name="gender" value={form.gender} onChange={handleChange} className="input-base" disabled={isSaving}>
-              <option value="">Nespecificat</option>
-              <option value="MALE">Masculin</option>
-              <option value="FEMALE">Feminin</option>
-              <option value="OTHER">Altul</option>
-            </select>
-          </div>
+          <Box sx={{ display: 'flex', justifyContent: 'center' }}>
+            <Box sx={{ position: 'relative' }}>
+              <Avatar src={photoPreview ?? undefined} sx={{ width: 84, height: 84, bgcolor: 'primary.light', fontSize: 28 }}>
+                {form.firstName ? form.firstName[0] : '?'}
+              </Avatar>
+              <IconButton
+                component="label"
+                size="small"
+                disabled={isSaving}
+                sx={{
+                  position: 'absolute', bottom: -4, right: -4, bgcolor: 'primary.main', color: 'white',
+                  '&:hover': { bgcolor: 'primary.dark' },
+                }}
+              >
+                <PhotoCameraIcon fontSize="small" />
+                <input hidden type="file" accept="image/*" onChange={handlePhotoSelect} />
+              </IconButton>
+            </Box>
+          </Box>
 
-          <div>
-            <label className="block text-xs font-semibold text-earbore-gray uppercase tracking-wider mb-1.5">Data nașterii</label>
-            <input type="date" name="birthDate" value={form.birthDate} onChange={handleChange} className="input-base" disabled={isSaving} />
-          </div>
+          {/* Prenume + Nume */}
+          <Box sx={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 2 }}>
+            <TextField label="Prenume" name="firstName" value={form.firstName} onChange={handleChange} required fullWidth disabled={isSaving} />
+            <TextField label="Nume" name="lastName" value={form.lastName} onChange={handleChange} required fullWidth disabled={isSaving} />
+          </Box>
+
+          {/* Gen + Data nașterii */}
+          <Box sx={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 2 }}>
+            <FormControl fullWidth disabled={isSaving}>
+              <InputLabel>Gen</InputLabel>
+              <Select label="Gen" value={form.gender} onChange={handleSelectChange('gender')}>
+                <MenuItem value="">Nespecificat</MenuItem>
+                <MenuItem value="MALE">Masculin</MenuItem>
+                <MenuItem value="FEMALE">Feminin</MenuItem>
+                <MenuItem value="OTHER">Altul</MenuItem>
+              </Select>
+            </FormControl>
+            <TextField
+              label="Data nașterii" type="date" name="birthDate" value={form.birthDate} onChange={handleChange}
+              fullWidth disabled={isSaving} slotProps={{ inputLabel: { shrink: true } }}
+            />
+          </Box>
 
           {members.length > 0 && (
             <>
-              <div className="grid grid-cols-2 gap-3 pt-2 border-t border-earbore-border">
-                <div className="col-span-2">
-                  <p className="text-xs font-semibold text-earbore-gray uppercase tracking-wider mb-1.5 mt-2">
-                    Părinți (opțional)
-                  </p>
-                </div>
-                <div>
-                  <label className="block text-xs text-earbore-gray mb-1.5">Tată</label>
-                  <select name="fatherId" value={form.fatherId} onChange={handleChange} className="input-base" disabled={isSaving}>
-                    <option value="">—</option>
-                    {fatherOptions.map((m) => (
-                      <option key={m.id} value={m.id}>{m.firstName} {m.lastName}</option>
-                    ))}
-                  </select>
-                </div>
-                <div>
-                  <label className="block text-xs text-earbore-gray mb-1.5">Mamă</label>
-                  <select name="motherId" value={form.motherId} onChange={handleChange} className="input-base" disabled={isSaving}>
-                    <option value="">—</option>
-                    {motherOptions.map((m) => (
-                      <option key={m.id} value={m.id}>{m.firstName} {m.lastName}</option>
-                    ))}
-                  </select>
-                </div>
-              </div>
+              <Divider><Typography variant="caption" color="text.secondary">PĂRINȚI (opțional)</Typography></Divider>
 
-              <div className="grid grid-cols-2 gap-3 pt-2 border-t border-earbore-border">
-                <div className="col-span-2">
-                  <p className="text-xs font-semibold text-earbore-gray uppercase tracking-wider mb-1.5 mt-2">
-                    Partener (opțional)
-                  </p>
-                </div>
-                <div>
-                  <label className="block text-xs text-earbore-gray mb-1.5">Partener</label>
-                  <select name="partnerId" value={form.partnerId} onChange={handleChange} className="input-base" disabled={isSaving}>
-                    <option value="">—</option>
-                    {members.map((m) => (
-                      <option key={m.id} value={m.id}>{m.firstName} {m.lastName}</option>
-                    ))}
-                  </select>
-                </div>
-                <div>
-                  <label className="block text-xs text-earbore-gray mb-1.5">Status</label>
-                  <select name="partnerStatus" value={form.partnerStatus} onChange={handleChange} className="input-base" disabled={isSaving}>
-                    <option value="MARRIED">Căsătoriți</option>
-                    <option value="PARTNER">Parteneri</option>
-                    <option value="DIVORCED">Divorțați</option>
-                    <option value="WIDOWED">Văduv/ă</option>
-                  </select>
-                </div>
-              </div>
+              {/* Tată + Mamă */}
+              <Box sx={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 2 }}>
+                <FormControl fullWidth disabled={isSaving}>
+                  <InputLabel>Tată</InputLabel>
+                  <Select label="Tată" value={form.fatherId} onChange={handleSelectChange('fatherId')}>
+                    <MenuItem value="">—</MenuItem>
+                    {fatherOptions.map((m) => <MenuItem key={m.id} value={m.id}>{m.firstName} {m.lastName}</MenuItem>)}
+                  </Select>
+                </FormControl>
+                <FormControl fullWidth disabled={isSaving}>
+                  <InputLabel>Mamă</InputLabel>
+                  <Select label="Mamă" value={form.motherId} onChange={handleSelectChange('motherId')}>
+                    <MenuItem value="">—</MenuItem>
+                    {motherOptions.map((m) => <MenuItem key={m.id} value={m.id}>{m.firstName} {m.lastName}</MenuItem>)}
+                  </Select>
+                </FormControl>
+              </Box>
 
-              <div className="pt-2 border-t border-earbore-border">
-                <p className="text-xs font-semibold text-earbore-gray uppercase tracking-wider mb-1.5 mt-2">
-                  Copii (opțional) — noul membru va deveni părintele lor
-                </p>
-                <div className="max-h-32 overflow-y-auto space-y-1.5 bg-earbore-grayLight rounded-xl p-2.5">
+              <Divider><Typography variant="caption" color="text.secondary">PARTENER (opțional)</Typography></Divider>
+
+              {/* Partener + Status (7/5 ≈ 1.4fr / 1fr) */}
+              <Box sx={{ display: 'grid', gridTemplateColumns: '1.4fr 1fr', gap: 2 }}>
+                <FormControl fullWidth disabled={isSaving}>
+                  <InputLabel>Partener</InputLabel>
+                  <Select label="Partener" value={form.partnerId} onChange={handleSelectChange('partnerId')}>
+                    <MenuItem value="">—</MenuItem>
+                    {members.map((m) => <MenuItem key={m.id} value={m.id}>{m.firstName} {m.lastName}</MenuItem>)}
+                  </Select>
+                </FormControl>
+                <FormControl fullWidth disabled={isSaving}>
+                  <InputLabel>Status</InputLabel>
+                  <Select label="Status" value={form.partnerStatus} onChange={handleSelectChange('partnerStatus')}>
+                    <MenuItem value="MARRIED">Căsătoriți</MenuItem>
+                    <MenuItem value="PARTNER">Parteneri</MenuItem>
+                    <MenuItem value="DIVORCED">Divorțați</MenuItem>
+                    <MenuItem value="WIDOWED">Văduv/ă</MenuItem>
+                  </Select>
+                </FormControl>
+              </Box>
+
+              <Divider><Typography variant="caption" color="text.secondary">COPII (opțional)</Typography></Divider>
+              <Typography variant="body2" color="text.secondary" sx={{ mt: -1.5 }}>
+                Noul membru va deveni părintele copiilor selectați.
+              </Typography>
+              <Box sx={{ maxHeight: 160, overflowY: 'auto', bgcolor: 'grey.50', borderRadius: 2, p: 1.5, border: '1px solid', borderColor: 'divider' }}>
+                <FormGroup>
                   {members.map((m) => (
-                    <label key={m.id} className="flex items-center gap-2 text-sm text-earbore-ink cursor-pointer">
-                      <input
-                        type="checkbox"
-                        checked={childrenIds.includes(m.id)}
-                        onChange={() => toggleChild(m.id)}
-                        disabled={isSaving}
-                        className="accent-earbore-600"
-                      />
-                      {m.firstName} {m.lastName}
-                    </label>
+                    <FormControlLabel
+                      key={m.id}
+                      control={<Checkbox checked={childrenIds.includes(m.id)} onChange={() => toggleChild(m.id)} disabled={isSaving} size="small" />}
+                      label={`${m.firstName} ${m.lastName}`}
+                    />
                   ))}
-                </div>
-              </div>
+                </FormGroup>
+              </Box>
             </>
           )}
 
-          {error && <p className="text-earbore-danger text-sm text-center bg-red-50 p-2.5 rounded-xl">{error}</p>}
+          {error && <Alert severity="error">{error}</Alert>}
+        </DialogContent>
 
-          <div className="flex gap-3 pt-2">
-            <button type="button" onClick={onClose} disabled={isSaving} className="btn-outline flex-1">
-              Anulează
-            </button>
-            <button type="submit" disabled={isSaving} className="btn-primary flex-1 disabled:opacity-50">
-              {isSaving ? 'Se salvează...' : 'Salvează'}
-            </button>
-          </div>
-        </form>
-      </div>
-    </div>
+        <DialogActions sx={{ p: 2.5 }}>
+          <Button onClick={onClose} disabled={isSaving} variant="outlined" color="inherit">Anulează</Button>
+          <Button
+            type="submit" disabled={isSaving} variant="contained"
+            startIcon={isSaving ? <CircularProgress size={16} color="inherit" /> : undefined}
+          >
+            {isSaving ? 'Se salvează...' : 'Salvează'}
+          </Button>
+        </DialogActions>
+      </form>
+    </Dialog>
   );
 };
 

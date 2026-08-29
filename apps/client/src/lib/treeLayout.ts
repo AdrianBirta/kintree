@@ -4,8 +4,8 @@ import type { FamilyMember, FamilyTreeData, Partnership, Alliance } from '../typ
 // CONSTANTE — reglează doar aici, algoritmul nu se schimbă
 // ─────────────────────────────────────────────────────────────
 export const LAYOUT = {
-  CARD_WIDTH: 180,
-  CARD_HEIGHT: 120,
+  CARD_WIDTH: 184,
+  CARD_HEIGHT: 204,
   COUPLE_GAP: 24,
   SIBLING_GAP: 40,
   RANK_GAP: 130,
@@ -16,6 +16,9 @@ export const LAYOUT = {
   COORD_EPSILON: 0.5,
   MAX_TRANSPOSE_PASSES: 20,
 };
+
+// NOU — direcția de randare a arborelui pe verticală
+export type TreeDirection = 'top-down' | 'bottom-up';
 
 // ─────────────────────────────────────────────────────────────
 // TIPURI DE IEȘIRE
@@ -43,7 +46,7 @@ export interface LayoutCoupleFrame {
 export interface LayoutEdge {
   id: string;
   path: string;
-  kind: 'parent-child' | 'union-child' | 'secondary-partner' | 'alliance'; // NOU: 'alliance'
+  kind: 'parent-child' | 'union-child' | 'secondary-partner' | 'alliance';
   long?: boolean;
 }
 
@@ -53,6 +56,8 @@ export interface FamilyTreeLayout {
   edges: LayoutEdge[];
   contentWidth: number;
   contentHeight: number;
+  direction: TreeDirection; // NOU
+  maxRank: number;          // NOU — necesar pentru drag & drop (vezi useCardDrag.ts)
 }
 
 // ─────────────────────────────────────────────────────────────
@@ -100,12 +105,9 @@ function computeRanks(
   members: FamilyMember[],
   relations: { parentId: string; childId: string }[],
   partnerships: Partnership[],
-  alliances: Alliance[], // NOU
+  alliances: Alliance[],
 ): Map<string, number> {
   const rank = new Map<string, number>();
-  // NOU: dacă un membru are manualRank (mutat manual prin drag pe verticală),
-  // pornim de acolo în loc de 0 — restul relaxării (regulile de mai jos) se ocupă
-  // automat de "cascadă" (copiii/partenerii/cuscrii sunt împinși după el).
   members.forEach((m) => rank.set(m.id, m.manualRank ?? 0));
 
   const validRelations = relations.filter((r) => r.parentId !== r.childId);
@@ -116,7 +118,6 @@ function computeRanks(
   for (let iter = 0; iter < maxIter; iter++) {
     let changed = false;
 
-    // regula 1: copilul e cu cel puțin un nivel sub părinte
     for (const rel of validRelations) {
       const pr = rank.get(rel.parentId);
       const cr = rank.get(rel.childId);
@@ -127,7 +128,6 @@ function computeRanks(
       }
     }
 
-    // regula 2: partenerii sunt mereu pe același nivel (egalăm la maxim)
     for (const p of partnerships) {
       if (p.partnerAId === p.partnerBId) continue;
       const ra = rank.get(p.partnerAId);
@@ -138,8 +138,6 @@ function computeRanks(
       if (rb !== maxR) { rank.set(p.partnerBId, maxR); changed = true; }
     }
 
-    // regula 3 (NOU): alianțele — "cuscrii" (părinții a doi parteneri) sunt aduși
-    // pe același nivel, exact ca partenerii, dar NU formează o unitate/cuplu în layout
     for (const al of alliances) {
       if (al.memberAId === al.memberBId) continue;
       const ra = rank.get(al.memberAId);
@@ -392,10 +390,7 @@ function transposeReduceCrossings(
 }
 
 // ─────────────────────────────────────────────────────────────
-// PASUL 5C (NOU) — APROPIEREA CUSCRILOR PE ACELAȘI RÂND
-// După ce ordinea e stabilă, apropiem unitățile legate printr-o alianță (cuscri)
-// una de alta pe rândul lor comun, mutând doar unitatea B lângă A (fără să atingem
-// alte rânduri și fără să reordonăm restul rândului mai mult decât e nevoie).
+// PASUL 5C — APROPIEREA CUSCRILOR PE ACELAȘI RÂND
 // ─────────────────────────────────────────────────────────────
 function clusterAlliancesWithinRanks(
   levelsMap: Map<number, string[]>,
@@ -417,10 +412,10 @@ function clusterAlliancesWithinRanks(
 
     const moved = new Set<string>();
     for (const [a, b] of pairsHere) {
-      if (moved.has(a) || moved.has(b)) continue; // evităm conflicte cu mai multe alianțe pe același rând
+      if (moved.has(a) || moved.has(b)) continue;
       const idxA = order.indexOf(a);
       const idxB = order.indexOf(b);
-      if (Math.abs(idxA - idxB) === 1) continue; // deja adiacente
+      if (Math.abs(idxA - idxB) === 1) continue;
 
       order.splice(idxB, 1);
       const newIdxA = order.indexOf(a);
@@ -535,13 +530,16 @@ function partnerConnectorPath(ax: number, ay: number, bx: number, by: number): s
 // ─────────────────────────────────────────────────────────────
 // FUNCȚIA PRINCIPALĂ
 // ─────────────────────────────────────────────────────────────
-export function layoutFamilyTree(data: FamilyTreeData | undefined): FamilyTreeLayout {
+export function layoutFamilyTree(
+  data: FamilyTreeData | undefined,
+  direction: TreeDirection = 'top-down',
+): FamilyTreeLayout {
   if (!data || data.members.length === 0) {
-    return { members: [], couples: [], edges: [], contentWidth: 0, contentHeight: 0 };
+    return { members: [], couples: [], edges: [], contentWidth: 0, contentHeight: 0, direction, maxRank: 0 };
   }
 
   const { members, relations, partnerships } = data;
-  const alliances = data.alliances ?? []; // NOU
+  const alliances = data.alliances ?? [];
   const membersById = new Map(members.map((m) => [m.id, m]));
 
   const rank = computeRanks(members, relations, partnerships, alliances);
@@ -560,8 +558,22 @@ export function layoutFamilyTree(data: FamilyTreeData | undefined): FamilyTreeLa
 
   orderLevels(levelsMap, parentUnitsOf, childUnitsOf, manualOrderByUnit);
   transposeReduceCrossings(levelsMap, childUnitsOf);
-  clusterAlliancesWithinRanks(levelsMap, memberToUnit, alliances); // NOU
+  clusterAlliancesWithinRanks(levelsMap, memberToUnit, alliances);
   const centerX = assignCoordinates(unitsById, levelsMap, parentUnitsOf, childUnitsOf);
+
+  // NOU — pregătim conversia rank -> Y și punctele de ancorare ale conexiunilor,
+  // ținând cont de direcție. În 'bottom-up' inversăm ordinea rândurilor pe verticală
+  // (rank 0 = strămoșii ajunge jos, ultima generație ajunge sus) și, în același timp,
+  // inversăm și capătul din care pleacă/în care intră o linie de conexiune, ca traseul
+  // să rămână un arc curat, nu o buclă.
+  const ranksPresent = [...levelsMap.keys()];
+  const maxRank = ranksPresent.length > 0 ? Math.max(...ranksPresent) : 0;
+
+  const rankToY = (r: number) =>
+    (direction === 'bottom-up' ? maxRank - r : r) * (LAYOUT.CARD_HEIGHT + LAYOUT.RANK_GAP);
+
+  const parentConnectorY = (y: number) => (direction === 'bottom-up' ? y : y + LAYOUT.CARD_HEIGHT);
+  const childConnectorY = (y: number) => (direction === 'bottom-up' ? y + LAYOUT.CARD_HEIGHT : y);
 
   const memberPositions: LayoutMemberPosition[] = [];
   const couples: LayoutCoupleFrame[] = [];
@@ -569,7 +581,7 @@ export function layoutFamilyTree(data: FamilyTreeData | undefined): FamilyTreeLa
   let maxY = 0;
 
   for (const [r, unitIds] of levelsMap) {
-    const y = r * (LAYOUT.CARD_HEIGHT + LAYOUT.RANK_GAP);
+    const y = rankToY(r);
     for (const unitId of unitIds) {
       const unit = unitsById.get(unitId)!;
       const cx = centerX.get(unitId)!;
@@ -590,7 +602,7 @@ export function layoutFamilyTree(data: FamilyTreeData | undefined): FamilyTreeLa
 
         couples.push({
           unitId, rank: r, x: frameX, y: frameY, width: frameW, height: frameH,
-          unionX: cx, unionY: y + LAYOUT.CARD_HEIGHT,
+          unionX: cx, unionY: parentConnectorY(y),
         });
 
         maxX = Math.max(maxX, frameX + frameW);
@@ -621,7 +633,7 @@ export function layoutFamilyTree(data: FamilyTreeData | undefined): FamilyTreeLa
     const childPos = posById.get(childId);
     if (!childPos) return;
     const childTopX = childPos.x + LAYOUT.CARD_WIDTH / 2;
-    const childTopY = childPos.y;
+    const childTopY = childConnectorY(childPos.y);
 
     const parentUnitIds = new Set(
       parentIds.map((pid) => memberToUnit.get(pid)).filter((v): v is string => !!v),
@@ -650,7 +662,7 @@ export function layoutFamilyTree(data: FamilyTreeData | undefined): FamilyTreeLa
           id: key,
           kind: 'parent-child',
           long: isLong,
-          path: bezierPath(pPos.x + LAYOUT.CARD_WIDTH / 2, pPos.y + LAYOUT.CARD_HEIGHT, childTopX, childTopY, isLong),
+          path: bezierPath(pPos.x + LAYOUT.CARD_WIDTH / 2, parentConnectorY(pPos.y), childTopX, childTopY, isLong),
         });
       }
     });
@@ -670,7 +682,6 @@ export function layoutFamilyTree(data: FamilyTreeData | undefined): FamilyTreeLa
     });
   });
 
-  // NOU — muchii vizuale pentru alianțele de tip "cuscri"
   const drawnAllianceKeys = new Set<string>();
   alliances.forEach((a) => {
     const key = [a.memberAId, a.memberBId].sort().join('|');
@@ -697,5 +708,7 @@ export function layoutFamilyTree(data: FamilyTreeData | undefined): FamilyTreeLa
     edges,
     contentWidth: maxX + LAYOUT.SIBLING_GAP,
     contentHeight: maxY + LAYOUT.RANK_GAP,
+    direction,
+    maxRank,
   };
 }

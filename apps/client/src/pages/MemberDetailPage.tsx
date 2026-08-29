@@ -7,6 +7,10 @@ import { calculateAge, isDeceased } from '../utils/age';
 import Header from '../components/layout/Header';
 import { format } from 'date-fns';
 import { ro } from 'date-fns/locale';
+import Button from '@mui/material/Button';
+import IconButton from '@mui/material/IconButton';
+import PhotoCameraIcon from '@mui/icons-material/PhotoCamera';
+import ConfirmDialog from '../components/common/ConfirmDialog';
 
 const GENDER_LABELS: Record<string, string> = { MALE: 'Masculin', FEMALE: 'Feminin', OTHER: 'Altul' };
 const STATUS_LABELS: Record<string, string> = {
@@ -26,6 +30,10 @@ const MemberDetailPage: React.FC = () => {
   const [form, setForm] = useState<Partial<FamilyMember>>({});
   const [isSaving, setIsSaving] = useState(false);
 
+  // NOU — poza selectată în timpul editării (înainte de upload) + preview local
+  const [photoFile, setPhotoFile] = useState<File | null>(null);
+  const [photoPreview, setPhotoPreview] = useState<string | null>(null);
+
   const [selectedPartnerId, setSelectedPartnerId] = useState('');
   const [partnerStatus, setPartnerStatus] = useState('MARRIED');
   const [isLinkingPartner, setIsLinkingPartner] = useState(false);
@@ -36,6 +44,7 @@ const MemberDetailPage: React.FC = () => {
   const [selectedChildId, setSelectedChildId] = useState('');
   const [isLinkingChild, setIsLinkingChild] = useState(false);
 
+  const [confirmOpen, setConfirmOpen] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
 
   const loadMember = useCallback(() => {
@@ -59,11 +68,40 @@ const MemberDetailPage: React.FC = () => {
     setForm({ ...form, [name]: value === '' ? undefined : name === 'heightCm' ? Number(value) : value });
   };
 
+  // NOU — selectarea unei poze noi în modul editare
+  const handlePhotoSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setPhotoFile(file);
+    setPhotoPreview(URL.createObjectURL(file));
+  };
+
+  const handleStartEditing = () => {
+    setIsEditing(true);
+  };
+
+  // NOU — la anulare, renunțăm și la poza selectată dar neîncă salvată
+  const handleCancelEditing = () => {
+    if (member) {
+      const { parents, children, partnersA, partnersB, ...editableFields } = member;
+      setForm(editableFields);
+    }
+    setPhotoFile(null);
+    setPhotoPreview(null);
+    setIsEditing(false);
+  };
+
   const handleSave = async () => {
     if (!id) return;
     setIsSaving(true);
     try {
       await familyMembersService.update(id, form);
+      // NOU — dacă a fost selectată o poză nouă, o încărcăm după salvarea datelor
+      if (photoFile) {
+        await familyMembersService.uploadPhoto(id, photoFile);
+      }
+      setPhotoFile(null);
+      setPhotoPreview(null);
       loadMember();
       setIsEditing(false);
     } finally {
@@ -129,16 +167,13 @@ const MemberDetailPage: React.FC = () => {
 
   const handleDelete = async () => {
     if (!id || !member) return;
-    const confirmed = window.confirm(
-      `Sigur vrei să ștergi pe ${member.firstName} ${member.lastName}? Se vor elimina și toate relațiile de rudenie și parteneriatele asociate. Acțiunea nu poate fi anulată.`,
-    );
-    if (!confirmed) return;
     setIsDeleting(true);
     try {
       await familyMembersService.remove(id);
       navigate('/dashboard');
     } finally {
       setIsDeleting(false);
+      setConfirmOpen(false);
     }
   };
 
@@ -168,6 +203,9 @@ const MemberDetailPage: React.FC = () => {
   const deceased = isDeceased(member.deathDate);
   const age = calculateAge(member.birthDate, member.deathDate);
 
+  // NOU — sursa afișată pentru avatar: preview local (dacă tocmai a fost aleasă o poză nouă) sau poza salvată
+  const displayedImageUrl = photoPreview ?? member.imageUrl;
+
   return (
     <div className="min-h-screen bg-earbore-grayLight">
       <Header />
@@ -180,14 +218,31 @@ const MemberDetailPage: React.FC = () => {
         <div className="bg-white rounded-2xl shadow-sm border border-earbore-border p-8">
           <div className="flex items-start justify-between mb-6">
             <div className="flex items-center gap-4">
-              <div
-                className={`w-20 h-20 rounded-full overflow-hidden border-2 flex items-center justify-center text-2xl font-bold ${deceased ? 'border-earbore-border bg-earbore-grayLight text-earbore-gray' : 'border-earbore-400 bg-earbore-100 text-earbore-700'
-                  }`}
-              >
-                {member.imageUrl ? (
-                  <img src={member.imageUrl} alt={member.firstName} className="w-full h-full object-cover" />
-                ) : (
-                  <span>{member.firstName[0]}{member.lastName[0]}</span>
+              {/* NOU — avatar cu buton de schimbare poză, vizibil doar în modul editare */}
+              <div className="relative">
+                <div
+                  className={`w-20 h-20 rounded-full overflow-hidden border-2 flex items-center justify-center text-2xl font-bold ${deceased ? 'border-earbore-border bg-earbore-grayLight text-earbore-gray' : 'border-earbore-400 bg-earbore-100 text-earbore-700'
+                    }`}
+                >
+                  {displayedImageUrl ? (
+                    <img src={displayedImageUrl} alt={member.firstName} className="w-full h-full object-cover" />
+                  ) : (
+                    <span>{member.firstName[0]}{member.lastName[0]}</span>
+                  )}
+                </div>
+                {isEditing && (
+                  <IconButton
+                    component="label"
+                    size="small"
+                    disabled={isSaving}
+                    sx={{
+                      position: 'absolute', bottom: -4, right: -4, bgcolor: 'primary.main', color: 'white',
+                      '&:hover': { bgcolor: 'primary.dark' },
+                    }}
+                  >
+                    <PhotoCameraIcon fontSize="small" />
+                    <input hidden type="file" accept="image/*" onChange={handlePhotoSelect} />
+                  </IconButton>
                 )}
               </div>
               <div>
@@ -209,22 +264,36 @@ const MemberDetailPage: React.FC = () => {
             </div>
 
             <div className="flex gap-2">
+              {isEditing && (
+                <button
+                  onClick={handleCancelEditing}
+                  disabled={isSaving}
+                  className="btn-outline text-sm py-2 px-4"
+                >
+                  Anulează
+                </button>
+              )}
               <button
-                onClick={() => (isEditing ? handleSave() : setIsEditing(true))}
+                onClick={() => (isEditing ? handleSave() : handleStartEditing())}
                 disabled={isSaving}
                 className="btn-outline text-sm py-2 px-4"
               >
                 {isEditing ? (isSaving ? 'Se salvează...' : 'Salvează') : 'Editează'}
               </button>
-              <button
-                onClick={handleDelete}
-                disabled={isDeleting}
-                className="text-sm py-2 px-4 rounded-xl border-2 border-earbore-danger/30 text-earbore-danger font-semibold hover:bg-red-50 transition-colors cursor-pointer disabled:opacity-50"
-              >
-                {isDeleting ? 'Se șterge...' : 'Șterge'}
-              </button>
+              <Button color="error" variant="outlined" onClick={() => setConfirmOpen(true)}>
+                Șterge membru
+              </Button>
             </div>
           </div>
+
+          <ConfirmDialog
+            open={confirmOpen}
+            title="Ștergi acest membru?"
+            description={`${member.firstName} ${member.lastName} va fi eliminat definitiv din arbore, împreună cu toate relațiile asociate.`}
+            isLoading={isDeleting}
+            onConfirm={handleDelete}
+            onCancel={() => setConfirmOpen(false)}
+          />
 
           {isEditing ? (
             <div className="grid grid-cols-2 gap-4">

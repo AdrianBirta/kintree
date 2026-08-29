@@ -1,13 +1,7 @@
 import {
-  Controller,
-  Get,
-  Post,
-  Body,
-  Patch,
-  Param,
-  Delete,
-  UseGuards,
+  Controller, Get, Post, Body, Patch, Param, Delete, UseGuards, UseInterceptors, UploadedFile,
 } from '@nestjs/common';
+import { FileInterceptor } from '@nestjs/platform-express';
 import { FamilyMembersService } from './family-members.service';
 import { CreateFamilyMemberDto } from './dto/create-family-member.dto';
 import { UpdateFamilyMemberDto } from './dto/update-family-member.dto';
@@ -15,6 +9,7 @@ import { LinkParentChildDto } from './dto/link-parent-child.dto';
 import { JwtAccessGuard } from '../auth/guards/jwt-access.guard';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import { LinkPartnersDto } from 'src/family-members/dto/link-partners.dto';
+import { imageFileFilter } from './utils/image-file-filter';
 
 @UseGuards(JwtAccessGuard)
 @Controller('family-members')
@@ -64,6 +59,22 @@ export class FamilyMembersController {
   @Patch(':id')
   update(@CurrentUser() user: { userId: string }, @Param('id') id: string, @Body() dto: UpdateFamilyMemberDto) {
     return this.familyMembersService.update(user.userId, id, dto);
+  }
+
+  // NOU — încărcare poză de profil (multipart/form-data, câmpul "file")
+  @Post(':id/photo')
+  @UseInterceptors(
+    FileInterceptor('file', {
+      limits: { fileSize: 5 * 1024 * 1024 }, // 5MB
+      fileFilter: imageFileFilter,
+    }),
+  )
+  uploadPhoto(
+    @CurrentUser() user: { userId: string },
+    @Param('id') id: string,
+    @UploadedFile() file: Parameters<FamilyMembersService['uploadPhoto']>[2],
+  ) {
+    return this.familyMembersService.uploadPhoto(user.userId, id, file);
   }
 
   @Delete(':id')

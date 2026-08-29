@@ -1,7 +1,12 @@
 import React, { useCallback, useEffect, useMemo, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { Paper, IconButton, Tooltip } from '@mui/material';
+import AddIcon from '@mui/icons-material/Add';
+import RemoveIcon from '@mui/icons-material/Remove';
+import CropFreeIcon from '@mui/icons-material/CropFree';
+import RestartAltIcon from '@mui/icons-material/RestartAlt';
 import type { FamilyTreeData } from '../../types/family';
-import { layoutFamilyTree, LAYOUT } from '../../lib/treeLayout';
+import { layoutFamilyTree, LAYOUT, type TreeDirection } from '../../lib/treeLayout';
 import { usePanZoom } from '../../hooks/usePanZoom';
 import { useCardDrag } from '../../hooks/useCardDrag';
 import MemberCard from './MemberCard';
@@ -10,16 +15,17 @@ import { useHighlightedLineage } from '../../hooks/useHighlightedLineage';
 
 interface Props {
   treeData?: FamilyTreeData;
+  direction: TreeDirection;
   onReorder: (updates: { memberId: string; manualOrder: number; manualRank?: number }[]) => void;
 }
 
-const FamilyTreeCanvas: React.FC<Props> = ({ treeData, onReorder }) => {
+const FamilyTreeCanvas: React.FC<Props> = ({ treeData, direction, onReorder }) => {
   const navigate = useNavigate();
   const { setFocusId, isDimmed } = useHighlightedLineage(treeData);
   const { containerRef, transform, onPointerDown, onPointerMove, stopPan, zoomBy, reset, fitToContent } =
     usePanZoom();
 
-  const layout = useMemo(() => layoutFamilyTree(treeData), [treeData]);
+  const layout = useMemo(() => layoutFamilyTree(treeData, direction), [treeData, direction]);
 
   const hasFitted = useRef(false);
   useEffect(() => {
@@ -27,6 +33,15 @@ const FamilyTreeCanvas: React.FC<Props> = ({ treeData, onReorder }) => {
     fitToContent(layout.contentWidth, layout.contentHeight);
     hasFitted.current = true;
   }, [layout.contentWidth, layout.contentHeight, fitToContent]);
+
+  // NOU — la schimbarea direcției, reîncadrăm conținutul (pozițiile s-au inversat)
+  const prevDirectionRef = useRef(direction);
+  useEffect(() => {
+    if (prevDirectionRef.current !== direction) {
+      fitToContent(layout.contentWidth, layout.contentHeight);
+      prevDirectionRef.current = direction;
+    }
+  }, [direction, layout.contentWidth, layout.contentHeight, fitToContent]);
 
   const handleCardClick = useCallback((id: string) => navigate(`/members/${id}`), [navigate]);
 
@@ -40,9 +55,6 @@ const FamilyTreeCanvas: React.FC<Props> = ({ treeData, onReorder }) => {
     return map;
   }, [layout]);
 
-  // NOU: acum primim și rank-ul țintă (targetRank) + rank-ul de plecare (sourceRank).
-  // Dacă rank-ul s-a schimbat, doar unitatea mutată primește manualRank — restul
-  // arborelui (copii, partener, cuscri) se recalculează automat prin computeRanks.
   const handleDrop = useCallback(
     (targetRank: number, orderedUnitIds: string[], movedUnitId: string, sourceRank: number) => {
       const updates: { memberId: string; manualOrder: number; manualRank?: number }[] = [];
@@ -93,7 +105,7 @@ const FamilyTreeCanvas: React.FC<Props> = ({ treeData, onReorder }) => {
         {layout.members.map((m) => {
           const isDraggingThis = dragState?.unitId === m.unitId;
           const dx = isDraggingThis ? dragState!.currentX - dragState!.originalCenterX : 0;
-          const dy = isDraggingThis ? dragState!.currentY - dragState!.originalTopY : 0; // NOU
+          const dy = isDraggingThis ? dragState!.currentY - dragState!.originalTopY : 0;
           return (
             <MemberCard
               key={m.id}
@@ -117,8 +129,6 @@ const FamilyTreeCanvas: React.FC<Props> = ({ treeData, onReorder }) => {
           <div
             style={{
               position: 'absolute',
-              // FIX: lățimea/înălțimea vin acum din unitatea REALĂ mutată (cuplu sau
-              // persoană singură), nu mai sunt hardcodate — asta rezolvă decalajul
               left: dragState.slot.x - dragState.slot.width / 2,
               top: dragState.slot.y,
               width: dragState.slot.width,
@@ -132,12 +142,20 @@ const FamilyTreeCanvas: React.FC<Props> = ({ treeData, onReorder }) => {
         )}
       </div>
 
-      <div className="absolute bottom-4 right-4 flex flex-col gap-2 bg-white rounded-xl shadow-md border border-earbore-border p-1.5">
-        <button onClick={() => zoomBy(1.2)} className="w-8 h-8 rounded-lg hover:bg-earbore-50 font-bold text-earbore-700 cursor-pointer" title="Mărește">+</button>
-        <button onClick={() => zoomBy(1 / 1.2)} className="w-8 h-8 rounded-lg hover:bg-earbore-50 font-bold text-earbore-700 cursor-pointer" title="Micșorează">−</button>
-        <button onClick={() => fitToContent(layout.contentWidth, layout.contentHeight)} className="w-8 h-8 rounded-lg hover:bg-earbore-50 text-earbore-700 text-sm cursor-pointer" title="Încadrează tot arborele">⛶</button>
-        <button onClick={reset} className="w-8 h-8 rounded-lg hover:bg-earbore-50 text-earbore-gray text-xs cursor-pointer" title="Resetează zoom-ul">⟲</button>
-      </div>
+      <Paper elevation={3} sx={{ position: 'absolute', bottom: 16, right: 16, display: 'flex', flexDirection: 'column', gap: 0.5, p: 0.5, borderRadius: 3 }}>
+        <Tooltip title="Mărește" placement="left">
+          <IconButton size="small" onClick={() => zoomBy(1.2)}><AddIcon fontSize="small" /></IconButton>
+        </Tooltip>
+        <Tooltip title="Micșorează" placement="left">
+          <IconButton size="small" onClick={() => zoomBy(1 / 1.2)}><RemoveIcon fontSize="small" /></IconButton>
+        </Tooltip>
+        <Tooltip title="Încadrează tot arborele" placement="left">
+          <IconButton size="small" onClick={() => fitToContent(layout.contentWidth, layout.contentHeight)}><CropFreeIcon fontSize="small" /></IconButton>
+        </Tooltip>
+        <Tooltip title="Resetează zoom-ul" placement="left">
+          <IconButton size="small" onClick={reset}><RestartAltIcon fontSize="small" /></IconButton>
+        </Tooltip>
+      </Paper>
     </div>
   );
 };

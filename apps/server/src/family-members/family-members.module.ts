@@ -1,9 +1,10 @@
 import { Module } from '@nestjs/common';
 import { FamilyMembersService } from './family-members.service';
 import { FamilyMembersController } from './family-members.controller';
+import { UploadService } from '../upload/upload.service';
 
 @Module({
   controllers: [FamilyMembersController],
-  providers: [FamilyMembersService],
+  providers: [FamilyMembersService, UploadService],
 })
-export class FamilyMembersModule {}
+export class FamilyMembersModule { }

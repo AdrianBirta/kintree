@@ -2,10 +2,14 @@ import { Injectable, NotFoundException, ForbiddenException, BadRequestException 
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateFamilyMemberDto } from './dto/create-family-member.dto';
 import { UpdateFamilyMemberDto } from './dto/update-family-member.dto';
+import { UploadService } from '../upload/upload.service';
 
 @Injectable()
 export class FamilyMembersService {
-  constructor(private prisma: PrismaService) { }
+  constructor(
+    private prisma: PrismaService,
+    private uploadService: UploadService,
+  ) { }
 
   private normalizeDates<T extends { birthDate?: string; deathDate?: string }>(dto: T) {
     return {
@@ -57,22 +61,26 @@ export class FamilyMembersService {
     return removed;
   }
 
+  // NOU — încarcă poza pe Cloudinary și salvează URL-ul rezultat pe membru.
+  // Notă: nu ștergem poza veche de pe Cloudinary la înlocuire — dacă vrei asta,
+  // adaugă un câmp `imagePublicId` în schema Prisma și apelează uploadService.deleteImage().
+  async uploadPhoto(userId: string, id: string, file: Parameters<UploadService['uploadImage']>[0]) {
+    await this.findOne(userId, id);
+    if (!file) throw new BadRequestException('Niciun fișier trimis.');
+
+    const { url } = await this.uploadService.uploadImage(file, `earbore/${userId}`);
+
+    return this.prisma.familyMember.update({
+      where: { id },
+      data: { imageUrl: url },
+    });
+  }
+
   async getFamilyTree(userId: string) {
-    const members = await this.prisma.familyMember.findMany({
-      where: { ownerId: userId },
-    });
-
-    const relations = await this.prisma.parentChild.findMany({
-      where: { parent: { ownerId: userId } },
-    });
-
-    const partnerships = await this.prisma.partnership.findMany({
-      where: { partnerA: { ownerId: userId } },
-    });
-
-    const alliances = await this.prisma.familyAlliance.findMany({
-      where: { memberA: { ownerId: userId } },
-    });
+    const members = await this.prisma.familyMember.findMany({ where: { ownerId: userId } });
+    const relations = await this.prisma.parentChild.findMany({ where: { parent: { ownerId: userId } } });
+    const partnerships = await this.prisma.partnership.findMany({ where: { partnerA: { ownerId: userId } } });
+    const alliances = await this.prisma.familyAlliance.findMany({ where: { memberA: { ownerId: userId } } });
 
     return { members, relations, partnerships, alliances };
   }
@@ -81,10 +89,7 @@ export class FamilyMembersService {
     await this.findOne(userId, parentId);
     await this.findOne(userId, childId);
 
-    const relation = await this.prisma.parentChild.create({
-      data: { parentId, childId },
-    });
-
+    const relation = await this.prisma.parentChild.create({ data: { parentId, childId } });
     await this.syncAlliances(userId);
     return relation;
   }
@@ -93,10 +98,7 @@ export class FamilyMembersService {
     await this.findOne(userId, parentId);
     await this.findOne(userId, childId);
 
-    const result = await this.prisma.parentChild.deleteMany({
-      where: { parentId, childId },
-    });
-
+    const result = await this.prisma.parentChild.deleteMany({ where: { parentId, childId } });
     await this.syncAlliances(userId);
     return result;
   }
@@ -145,14 +147,6 @@ export class FamilyMembersService {
     return result;
   }
 
-  /**
-   * Recalculează automat alianțele de tip "cuscri": pentru fiecare parteneriat
-   * (căsătorie/relație) dintre doi membri, părinții celor doi devin "cuscri" unii
-   * cu alții. Rulează din nou, de la zero, la fiecare schimbare de parteneriat sau
-   * relație părinte-copil a acestui user — arborii sunt suficient de mici încât
-   * recalcularea completă e mai simplă și mai sigură decât un update incremental
-   * (nu rămân niciodată alianțe vechi, nefolosite, în baza de date).
-   */
   private async syncAlliances(userId: string) {
     const [relations, partnerships] = await Promise.all([
       this.prisma.parentChild.findMany({ where: { parent: { ownerId: userId } } }),

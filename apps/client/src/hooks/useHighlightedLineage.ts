@@ -28,7 +28,6 @@ export function useHighlightedLineage(treeData: FamilyTreeData | undefined) {
       partnersOf.set(p.partnerBId, b);
     });
 
-    // NOU: alianțele (cuscri) intră și ele în lanțul evidențiat la hover
     const alliancesOf = new Map<string, string[]>();
     (treeData.alliances ?? []).forEach((al) => {
       const a = alliancesOf.get(al.memberAId) ?? [];
@@ -39,23 +38,54 @@ export function useHighlightedLineage(treeData: FamilyTreeData | undefined) {
       alliancesOf.set(al.memberBId, b);
     });
 
-    const visited = new Set<string>();
-    const queue = [focusId];
-    while (queue.length > 0) {
-      const id = queue.shift()!;
-      if (visited.has(id)) continue;
-      visited.add(id);
-      [
-        ...(parentsByChild.get(id) ?? []),
-        ...(childrenByParent.get(id) ?? []),
-        ...(partnersOf.get(id) ?? []),
-        ...(alliancesOf.get(id) ?? []),
-      ].forEach((relatedId) => queue.push(relatedId));
+    // 1) Linia de sânge a persoanei asupra căreia stă cursorul: strămoși + descendenți.
+    //    Aici căutarea RĂMÂNE nelimitată — asta chiar înseamnă "lineage".
+    const bloodline = new Set<string>([focusId]);
+
+    const upQueue = [focusId];
+    while (upQueue.length > 0) {
+      const id = upQueue.shift()!;
+      (parentsByChild.get(id) ?? []).forEach((parentId) => {
+        if (!bloodline.has(parentId)) {
+          bloodline.add(parentId);
+          upQueue.push(parentId);
+        }
+      });
     }
-    return visited;
+
+    const downQueue = [focusId];
+    while (downQueue.length > 0) {
+      const id = downQueue.shift()!;
+      (childrenByParent.get(id) ?? []).forEach((childId) => {
+        if (!bloodline.has(childId)) {
+          bloodline.add(childId);
+          downQueue.push(childId);
+        }
+      });
+    }
+
+    // 2) Partenerii direcți ai fiecărei persoane din linia de sânge — UN SINGUR pas.
+    //    Nu continuăm căutarea mai departe pornind de la ei, altfel am ajunge din nou
+    //    să "inundăm" tot arborele prin părinții/rudele partenerului.
+    const visited = new Set(bloodline);
+    bloodline.forEach((id) => {
+      (partnersOf.get(id) ?? []).forEach((partnerId) => visited.add(partnerId));
+    });
+
+    // 3) Alianțele (cuscri) — tot un singur pas, doar pentru cei deja evidențiați.
+    //    Arată legătura dintre familii, dar nu sare mai departe în cealaltă familie extinsă.
+    const withAlliances = new Set(visited);
+    visited.forEach((id) => {
+      (alliancesOf.get(id) ?? []).forEach((alliedId) => withAlliances.add(alliedId));
+    });
+
+    return withAlliances;
   }, [focusId, treeData]);
 
-  const isDimmed = useCallback((memberId: string) => highlighted !== null && !highlighted.has(memberId), [highlighted]);
+  const isDimmed = useCallback(
+    (memberId: string) => highlighted !== null && !highlighted.has(memberId),
+    [highlighted],
+  );
 
   return { setFocusId, isDimmed };
 }
