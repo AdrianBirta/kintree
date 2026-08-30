@@ -102,6 +102,8 @@ export function useCardDrag(
       const self = rankUnits.find((u) => u.unitId === unitId);
       if (!self) return;
 
+      document.body.style.cursor = 'grabbing'; // cursorul rămâne "grabbing" oriunde te-ai muta pe ecran
+
       setDragState({
         unitId,
         sourceRank: memberPos.rank,
@@ -134,7 +136,7 @@ export function useCardDrag(
         const currentX = toWorldX(clientX) - prev.offsetX;
         const currentY = toWorldY(clientY) - prev.offsetY;
 
-        // NOU — conversia Y -> rank ține cont de direcție: în 'bottom-up' rank-ul 0
+        // conversia Y -> rank ține cont de direcție: în 'bottom-up' rank-ul 0
         // (strămoșii) e jos de tot, deci Y mare, iar rank-ul maxim e sus (Y mic).
         const maxRank = layout.maxRank;
         const rawRank = Math.round(currentY / RANK_STEP);
@@ -144,7 +146,18 @@ export function useCardDrag(
         const others = (unitsByRankRef.current.get(targetRank) ?? []).filter((u) => u.unitId !== prev.unitId);
         const centerXNow = currentX + prev.width / 2;
 
-        const insertIndex = others.filter((u) => u.centerX < centerXNow).length;
+        // FIX — pragul de trecere e la MIJLOCUL golului dintre vecini, nu la centrul
+        // vecinului. Comparând cu centrul vecinului, reacția venea abia după ce cardul
+        // tras trecea complet de el, ceea ce dădea senzația de highlight "cu un pas în urmă".
+        let insertIndex = 0;
+        for (let i = 0; i < others.length; i++) {
+          const boundary =
+            i === 0
+              ? others[i].centerX - others[i].width / 2 - LAYOUT.SIBLING_GAP / 2
+              : (others[i - 1].centerX + others[i].centerX) / 2;
+          if (centerXNow > boundary) insertIndex = i + 1;
+          else break;
+        }
 
         let slotX = centerXNow;
         if (others.length > 0) {
@@ -161,7 +174,7 @@ export function useCardDrag(
           }
         }
 
-        // NOU — Y-ul placeholder-ului trebuie calculat cu aceeași formulă rank -> Y
+        // Y-ul placeholder-ului trebuie calculat cu aceeași formulă rank -> Y
         // folosită de treeLayout.ts (rankToY), altfel dreptunghiul punctat "sare"
         // pe direcție greșită când arborele e inversat.
         const verticalPad = (prev.height - LAYOUT.CARD_HEIGHT) / 2;
@@ -182,6 +195,7 @@ export function useCardDrag(
   );
 
   const endDrag = useCallback(() => {
+    document.body.style.cursor = ''; // resetăm cursorul la final
     setDragState((prev) => {
       if (!prev) return null;
       const others = (unitsByRankRef.current.get(prev.slot.rank) ?? [])

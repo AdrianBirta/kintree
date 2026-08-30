@@ -1,5 +1,7 @@
 import React, { useRef, useState } from 'react';
-import { Card, Typography, Chip, Box } from '@mui/material';
+import { Card, Typography, Chip, Box, IconButton, Tooltip } from '@mui/material';
+import AddIcon from '@mui/icons-material/Add';
+import OpenWithIcon from '@mui/icons-material/OpenWith';
 import type { FamilyMember } from '../../types/family';
 import { calculateAge, isDeceased } from '../../utils/age';
 import { LAYOUT } from '../../lib/treeLayout';
@@ -17,10 +19,23 @@ interface Props {
   onMouseEnter?: () => void;
   onMouseLeave?: () => void;
   style?: React.CSSProperties;
+  onAddTop?: (memberId: string) => void;
+  onAddBottom?: (memberId: string) => void;
+  topLabel?: string;
+  bottomLabel?: string;
+}
+
+// NOU — culoarea borderului în funcție de gen: roșu pt. femei, albastru pt. bărbați,
+// mov neutru (culoarea implicită de brand) pt. gen nespecificat/altul
+function getBorderColor(gender?: string | null): string {
+  if (gender === 'FEMALE') return 'var(--color-earbore-danger)';
+  if (gender === 'MALE') return 'var(--color-earbore-info)';
+  return 'var(--color-earbore-400)';
 }
 
 function MemberCard({
   member, x, y, unitId, onClick, onDragStart, onDragMove, onDragEnd, isDragging, onMouseEnter, onMouseLeave, style,
+  onAddTop, onAddBottom, topLabel = 'Adaugă', bottomLabel = 'Adaugă',
 }: Props) {
   const deceased = isDeceased(member.deathDate);
   const age = calculateAge(member.birthDate, member.deathDate);
@@ -28,38 +43,45 @@ function MemberCard({
   const movedRef = useRef(false);
   const pointerDownPos = useRef({ x: 0, y: 0 });
   const [imageExpanded, setImageExpanded] = useState(false);
+  const [hovered, setHovered] = useState(false);
 
-  const handlePointerDown = (e: React.PointerEvent) => {
+  // ── click pe card (navigare către profil) ──
+  // Nu mai pornim drag de aici — drag-ul se face STRICT din butonul "Mută" de mai jos.
+  // Poza, butoanele +, și handle-ul de mutare își opresc singure propagarea click-ului,
+  // așa că acest onClick prinde doar restul cardului.
+  const handleCardClick = () => {
+    if (!movedRef.current) onClick(member.id);
+    movedRef.current = false;
+  };
+
+  const handleCardPointerDown = (e: React.PointerEvent) => {
     e.stopPropagation();
+  };
+
+  // ── handle-ul de mutare — AICI pornește efectiv drag-ul ──
+  const handleMovePointerDown = (e: React.PointerEvent) => {
+    e.stopPropagation();
+    e.preventDefault();
     movedRef.current = false;
     pointerDownPos.current = { x: e.clientX, y: e.clientY };
     e.currentTarget.setPointerCapture(e.pointerId);
     onDragStart?.(unitId, e.clientX, e.clientY);
   };
 
-  const handlePointerMove = (e: React.PointerEvent) => {
+  const handleMovePointerMove = (e: React.PointerEvent) => {
     if (!onDragMove) return;
-    // prag de 4px — altfel orice tremur minim al mâinii în timpul unui click simplu
-    // era interpretat ca "drag" și click-ul pe card nu mai naviga nicăieri
     const dx = e.clientX - pointerDownPos.current.x;
     const dy = e.clientY - pointerDownPos.current.y;
-    if (Math.hypot(dx, dy) > 4) {
-      movedRef.current = true;
-    }
+    if (Math.hypot(dx, dy) > 4) movedRef.current = true;
     onDragMove(e.clientX, e.clientY);
   };
 
-  const handlePointerUp = (e: React.PointerEvent) => {
+  const handleMovePointerUp = (e: React.PointerEvent) => {
+    e.stopPropagation();
     try { e.currentTarget.releasePointerCapture(e.pointerId); } catch { /* deja eliberat */ }
-    if (movedRef.current) {
-      onDragEnd?.();
-    } else {
-      onClick(member.id);
-    }
+    onDragEnd?.();
   };
 
-  // click pe poză: se oprește propagarea către card (nu declanșează drag/navigare),
-  // și doar comută zoom-ul in-place al pozei
   const handlePhotoPointerDown = (e: React.PointerEvent) => e.stopPropagation();
   const handlePhotoPointerUp = (e: React.PointerEvent) => e.stopPropagation();
   const handlePhotoClick = (e: React.MouseEvent) => {
@@ -67,21 +89,33 @@ function MemberCard({
     if (member.imageUrl) setImageExpanded((prev) => !prev);
   };
 
-  // la ieșirea cursorului de pe card, resetăm și highlight-ul de rudenie (primit din
-  // FamilyTreeCanvas) și poza mărită, ca să nu rămână "agățată" deschisă
+  // NOU — la ieșirea cursorului de pe card NU mai închidem poza expandată.
+  // Poza rămâne mărită până dai click din nou pe ea (toggle).
   const handleCardMouseLeave = () => {
-    setImageExpanded(false);
+    setHovered(false);
     onMouseLeave?.();
   };
 
+  const handleCardMouseEnter = () => {
+    setHovered(true);
+    onMouseEnter?.();
+  };
+
+  // butoanele + nu trebuie să declanșeze click-ul cardului
+  const stopAndRun = (fn?: (id: string) => void) => (e: React.PointerEvent | React.MouseEvent) => {
+    e.stopPropagation();
+    e.preventDefault();
+    fn?.(member.id);
+  };
+
   const initials = `${member.firstName[0] ?? ''}${member.lastName[0] ?? ''}`;
+  const borderColor = deceased ? 'divider' : getBorderColor(member.gender);
 
   return (
     <Card
-      onPointerDown={handlePointerDown}
-      onPointerMove={handlePointerMove}
-      onPointerUp={handlePointerUp}
-      onMouseEnter={onMouseEnter}
+      onClick={handleCardClick}
+      onPointerDown={handleCardPointerDown}
+      onMouseEnter={handleCardMouseEnter}
       onMouseLeave={handleCardMouseLeave}
       elevation={isDragging ? 6 : 0}
       sx={{
@@ -91,21 +125,82 @@ function MemberCard({
         width: LAYOUT.CARD_WIDTH,
         height: LAYOUT.CARD_HEIGHT,
         touchAction: 'none',
-        zIndex: isDragging ? 50 : imageExpanded ? 70 : undefined,
-        cursor: 'grab',
-        borderWidth: 2,
+        zIndex: isDragging ? 50 : imageExpanded ? 70 : hovered ? 40 : undefined,
+        cursor: 'pointer', // NOU — implicit pointer pe tot cardul (nu grab); grab e doar pe handle
+        borderWidth: 3, // era 2 — border puțin mai gros
         borderStyle: 'solid',
-        borderColor: deceased ? 'divider' : 'primary.light',
+        borderColor,
         filter: deceased ? 'grayscale(40%)' : undefined,
         display: 'flex',
         flexDirection: 'column',
-        overflow: 'visible', // clipping-ul e gestionat separat, de fiecare zonă (poză / text)
-        transition: 'box-shadow 0.2s, opacity 0.2s',
+        overflow: 'visible',
+        transition: 'box-shadow 0.2s, opacity 0.2s, border-color 0.2s',
         '&:hover': { boxShadow: isDragging ? undefined : 2 },
         ...style,
       }}
     >
-      {/* Poza — 60% din înălțimea cardului, lipită de marginile de sus/stânga/dreapta, ca un header */}
+      {/* Buton sus — adaugă părinte/copil, apare la hover */}
+      {onAddTop && (
+        <Tooltip title={topLabel} placement="top">
+          <IconButton
+            size="small"
+            onPointerDown={stopAndRun()}
+            onClick={stopAndRun(onAddTop)}
+            sx={{
+              position: 'absolute',
+              top: -14,
+              left: '50%',
+              transform: 'translateX(-50%)',
+              width: 26,
+              height: 26,
+              zIndex: 60,
+              bgcolor: 'primary.main',
+              color: 'white',
+              opacity: hovered ? 1 : 0,
+              transition: 'opacity 0.15s',
+              boxShadow: 2,
+              cursor: 'pointer',
+              '&:hover': { bgcolor: 'primary.dark' },
+            }}
+          >
+            <AddIcon sx={{ fontSize: 16 }} />
+          </IconButton>
+        </Tooltip>
+      )}
+
+      {/* NOU — handle dedicat de mutare. Doar de-aici pornește drag-ul cardului. */}
+      <Tooltip title="Mută cardul" placement="left">
+        <IconButton
+          size="small"
+          onPointerDown={handleMovePointerDown}
+          onPointerMove={handleMovePointerMove}
+          onPointerUp={handleMovePointerUp}
+          onPointerCancel={handleMovePointerUp}
+          onClick={(e) => e.stopPropagation()}
+          sx={{
+            position: 'absolute',
+            top: -14,
+            right: -14,
+            width: 26,
+            height: 26,
+            zIndex: 61,
+            bgcolor: 'white',
+            color: 'earbore.gray',
+            border: '1px solid',
+            borderColor: 'divider',
+            opacity: hovered || isDragging ? 1 : 0,
+            transition: 'opacity 0.15s',
+            boxShadow: 2,
+            touchAction: 'none',
+            cursor: isDragging ? 'grabbing' : 'grab',
+            '&:hover': { bgcolor: 'earbore.50', color: 'primary.main' },
+          }}
+        >
+          <OpenWithIcon sx={{ fontSize: 15 }} />
+        </IconButton>
+      </Tooltip>
+
+      {/* Poza */}
       <Box
         onPointerDown={handlePhotoPointerDown}
         onPointerUp={handlePhotoPointerUp}
@@ -137,7 +232,7 @@ function MemberCard({
               borderTopRightRadius: 'inherit',
               borderBottomLeftRadius: imageExpanded ? '12px' : 0,
               borderBottomRightRadius: imageExpanded ? '12px' : 0,
-              transform: imageExpanded ? 'scale(1.7)' : 'scale(1)',
+              transform: imageExpanded ? 'scale(2.3)' : 'scale(1)', // era 1.7 — acum mai mare
               transformOrigin: 'center top',
               transition: 'transform 0.25s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.25s ease, border-radius 0.25s ease',
               boxShadow: imageExpanded ? '0 16px 32px rgba(20, 10, 40, 0.35)' : 'none',
@@ -164,7 +259,7 @@ function MemberCard({
         )}
       </Box>
 
-      {/* Text — restul de 40%: nume, nume anterior, vârstă, status decedat */}
+      {/* Text */}
       <Box
         sx={{
           position: 'relative',
@@ -204,6 +299,35 @@ function MemberCard({
           {deceased && <Chip label="✝ decedat" size="small" variant="outlined" sx={{ height: 20, fontSize: 11 }} />}
         </Box>
       </Box>
+
+      {/* Buton jos — adaugă părinte/copil, apare la hover */}
+      {onAddBottom && (
+        <Tooltip title={bottomLabel} placement="bottom">
+          <IconButton
+            size="small"
+            onPointerDown={stopAndRun()}
+            onClick={stopAndRun(onAddBottom)}
+            sx={{
+              position: 'absolute',
+              bottom: -14,
+              left: '50%',
+              transform: 'translateX(-50%)',
+              width: 26,
+              height: 26,
+              zIndex: 60,
+              bgcolor: 'primary.main',
+              color: 'white',
+              opacity: hovered ? 1 : 0,
+              transition: 'opacity 0.15s',
+              boxShadow: 2,
+              cursor: 'pointer',
+              '&:hover': { bgcolor: 'primary.dark' },
+            }}
+          >
+            <AddIcon sx={{ fontSize: 16 }} />
+          </IconButton>
+        </Tooltip>
+      )}
     </Card>
   );
 }

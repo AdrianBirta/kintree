@@ -210,7 +210,18 @@ function buildUnits(
     if (used.has(p.partnerAId) || used.has(p.partnerBId)) continue;
     const r = rank.get(p.partnerAId) ?? rank.get(p.partnerBId) ?? 0;
     const unitId = `u-${p.id}`;
-    units.push({ id: unitId, rank: r, memberIds: [p.partnerAId, p.partnerBId], partnershipId: p.id });
+
+    // NOU — dacă ambii parteneri au manualOrder setat, cel cu valoarea mai mică
+    // stă în stânga în cadrul cuplului. Altfel păstrăm ordinea implicită
+    // partnerA/partnerB din relație (comportamentul de dinainte).
+    const memberA = members.find((m) => m.id === p.partnerAId);
+    const memberB = members.find((m) => m.id === p.partnerBId);
+    const orderedIds: [string, string] =
+      memberA?.manualOrder != null && memberB?.manualOrder != null && memberA.manualOrder > memberB.manualOrder
+        ? [p.partnerBId, p.partnerAId]
+        : [p.partnerAId, p.partnerBId];
+
+    units.push({ id: unitId, rank: r, memberIds: orderedIds, partnershipId: p.id });
     used.add(p.partnerAId);
     used.add(p.partnerBId);
     memberToUnit.set(p.partnerAId, unitId);

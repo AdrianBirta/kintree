@@ -43,6 +43,29 @@ const theme = createTheme({
     MuiTextField: {
       defaultProps: { size: 'small' },
     },
+    MuiFormControl: {
+      defaultProps: { size: 'small' },
+    },
+    // NOU — Autocomplete pune padding-ul real pe elementul .MuiAutocomplete-input
+    // din interior, nu (doar) pe wrapper-ul .inputRoot. Suprascriind doar
+    // inputRoot, stilul intern al MUI câștiga oricum la specificitate CSS.
+    // Aici țintim ambele straturi explicit, cu selectoare care au prioritate
+    // mai mare decât stilurile default ale componentei.
+    MuiAutocomplete: {
+      defaultProps: { size: 'small' },
+      styleOverrides: {
+        inputRoot: {
+          '&.MuiOutlinedInput-root': {
+            paddingTop: '3.5px',
+            paddingBottom: '3.5px',
+          },
+        },
+        input: {
+          paddingTop: '4.5px !important',
+          paddingBottom: '4.5px !important',
+        },
+      },
+    },
     MuiOutlinedInput: {
       styleOverrides: {
         root: { borderRadius: 12, backgroundColor: '#f8f6fb' },
