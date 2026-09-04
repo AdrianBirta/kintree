@@ -84,16 +84,24 @@ function arraysEqual(a: string[], b: string[]): boolean {
   return a.length === b.length && a.every((v, i) => v === b[i]);
 }
 
+// FIX — foloseam "primul membru cu manualOrder găsit" ca prioritate a unității.
+// Problemă: la un swap de parteneri, cei doi membri au adesea valori diferite
+// (bitul de orientare stânga/dreapta — vezi FamilyTreeCanvas.handleSwapPartners),
+// și în funcție de cine era "primul" în memberIds, prioritatea unității sărea
+// brusc de la o valoare la alta → tot rândul se reordona ("se răsturna") doar
+// pentru că ai apăsat pe butonul de swap. Acum folosim MINIMUL valorilor celor
+// doi membri — stabil, indiferent cine ține bitul 0 sau 1.
 function getManualOrderByUnit(units: Unit[], membersById: Map<string, FamilyMember>): Map<string, number> {
   const map = new Map<string, number>();
   for (const unit of units) {
+    let min: number | null = null;
     for (const memberId of unit.memberIds) {
       const m = membersById.get(memberId);
       if (m?.manualOrder != null) {
-        map.set(unit.id, m.manualOrder);
-        break;
+        min = min === null ? m.manualOrder : Math.min(min, m.manualOrder);
       }
     }
+    if (min !== null) map.set(unit.id, min);
   }
   return map;
 }
@@ -211,9 +219,10 @@ function buildUnits(
     const r = rank.get(p.partnerAId) ?? rank.get(p.partnerBId) ?? 0;
     const unitId = `u-${p.id}`;
 
-    // NOU — dacă ambii parteneri au manualOrder setat, cel cu valoarea mai mică
-    // stă în stânga în cadrul cuplului. Altfel păstrăm ordinea implicită
-    // partnerA/partnerB din relație (comportamentul de dinainte).
+    // Ordinea stânga/dreapta a cuplului: dacă ambii parteneri au manualOrder
+    // setat, cel cu valoarea mai mică stă în stânga. Valorile astea sunt acum
+    // "index*2 + bit orientare" (vezi FamilyTreeCanvas), deci comparația directă
+    // rămâne corectă indiferent de scală.
     const memberA = members.find((m) => m.id === p.partnerAId);
     const memberB = members.find((m) => m.id === p.partnerBId);
     const orderedIds: [string, string] =
@@ -362,6 +371,7 @@ function countCrossingsBetweenRanks(
 function transposeReduceCrossings(
   levelsMap: Map<number, string[]>,
   childUnitsOf: Map<string, Set<string>>,
+  manualOrderByUnit: Map<string, number>, // NOU
 ) {
   const ranks = [...levelsMap.keys()].sort((a, b) => a - b);
 
@@ -378,6 +388,14 @@ function transposeReduceCrossings(
       const lowerOrder = ri < ranks.length - 1 ? levelsMap.get(ranks[ri + 1])! : null;
 
       for (let i = 0; i < order.length - 1; i++) {
+        // FIX — dacă oricare dintre cele două unități are o poziție manuală
+        // explicită (adusă printr-un drag&drop sau printr-un swap de
+        // parteneri), NU o mai interschimbăm aici. Altfel, algoritmul de
+        // reducere a încrucișărilor "corectează" tocmai mutarea pe care ai
+        // făcut-o tu manual — de-asta cardurile păreau că "nu se mută unde
+        // le tragi": se mutau, dar acest pas le trăgea imediat înapoi.
+        if (manualOrderByUnit.has(order[i]) || manualOrderByUnit.has(order[i + 1])) continue;
+
         const costBefore =
           (upperOrder ? countCrossingsBetweenRanks(upperOrder, order, childUnitsOf) : 0) +
           (lowerOrder ? countCrossingsBetweenRanks(order, lowerOrder, childUnitsOf) : 0);
@@ -407,6 +425,7 @@ function clusterAlliancesWithinRanks(
   levelsMap: Map<number, string[]>,
   memberToUnit: Map<string, string>,
   alliances: Alliance[],
+  manualOrderByUnit: Map<string, number>, // NOU
 ) {
   const allianceUnitPairs: [string, string][] = [];
   alliances.forEach((a) => {
@@ -424,6 +443,9 @@ function clusterAlliancesWithinRanks(
     const moved = new Set<string>();
     for (const [a, b] of pairsHere) {
       if (moved.has(a) || moved.has(b)) continue;
+      // NOU — nu deranjăm poziția unei unități fixate manual, din același
+      // motiv ca la transposeReduceCrossings mai sus.
+      if (manualOrderByUnit.has(a) || manualOrderByUnit.has(b)) continue;
       const idxA = order.indexOf(a);
       const idxB = order.indexOf(b);
       if (Math.abs(idxA - idxB) === 1) continue;
@@ -568,15 +590,15 @@ export function layoutFamilyTree(
   });
 
   orderLevels(levelsMap, parentUnitsOf, childUnitsOf, manualOrderByUnit);
-  transposeReduceCrossings(levelsMap, childUnitsOf);
-  clusterAlliancesWithinRanks(levelsMap, memberToUnit, alliances);
+  transposeReduceCrossings(levelsMap, childUnitsOf, manualOrderByUnit);
+  clusterAlliancesWithinRanks(levelsMap, memberToUnit, alliances, manualOrderByUnit);
   const centerX = assignCoordinates(unitsById, levelsMap, parentUnitsOf, childUnitsOf);
 
-  // NOU — pregătim conversia rank -> Y și punctele de ancorare ale conexiunilor,
-  // ținând cont de direcție. În 'bottom-up' inversăm ordinea rândurilor pe verticală
-  // (rank 0 = strămoșii ajunge jos, ultima generație ajunge sus) și, în același timp,
-  // inversăm și capătul din care pleacă/în care intră o linie de conexiune, ca traseul
-  // să rămână un arc curat, nu o buclă.
+  // Pregătim conversia rank -> Y și punctele de ancorare ale conexiunilor,
+  // ținând cont de direcție. În 'bottom-up' inversăm ordinea rândurilor pe
+  // verticală (rank 0 = strămoșii ajunge jos, ultima generație ajunge sus) și,
+  // în același timp, inversăm și capătul din care pleacă/în care intră o linie
+  // de conexiune, ca traseul să rămână un arc curat, nu o buclă.
   const ranksPresent = [...levelsMap.keys()];
   const maxRank = ranksPresent.length > 0 ? Math.max(...ranksPresent) : 0;
 

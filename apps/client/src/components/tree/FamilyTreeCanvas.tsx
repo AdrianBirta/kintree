@@ -6,6 +6,7 @@ import RemoveIcon from '@mui/icons-material/Remove';
 import CropFreeIcon from '@mui/icons-material/CropFree';
 import RestartAltIcon from '@mui/icons-material/RestartAlt';
 import SwapHorizIcon from '@mui/icons-material/SwapHoriz';
+import OpenWithIcon from '@mui/icons-material/OpenWith';
 import type { FamilyTreeData } from '../../types/family';
 import { layoutFamilyTree, LAYOUT, type TreeDirection } from '../../lib/treeLayout';
 import { usePanZoom } from '../../hooks/usePanZoom';
@@ -19,10 +20,15 @@ interface Props {
   direction: TreeDirection;
   onReorder: (updates: { memberId: string; manualOrder: number; manualRank?: number }[]) => void;
   onQuickAdd: (memberId: string, kind: 'parent' | 'child') => void;
-  onSwapPartners?: (memberAId: string, memberBId: string) => void;
 }
 
-const FamilyTreeCanvas: React.FC<Props> = ({ treeData, direction, onReorder, onQuickAdd, onSwapPartners }) => {
+// NOU — "pasul" de bază pentru manualOrder în cadrul unui rând. Fiecare unitate
+// (cuplu sau single) primește index * ORDER_STEP ca poziție de bază. Pentru
+// cupluri, bitul rămas (0 sau 1) codifică cine e stânga/dreapta — vezi
+// handleDrop și handleSwapPartners mai jos, și treeLayout.ts -> buildUnits.
+const ORDER_STEP = 2;
+
+const FamilyTreeCanvas: React.FC<Props> = ({ treeData, direction, onReorder, onQuickAdd }) => {
   const navigate = useNavigate();
   const { setFocusId, isDimmed } = useHighlightedLineage(treeData);
   const { containerRef, transform, onPointerDown, onPointerMove, stopPan, zoomBy, reset, fitToContent } =
@@ -40,11 +46,33 @@ const FamilyTreeCanvas: React.FC<Props> = ({ treeData, direction, onReorder, onQ
 
   const layout = useMemo(() => layoutFamilyTree(treeData, direction), [treeData, direction]);
 
+  // FIX — la primul randare (mai ales imediat după refresh), containerul
+  // poate să nu aibă încă dimensiuni reale în DOM. Înainte, dacă fitToContent
+  // rula pe un dreptunghi gol, arborele era "aruncat" undeva departe în
+  // stânga și marcam fit-ul ca terminat (hasFitted=true), deci nu se mai
+  // repara singur. Acum reîncercăm pe requestAnimationFrame până când
+  // fitToContent reușește efectiv (containerul are dimensiuni reale).
   const hasFitted = useRef(false);
   useEffect(() => {
     if (hasFitted.current || layout.contentWidth === 0) return;
-    fitToContent(layout.contentWidth, layout.contentHeight);
-    hasFitted.current = true;
+    let rafId: number | undefined;
+    let cancelled = false;
+
+    const tryFit = () => {
+      if (cancelled) return;
+      const ok = fitToContent(layout.contentWidth, layout.contentHeight);
+      if (ok) {
+        hasFitted.current = true;
+      } else {
+        rafId = requestAnimationFrame(tryFit);
+      }
+    };
+    tryFit();
+
+    return () => {
+      cancelled = true;
+      if (rafId !== undefined) cancelAnimationFrame(rafId);
+    };
   }, [layout.contentWidth, layout.contentHeight, fitToContent]);
 
   const prevDirectionRef = useRef(direction);
@@ -67,6 +95,11 @@ const FamilyTreeCanvas: React.FC<Props> = ({ treeData, direction, onReorder, onQ
     return map;
   }, [layout]);
 
+  const membersById = useMemo(
+    () => new Map((treeData?.members ?? []).map((m) => [m.id, m])),
+    [treeData],
+  );
+
   const handleDrop = useCallback(
     (targetRank: number, orderedUnitIds: string[], movedUnitId: string, sourceRank: number) => {
       const updates: { memberId: string; manualOrder: number; manualRank?: number }[] = [];
@@ -74,9 +107,15 @@ const FamilyTreeCanvas: React.FC<Props> = ({ treeData, direction, onReorder, onQ
       orderedUnitIds.forEach((unitId, index) => {
         const memberIds = memberIdsByUnit.get(unitId) ?? [];
         memberIds.forEach((memberId) => {
+          // Păstrăm bitul de orientare stânga/dreapta al fiecărui membru (0
+          // sau 1 — vezi handleSwapPartners) și schimbăm doar poziția de bază
+          // în rând. Altfel, orice drag&drop ar reseta orientarea aleasă
+          // anterior prin butonul de swap.
+          const existing = membersById.get(memberId);
+          const orientationBit = existing?.manualOrder != null ? existing.manualOrder % ORDER_STEP : 0;
           const update: { memberId: string; manualOrder: number; manualRank?: number } = {
             memberId,
-            manualOrder: index,
+            manualOrder: index * ORDER_STEP + orientationBit,
           };
           if (unitId === movedUnitId && targetRank !== sourceRank) {
             update.manualRank = targetRank;
@@ -87,12 +126,90 @@ const FamilyTreeCanvas: React.FC<Props> = ({ treeData, direction, onReorder, onQ
 
       onReorder(updates);
     },
-    [memberIdsByUnit, onReorder],
+    [memberIdsByUnit, membersById, onReorder],
   );
 
   const { dragState, startDrag, updateDrag, endDrag } = useCardDrag(layout, transform, containerRef, handleDrop);
 
-  const [hoveredCoupleId, setHoveredCoupleId] = useState<string | null>(null);
+  // ordinea vizuală curentă (stânga → dreapta) a unităților de pe un rând,
+  // citită direct din layout — folosită de swap ca să "înghețe" poziția reală
+  const getRankOrderedUnitIds = useCallback(
+    (rank: number) => {
+      const seen = new Set<string>();
+      const items: { unitId: string; centerX: number }[] = [];
+      layout.members.forEach((m) => {
+        if (m.rank !== rank || seen.has(m.unitId)) return;
+        seen.add(m.unitId);
+        const couple = layout.couples.find((c) => c.unitId === m.unitId);
+        items.push({ unitId: m.unitId, centerX: couple ? couple.unionX : m.x + LAYOUT.CARD_WIDTH / 2 });
+      });
+      items.sort((a, b) => a.centerX - b.centerX);
+      return items.map((i) => i.unitId);
+    },
+    [layout],
+  );
+
+  // FIX — swap-ul de parteneri folosea valori fixe 0/1 pentru manualOrder,
+  // ceea ce "fura" din câmpul folosit și pentru poziția cuplului printre
+  // frații lui pe rând, provocând răsturnarea vizuală a întregului rând.
+  // Acum: "înghețăm" poziția curentă (reală) a TUTUROR unităților din acel
+  // rând ca manualOrder = index*ORDER_STEP (exact ca la un drag&drop lăsat
+  // pe loc), iar pentru cuplul selectat inversăm doar bitul de orientare
+  // (+1). Nimic altceva din rând nu se mișcă.
+  const handleSwapPartners = useCallback(
+    (unitId: string) => {
+      const memberIds = memberIdsByUnit.get(unitId);
+      if (!memberIds || memberIds.length !== 2) return;
+      const memberPos = layout.members.find((m) => m.unitId === unitId);
+      if (!memberPos) return;
+
+      const [leftId, rightId] = memberIds;
+      const rankOrderedUnitIds = getRankOrderedUnitIds(memberPos.rank);
+
+      const updates: { memberId: string; manualOrder: number }[] = [];
+      rankOrderedUnitIds.forEach((uId, index) => {
+        if (uId === unitId) {
+          updates.push({ memberId: rightId, manualOrder: index * ORDER_STEP });
+          updates.push({ memberId: leftId, manualOrder: index * ORDER_STEP + 1 });
+          return;
+        }
+        (memberIdsByUnit.get(uId) ?? []).forEach((memberId) => {
+          const existing = membersById.get(memberId);
+          const bit = existing?.manualOrder != null ? existing.manualOrder % ORDER_STEP : 0;
+          updates.push({ memberId, manualOrder: index * ORDER_STEP + bit });
+        });
+      });
+
+      onReorder(updates);
+    },
+    [memberIdsByUnit, layout, getRankOrderedUnitIds, membersById, onReorder],
+  );
+
+  const handleCoupleMovePointerDown = useCallback(
+    (unitId: string) => (e: React.PointerEvent) => {
+      e.stopPropagation();
+      e.preventDefault();
+      try { (e.currentTarget as Element).setPointerCapture(e.pointerId); } catch { /* ignorăm */ }
+      startDrag(unitId, e.clientX, e.clientY);
+    },
+    [startDrag],
+  );
+
+  const handleCoupleMovePointerMove = useCallback(
+    (e: React.PointerEvent) => updateDrag(e.clientX, e.clientY),
+    [updateDrag],
+  );
+
+  const handleCoupleMovePointerUp = useCallback(
+    (e: React.PointerEvent) => {
+      e.stopPropagation();
+      try { (e.currentTarget as Element).releasePointerCapture(e.pointerId); } catch { /* deja eliberat */ }
+      endDrag();
+    },
+    [endDrag],
+  );
+
+  const [hoveredMoveId, setHoveredMoveId] = useState<string | null>(null);
 
   return (
     <div
@@ -120,6 +237,10 @@ const FamilyTreeCanvas: React.FC<Props> = ({ treeData, direction, onReorder, onQ
           const isDraggingThis = dragState?.unitId === m.unitId;
           const dx = isDraggingThis ? dragState!.currentX - dragState!.originalCenterX : 0;
           const dy = isDraggingThis ? dragState!.currentY - dragState!.originalTopY : 0;
+          // NOU — membrii unui cuplu (unitate cu 2 persoane) NU mai au propriul
+          // handle de mutare pe card; mutarea se face din chenarul mare al
+          // cuplului (mai jos). Membrii singuri păstrează handle-ul pe card.
+          const isCoupled = (memberIdsByUnit.get(m.unitId)?.length ?? 1) === 2;
           return (
             <MemberCard
               key={m.id}
@@ -127,6 +248,7 @@ const FamilyTreeCanvas: React.FC<Props> = ({ treeData, direction, onReorder, onQ
               x={m.x + dx}
               y={m.y + dy}
               unitId={m.unitId}
+              canDrag={!isCoupled}
               onAddTop={handleAddTop}
               onAddBottom={handleAddBottom}
               topLabel={topMeansParent ? 'Adaugă părinte' : 'Adaugă copil'}
@@ -143,29 +265,28 @@ const FamilyTreeCanvas: React.FC<Props> = ({ treeData, direction, onReorder, onQ
           );
         })}
 
-        {/* Buton de swap parteneri — FIX: zona de hover e mică (doar banda de sus
-            a chenarului de cuplu), nu mai acoperă cardurile de dedesubt. Înainte,
-            zona ocupa tot chenarul (width/height = width/height cuplu), bloca orice
-            click/hover spre carduri și lăsa să se vadă doar cursorul de "grab" al
-            canvas-ului din spate. */}
-        {onSwapPartners &&
-          layout.couples.map((c) => {
-            const ids = memberIdsByUnit.get(c.unitId) ?? [];
-            if (ids.length !== 2) return null;
-            const isHovered = hoveredCoupleId === c.unitId;
-            return (
+        {/* Controale pentru cupluri: buton de swap (mereu vizibil) + buton de
+            mutare a întregului cuplu (apare la hover pe colțul chenarului).
+            Zonele de hover rămân mici, ca să nu blocheze cardurile de
+            dedesubt. */}
+        {layout.couples.map((c) => {
+          const ids = memberIdsByUnit.get(c.unitId) ?? [];
+          if (ids.length !== 2) return null;
+          const isMoveHovered = hoveredMoveId === c.unitId;
+          const isDraggingThisCouple = dragState?.unitId === c.unitId;
+
+          return (
+            <React.Fragment key={`couple-controls-${c.unitId}`}>
+              {/* Buton swap — mereu vizibil, mai mare și mai vizibil */}
               <div
-                key={`swap-${c.unitId}`}
-                onMouseEnter={() => setHoveredCoupleId(c.unitId)}
-                onMouseLeave={() => setHoveredCoupleId((prev) => (prev === c.unitId ? null : prev))}
                 style={{
                   position: 'absolute',
-                  left: c.unionX - 20,
-                  top: c.y - 6,
-                  width: 40,
-                  height: 34,
+                  left: c.unionX - 22,
+                  top: c.y - 8,
+                  width: 44,
+                  height: 36,
                   pointerEvents: 'auto',
-                  zIndex: 55,
+                  zIndex: 56,
                 }}
               >
                 <Tooltip title="Inversează pozițiile partenerilor" placement="top">
@@ -174,8 +295,49 @@ const FamilyTreeCanvas: React.FC<Props> = ({ treeData, direction, onReorder, onQ
                     onPointerDown={(e) => e.stopPropagation()}
                     onClick={(e) => {
                       e.stopPropagation();
-                      onSwapPartners(ids[0], ids[1]);
+                      handleSwapPartners(c.unitId);
                     }}
+                    style={{
+                      position: 'absolute',
+                      top: 0,
+                      left: '50%',
+                      transform: 'translateX(-50%)',
+                      width: 30,
+                      height: 30,
+                      background: 'var(--color-earbore-500)',
+                      border: '2px solid white',
+                      opacity: 1,
+                      boxShadow: '0 3px 8px rgba(20,10,40,0.3)',
+                      cursor: 'pointer',
+                    }}
+                  >
+                    <SwapHorizIcon sx={{ fontSize: 18, color: 'white' }} />
+                  </IconButton>
+                </Tooltip>
+              </div>
+
+              {/* Buton mutare cuplu — pe colțul chenarului, apare la hover */}
+              <div
+                onMouseEnter={() => setHoveredMoveId(c.unitId)}
+                onMouseLeave={() => setHoveredMoveId((prev) => (prev === c.unitId ? null : prev))}
+                style={{
+                  position: 'absolute',
+                  left: c.x + c.width - 28,
+                  top: c.y - 8,
+                  width: 36,
+                  height: 36,
+                  pointerEvents: 'auto',
+                  zIndex: 56,
+                }}
+              >
+                <Tooltip title="Mută tot cuplul" placement="right">
+                  <IconButton
+                    size="small"
+                    onPointerDown={handleCoupleMovePointerDown(c.unitId)}
+                    onPointerMove={handleCoupleMovePointerMove}
+                    onPointerUp={handleCoupleMovePointerUp}
+                    onPointerCancel={handleCoupleMovePointerUp}
+                    onClick={(e) => e.stopPropagation()}
                     style={{
                       position: 'absolute',
                       top: 0,
@@ -185,18 +347,20 @@ const FamilyTreeCanvas: React.FC<Props> = ({ treeData, direction, onReorder, onQ
                       height: 26,
                       background: 'white',
                       border: '1px solid var(--color-earbore-border)',
-                      opacity: isHovered ? 1 : 0,
+                      opacity: isMoveHovered || isDraggingThisCouple ? 1 : 0,
                       transition: 'opacity 0.15s',
                       boxShadow: '0 2px 6px rgba(20,10,40,0.15)',
-                      cursor: 'pointer',
+                      cursor: isDraggingThisCouple ? 'grabbing' : 'grab',
+                      touchAction: 'none',
                     }}
                   >
-                    <SwapHorizIcon sx={{ fontSize: 16, color: 'primary.main' }} />
+                    <OpenWithIcon sx={{ fontSize: 15, color: 'var(--color-earbore-gray)' }} />
                   </IconButton>
                 </Tooltip>
               </div>
-            );
-          })}
+            </React.Fragment>
+          );
+        })}
 
         {dragState && (
           <div

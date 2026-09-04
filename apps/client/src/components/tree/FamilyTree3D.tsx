@@ -1,3 +1,4 @@
+// FamilyTree3D.tsx
 import React, { useMemo } from 'react';
 import * as THREE from 'three';
 import { Canvas } from '@react-three/fiber';
@@ -5,131 +6,217 @@ import { OrbitControls } from '@react-three/drei';
 import { useNavigate } from 'react-router-dom';
 import type { FamilyTreeData } from '../../types/family';
 import { layoutFamilyTree, LAYOUT, type TreeDirection } from '../../lib/treeLayout';
-import MemberCard3D from './MemberCard3D';
+import MemberCard3D, { ORB_RADIUS } from './MemberCard3D';
 
 interface Props {
   treeData?: FamilyTreeData;
-  // NOU — păstrat doar pentru compatibilitate cu DashboardPage (2D folosește direcția),
-  // dar orientarea 3D e FIXĂ: strămoșii (rank 0) mereu jos, descendenții mereu cresc în sus.
   direction?: TreeDirection;
 }
 
-// scală de conversie din pixeli (spațiul de layout 2D) în unități 3D, doar pe orizontală
-const SCALE_X = 0.014;
-// distanța verticală dintre generații
-const RANK_HEIGHT = 3.1;
+const RANK_HEIGHT = 3.8;
+
+const ANGLE_STEP = 0.42;
+const ARC_SPAN = Math.PI * 1.5;
+const BASE_RADIUS = 1.4;
+const RADIUS_GROWTH = 1.15;
+const MIN_ARC_PER_MEMBER = 0.85;
+
+// spațiu liber lăsat între marginea sferei și capătul liniei — ca
+// linia să nu "lipească" vizual de poză, ci să plutească la mică distanță
+const CONNECTOR_GAP = 0.1;
+// dacă după tăiere nu mai rămâne o linie vizibilă (membri prea apropiați),
+// nu randăm deloc conectorul, ca să evităm o geometrie inversată/glitch
+const MIN_CONNECTOR_LENGTH = 0.05;
 
 type Vec3 = [number, number, number];
 
 // ─────────────────────────────────────────────────────────────
-// O ramură — tub subțire, ușor curbat, mai gros spre trunchi
+// Conector — înlocuiește complet vechea "ramură" (tub curbat, culoare
+// de scoarță). E o tijă dreaptă, subțire, orientată direct între cele
+// două puncte primite. Design intenționat "grafic"/minimalist, nu
+// organic — liniile nu se mai vor niciodată a fi ramuri de copac
+// literale, ci conectori clari între generații.
+//
+// IMPORTANT: `from`/`to` primite aici sunt deja PRE-TĂIATE (vezi
+// `trimToOrbEdge` mai jos) — componenta nu mai știe nimic despre
+// sfere, doar desenează segmentul care i se dă.
 // ─────────────────────────────────────────────────────────────
-interface BranchProps {
+interface ConnectorProps {
   from: Vec3;
   to: Vec3;
   radius: number;
   color: string;
+  opacity?: number;
 }
 
-const Branch: React.FC<BranchProps> = ({ from, to, radius, color }) => {
-  const geometry = useMemo(() => {
+const UP = new THREE.Vector3(0, 1, 0);
+
+const Connector: React.FC<ConnectorProps> = ({ from, to, radius, color, opacity = 0.6 }) => {
+  const transform = useMemo(() => {
     const start = new THREE.Vector3(...from);
     const end = new THREE.Vector3(...to);
-    const mid = start.clone().lerp(end, 0.5);
-    const bendSeed = from[0] * 12.9898 + to[0] * 78.233;
-    mid.x += Math.sin(bendSeed) * 0.18;
+    const delta = end.clone().sub(start);
+    const length = delta.length();
+    if (length < MIN_CONNECTOR_LENGTH) return null;
 
-    const curve = new THREE.CatmullRomCurve3([start, mid, end]);
-    return new THREE.TubeGeometry(curve, 10, radius, 6, false);
-  }, [from, to, radius]);
+    const mid = start.clone().add(end).multiplyScalar(0.5);
+    const quaternion = new THREE.Quaternion().setFromUnitVectors(UP, delta.clone().normalize());
+    return { mid, quaternion, length };
+  }, [from, to]);
+
+  if (!transform) return null;
 
   return (
-    <mesh geometry={geometry} castShadow receiveShadow>
-      <meshStandardMaterial color={color} roughness={0.9} metalness={0} />
+    <mesh position={transform.mid} quaternion={transform.quaternion} castShadow receiveShadow>
+      <cylinderGeometry args={[radius, radius, transform.length, 8, 1]} />
+      <meshStandardMaterial color={color} roughness={0.45} metalness={0.15} transparent opacity={opacity} />
     </mesh>
   );
 };
 
 // ─────────────────────────────────────────────────────────────
-// Trunchi — cilindru simplu, drept, de la sol până la prima generație (rank 0)
+// Trunchi — neschimbat structural, doar culoare puțin mai neutră,
+// aliniată cu paleta noilor conectori.
 // ─────────────────────────────────────────────────────────────
 const Trunk: React.FC<{ x: number; z: number; fromY: number; toY: number }> = ({ x, z, fromY, toY }) => {
   const height = toY - fromY;
   if (height <= 0) return null;
   return (
     <mesh position={[x, fromY + height / 2, z]} castShadow receiveShadow>
-      <cylinderGeometry args={[0.16, 0.26, height, 8]} />
-      <meshStandardMaterial color="#7a5a40" roughness={0.95} />
+      <cylinderGeometry args={[0.1, 0.16, height, 12]} />
+      <meshStandardMaterial color="#8a7f6e" roughness={0.7} metalness={0.1} />
     </mesh>
   );
 };
 
-// ─────────────────────────────────────────────────────────────
-// Frunziș minimal — doar pentru capetele de ramură (membri fără copii)
-// ─────────────────────────────────────────────────────────────
-const FoliageCluster: React.FC<{ position: Vec3 }> = ({ position }) => {
+const Bud: React.FC<{ position: Vec3 }> = ({ position }) => {
   const seed = position[0] * 3.7 + position[2] * 5.1;
-  const scale = 0.4 + (Math.sin(seed) * 0.5 + 0.5) * 0.15;
+  const scale = 0.16 + (Math.sin(seed) * 0.5 + 0.5) * 0.06;
   return (
-    <mesh position={[position[0], position[1] + 0.75, position[2]]}>
-      <icosahedronGeometry args={[scale, 1]} />
-      <meshStandardMaterial color="#7fac68" roughness={1} flatShading />
+    <mesh position={[position[0], position[1] + ORB_RADIUS + 0.15, position[2]]}>
+      <sphereGeometry args={[scale, 16, 16]} />
+      <meshPhysicalMaterial
+        color="#9cb583"
+        transparent
+        opacity={0.5}
+        roughness={0.3}
+        transmission={0.4}
+        thickness={0.3}
+      />
     </mesh>
   );
 };
+
+function connectorColorForRank(rank: number, maxRank: number): string {
+  const t = maxRank > 0 ? rank / maxRank : 0;
+  const dark = new THREE.Color('#8a8272');
+  const light = new THREE.Color('#c9c2b0');
+  return dark.lerp(light, t).getStyle();
+}
+
+// ─────────────────────────────────────────────────────────────
+// Scurtează segmentul from→to cu `offset` la fiecare capăt, ca linia
+// să se oprească exact la marginea sferelor (nu la centrul lor).
+// E singura schimbare care rezolvă efectiv problema liniilor ce
+// "intră și ies" prin poze.
+// ─────────────────────────────────────────────────────────────
+function trimToOrbEdge(from: Vec3, to: Vec3, offset: number): { from: Vec3; to: Vec3 } | null {
+  const start = new THREE.Vector3(...from);
+  const end = new THREE.Vector3(...to);
+  const delta = end.clone().sub(start);
+  const dist = delta.length();
+  if (dist <= offset * 2 + MIN_CONNECTOR_LENGTH) return null; // membri prea apropiați — nu desenăm
+
+  const dir = delta.clone().normalize();
+  const trimmedStart = start.clone().add(dir.clone().multiplyScalar(offset));
+  const trimmedEnd = end.clone().sub(dir.clone().multiplyScalar(offset));
+  return {
+    from: [trimmedStart.x, trimmedStart.y, trimmedStart.z],
+    to: [trimmedEnd.x, trimmedEnd.y, trimmedEnd.z],
+  };
+}
 
 const FamilyTree3D: React.FC<Props> = ({ treeData }) => {
   const navigate = useNavigate();
 
-  // NOU — layout-ul e mereu calculat cu 'top-down' intern, DOAR ca sursă pentru rank și x;
-  // nu folosim y-ul sau edge-urile calculate de layoutFamilyTree (acelea depind de direcție),
-  // ci ne construim singuri poziția verticală pe baza rank-ului brut, mereu în același sens.
   const layout = useMemo(() => layoutFamilyTree(treeData, 'top-down'), [treeData]);
   const maxRank = layout.maxRank || 1;
-
-  // rădăcina (strămoșii) e mereu rank 0 — FIX, nu depinde de toggle-ul din Dashboard
   const rootRank = 0;
 
   const positions = useMemo(() => {
     const map = new Map<string, Vec3>();
-    const cx = layout.contentWidth / 2;
+
+    const byRank = new Map<number, typeof layout.members>();
     layout.members.forEach((m) => {
-      const px = (m.x + LAYOUT.CARD_WIDTH / 2 - cx) * SCALE_X;
-      // rank mic (strămoși) => y mic (jos); rank mare (descendenți) => y mare (sus) — FIX
-      const py = m.rank * RANK_HEIGHT;
-      const seed = m.x * 0.011;
-      const pz = Math.sin(seed) * 0.35;
-      map.set(m.id, [px, py, pz]);
+      const list = byRank.get(m.rank) ?? [];
+      list.push(m);
+      byRank.set(m.rank, list);
     });
+
+    byRank.forEach((members, rank) => {
+      const sorted = [...members].sort((a, b) => a.x - b.x);
+      const count = sorted.length;
+
+      const neededSpan = Math.min(ARC_SPAN, MIN_ARC_PER_MEMBER * Math.max(count - 1, 1));
+      const rankBaseAngle = rank * ANGLE_STEP;
+      const radius = BASE_RADIUS + rank * RADIUS_GROWTH;
+
+      sorted.forEach((m, i) => {
+        const t = count > 1 ? i / (count - 1) - 0.5 : 0;
+        const angle = rankBaseAngle + t * neededSpan;
+
+        const px = Math.cos(angle) * radius;
+        const pz = Math.sin(angle) * radius;
+        const py = m.rank * RANK_HEIGHT;
+
+        map.set(m.id, [px, py, pz]);
+      });
+    });
+
     return map;
   }, [layout]);
 
-  const branches = useMemo(() => {
-    if (!treeData) return [] as { id: string; from: Vec3; to: Vec3; radius: number; color: string }[];
-    const result: { id: string; from: Vec3; to: Vec3; radius: number; color: string }[] = [];
+  const connectors = useMemo(() => {
+    if (!treeData) return [] as { id: string; from: Vec3; to: Vec3; radius: number; color: string; opacity?: number }[];
+    const result: { id: string; from: Vec3; to: Vec3; radius: number; color: string; opacity?: number }[] = [];
+    const gapOffset = ORB_RADIUS + CONNECTOR_GAP;
 
     const radiusForRank = (rank: number) => {
       const t = rank / maxRank;
-      return Math.max(0.045, 0.14 * (1 - t) + 0.045);
+      return Math.max(0.02, 0.05 * (1 - t) + 0.02);
     };
 
     treeData.relations.forEach((r) => {
       const from = positions.get(r.parentId);
       const to = positions.get(r.childId);
+      if (!from || !to) return;
+      const trimmed = trimToOrbEdge(from, to, gapOffset);
+      if (!trimmed) return;
       const childRank = layout.members.find((m) => m.id === r.childId)?.rank ?? 0;
-      if (from && to) result.push({ id: `r-${r.id}`, from, to, radius: radiusForRank(childRank), color: '#8a6448' });
+      result.push({
+        id: `r-${r.id}`,
+        ...trimmed,
+        radius: radiusForRank(childRank),
+        color: connectorColorForRank(childRank, maxRank),
+      });
     });
 
     treeData.partnerships.forEach((p) => {
       const from = positions.get(p.partnerAId);
       const to = positions.get(p.partnerBId);
-      if (from && to) result.push({ id: `p-${p.id}`, from, to, radius: 0.03, color: '#c2a274' });
+      if (!from || !to) return;
+      const trimmed = trimToOrbEdge(from, to, gapOffset);
+      if (!trimmed) return;
+      result.push({ id: `p-${p.id}`, ...trimmed, radius: 0.016, color: '#c2a274', opacity: 0.7 });
     });
 
     (treeData.alliances ?? []).forEach((a) => {
       const from = positions.get(a.memberAId);
       const to = positions.get(a.memberBId);
-      if (from && to) result.push({ id: `a-${a.id}`, from, to, radius: 0.025, color: '#a3bd8f' });
+      if (!from || !to) return;
+      const trimmed = trimToOrbEdge(from, to, gapOffset);
+      if (!trimmed) return;
+      result.push({ id: `a-${a.id}`, ...trimmed, radius: 0.012, color: '#a3bd8f', opacity: 0.55 });
     });
 
     return result;
@@ -158,44 +245,48 @@ const FamilyTree3D: React.FC<Props> = ({ treeData }) => {
   return (
     <div style={{ width: '100%', height: '100%', touchAction: 'none' }}>
       <Canvas
-        camera={{ position: [0.5, totalHeight * 0.55, totalHeight * 1.15 + 9], fov: 42 }}
+        camera={{ position: [0.5, totalHeight * 0.55, totalHeight * 1.25 + 12], fov: 42 }}
         dpr={[1, 2]}
         shadows
       >
-        <color attach="background" args={['#f3f1ea']} />
-        <fog attach="fog" args={['#f3f1ea', totalHeight * 1.6, totalHeight * 3.2 + 20]} />
+        <color attach="background" args={['#faf9f5']} />
+        <fog attach="fog" args={['#faf9f5', totalHeight * 1.7, totalHeight * 3.4 + 26]} />
 
-        <ambientLight intensity={0.75} />
-        <directionalLight position={[6, totalHeight + 8, 8]} intensity={0.9} castShadow shadow-mapSize={[1024, 1024]} />
-        <hemisphereLight args={['#eef2e4', '#5b4632', 0.35]} />
+        <ambientLight intensity={0.85} />
+        <directionalLight position={[6, totalHeight + 8, 8]} intensity={0.7} castShadow shadow-mapSize={[1024, 1024]} />
+        <hemisphereLight args={['#f5f6ef', '#5b4632', 0.3]} />
 
         <OrbitControls
           makeDefault
           enableDamping
           dampingFactor={0.12}
-          minDistance={4}
-          maxDistance={80}
-          maxPolarAngle={Math.PI * 0.48}
+          minDistance={3}
+          maxDistance={100}
+          maxPolarAngle={Math.PI * 0.49}
           target={[0, totalHeight * 0.5, 0]}
+          enablePan
+          screenSpacePanning
+          panSpeed={0.9}
+          zoomToCursor
         />
 
         <mesh rotation={[-Math.PI / 2, 0, 0]} position={[trunkX, groundY - 0.01, trunkZ]} receiveShadow>
-          <circleGeometry args={[2.4, 32]} />
-          <meshStandardMaterial color="#c9d6b3" roughness={1} transparent opacity={0.7} />
+          <circleGeometry args={[3, 32]} />
+          <meshStandardMaterial color="#dbe2cb" roughness={1} transparent opacity={0.55} />
         </mesh>
 
         <Trunk x={trunkX} z={trunkZ} fromY={groundY} toY={0} />
 
-        {branches.map((b) => (
-          <Branch key={b.id} from={b.from} to={b.to} radius={b.radius} color={b.color} />
+        {connectors.map((c) => (
+          <Connector key={c.id} from={c.from} to={c.to} radius={c.radius} color={c.color} opacity={c.opacity} />
         ))}
 
         {layout.members.map((m) => {
           const pos = positions.get(m.id);
-          if (!pos) return null;
+          if (!pos || !m.member) return null;
           return (
             <React.Fragment key={m.id}>
-              {leafMemberIds.has(m.id) && <FoliageCluster position={pos} />}
+              {leafMemberIds.has(m.id) && <Bud position={pos} />}
               <MemberCard3D position={pos} member={m.member} onOpen={() => navigate(`/members/${m.id}`)} />
             </React.Fragment>
           );

@@ -46,43 +46,6 @@ const DashboardPage: React.FC = () => {
 
   useEffect(() => { loadTree(); }, [loadTree]);
 
-
-  // adaugă acest handler lângă handleReorder
-  const handleSwapPartners = useCallback(
-    async (memberAId: string, memberBId: string) => {
-      const memberA = treeData?.members.find((m) => m.id === memberAId);
-      const memberB = treeData?.members.find((m) => m.id === memberBId);
-      const orderA = memberA?.manualOrder ?? 0;
-      const orderB = memberB?.manualOrder ?? 1;
-
-      // dacă erau egale (sau nesetate), le forțăm distincte ca swap-ul să aibă efect vizibil
-      const newOrderA = orderA === orderB ? 1 : orderB;
-      const newOrderB = orderA === orderB ? 0 : orderA;
-
-      setTreeData((prev) => {
-        if (!prev) return prev;
-        return {
-          ...prev,
-          members: prev.members.map((m) => {
-            if (m.id === memberAId) return { ...m, manualOrder: newOrderA };
-            if (m.id === memberBId) return { ...m, manualOrder: newOrderB };
-            return m;
-          }),
-        };
-      });
-
-      try {
-        await Promise.all([
-          familyMembersService.updatePosition(memberAId, newOrderA),
-          familyMembersService.updatePosition(memberBId, newOrderB),
-        ]);
-      } catch {
-        loadTree();
-      }
-    },
-    [treeData, loadTree],
-  );
-
   const handleReorder = useCallback(
     async (updates: { memberId: string; manualOrder: number; manualRank?: number }[]) => {
       setTreeData((prev) => {
@@ -107,7 +70,8 @@ const DashboardPage: React.FC = () => {
             }),
           ),
         );
-      } catch {
+      } catch (err) {
+        console.error('Reorder failed:', err)
         loadTree();
       }
     },
@@ -143,7 +107,6 @@ const DashboardPage: React.FC = () => {
                 onReorder={handleReorder}
                 direction={direction}
                 onQuickAdd={handleQuickAdd}
-                onSwapPartners={handleSwapPartners}
               />
             ) : (
               <FamilyTree3D treeData={treeData} direction={direction} />

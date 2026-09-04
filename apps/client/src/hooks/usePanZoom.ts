@@ -83,10 +83,20 @@ export function usePanZoom() {
 
   // ── încadrează tot conținutul (contentWidth x contentHeight) în container, centrat
   //    orizontal, lipit sus (rădăcina arborelui rămâne mereu primul lucru vizibil) ──
-  const fitToContent = useCallback((contentWidth: number, contentHeight: number, padding = 60) => {
+  //
+  // FIX — la primul randare (mai ales imediat după un refresh de pagină),
+  // containerRef poate exista în DOM dar încă fără dimensiuni reale (rect.width
+  // sau rect.height = 0), pentru că layout-ul flex al paginii nu s-a stabilizat
+  // complet la momentul la care rulează efectul. Dacă se calcula scale-ul pe un
+  // dreptunghi gol, rezultatul era un scale minim și un offset X puternic
+  // negativ → arborele "sărea" undeva departe în stânga ecranului. Acum
+  // funcția refuză să calculeze pe un dreptunghi gol și raportează eșecul prin
+  // valoarea returnată, ca apelantul să poată reîncerca (vezi FamilyTreeCanvas).
+  const fitToContent = useCallback((contentWidth: number, contentHeight: number, padding = 60): boolean => {
     const el = containerRef.current;
-    if (!el || contentWidth === 0 || contentHeight === 0) return;
+    if (!el || contentWidth === 0 || contentHeight === 0) return false;
     const rect = el.getBoundingClientRect();
+    if (rect.width === 0 || rect.height === 0) return false;
 
     const scale = Math.max(
       MIN_SCALE,
@@ -94,6 +104,7 @@ export function usePanZoom() {
     );
 
     setTransform({ x: (rect.width - contentWidth * scale) / 2, y: padding, scale });
+    return true;
   }, []);
 
   return { containerRef, transform, onPointerDown, onPointerMove, stopPan, zoomBy, reset, fitToContent };

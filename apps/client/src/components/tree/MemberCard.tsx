@@ -23,9 +23,15 @@ interface Props {
   onAddBottom?: (memberId: string) => void;
   topLabel?: string;
   bottomLabel?: string;
+  // NOU — controlează dacă acest card afișează propriul handle de mutare.
+  // Pentru membrii dintr-un cuplu căsătorit, mutarea se face acum DOAR din
+  // handle-ul de pe chenarul mare al cuplului (vezi FamilyTreeCanvas), nu mai
+  // duplicăm handle-ul pe fiecare card din cuplu. Pentru membri singuri,
+  // rămâne exact ca înainte (implicit true).
+  canDrag?: boolean;
 }
 
-// NOU — culoarea borderului în funcție de gen: roșu pt. femei, albastru pt. bărbați,
+// culoarea borderului în funcție de gen: roșu pt. femei, albastru pt. bărbați,
 // mov neutru (culoarea implicită de brand) pt. gen nespecificat/altul
 function getBorderColor(gender?: string | null): string {
   if (gender === 'FEMALE') return 'var(--color-earbore-danger)';
@@ -35,7 +41,7 @@ function getBorderColor(gender?: string | null): string {
 
 function MemberCard({
   member, x, y, unitId, onClick, onDragStart, onDragMove, onDragEnd, isDragging, onMouseEnter, onMouseLeave, style,
-  onAddTop, onAddBottom, topLabel = 'Adaugă', bottomLabel = 'Adaugă',
+  onAddTop, onAddBottom, topLabel = 'Adaugă', bottomLabel = 'Adaugă', canDrag = true,
 }: Props) {
   const deceased = isDeceased(member.deathDate);
   const age = calculateAge(member.birthDate, member.deathDate);
@@ -46,9 +52,6 @@ function MemberCard({
   const [hovered, setHovered] = useState(false);
 
   // ── click pe card (navigare către profil) ──
-  // Nu mai pornim drag de aici — drag-ul se face STRICT din butonul "Mută" de mai jos.
-  // Poza, butoanele +, și handle-ul de mutare își opresc singure propagarea click-ului,
-  // așa că acest onClick prinde doar restul cardului.
   const handleCardClick = () => {
     if (!movedRef.current) onClick(member.id);
     movedRef.current = false;
@@ -58,7 +61,7 @@ function MemberCard({
     e.stopPropagation();
   };
 
-  // ── handle-ul de mutare — AICI pornește efectiv drag-ul ──
+  // ── handle-ul de mutare — doar pentru membri singuri (canDrag) ──
   const handleMovePointerDown = (e: React.PointerEvent) => {
     e.stopPropagation();
     e.preventDefault();
@@ -89,8 +92,6 @@ function MemberCard({
     if (member.imageUrl) setImageExpanded((prev) => !prev);
   };
 
-  // NOU — la ieșirea cursorului de pe card NU mai închidem poza expandată.
-  // Poza rămâne mărită până dai click din nou pe ea (toggle).
   const handleCardMouseLeave = () => {
     setHovered(false);
     onMouseLeave?.();
@@ -101,7 +102,6 @@ function MemberCard({
     onMouseEnter?.();
   };
 
-  // butoanele + nu trebuie să declanșeze click-ul cardului
   const stopAndRun = (fn?: (id: string) => void) => (e: React.PointerEvent | React.MouseEvent) => {
     e.stopPropagation();
     e.preventDefault();
@@ -126,8 +126,8 @@ function MemberCard({
         height: LAYOUT.CARD_HEIGHT,
         touchAction: 'none',
         zIndex: isDragging ? 50 : imageExpanded ? 70 : hovered ? 40 : undefined,
-        cursor: 'pointer', // NOU — implicit pointer pe tot cardul (nu grab); grab e doar pe handle
-        borderWidth: 3, // era 2 — border puțin mai gros
+        cursor: 'pointer',
+        borderWidth: 3,
         borderStyle: 'solid',
         borderColor,
         filter: deceased ? 'grayscale(40%)' : undefined,
@@ -168,37 +168,40 @@ function MemberCard({
         </Tooltip>
       )}
 
-      {/* NOU — handle dedicat de mutare. Doar de-aici pornește drag-ul cardului. */}
-      <Tooltip title="Mută cardul" placement="left">
-        <IconButton
-          size="small"
-          onPointerDown={handleMovePointerDown}
-          onPointerMove={handleMovePointerMove}
-          onPointerUp={handleMovePointerUp}
-          onPointerCancel={handleMovePointerUp}
-          onClick={(e) => e.stopPropagation()}
-          sx={{
-            position: 'absolute',
-            top: -14,
-            right: -14,
-            width: 26,
-            height: 26,
-            zIndex: 61,
-            bgcolor: 'white',
-            color: 'earbore.gray',
-            border: '1px solid',
-            borderColor: 'divider',
-            opacity: hovered || isDragging ? 1 : 0,
-            transition: 'opacity 0.15s',
-            boxShadow: 2,
-            touchAction: 'none',
-            cursor: isDragging ? 'grabbing' : 'grab',
-            '&:hover': { bgcolor: 'earbore.50', color: 'primary.main' },
-          }}
-        >
-          <OpenWithIcon sx={{ fontSize: 15 }} />
-        </IconButton>
-      </Tooltip>
+      {/* Handle de mutare — DOAR pentru membri singuri. Pentru cei dintr-un
+          cuplu căsătorit, mutarea se face din chenarul mare (FamilyTreeCanvas). */}
+      {canDrag && (
+        <Tooltip title="Mută cardul" placement="left">
+          <IconButton
+            size="small"
+            onPointerDown={handleMovePointerDown}
+            onPointerMove={handleMovePointerMove}
+            onPointerUp={handleMovePointerUp}
+            onPointerCancel={handleMovePointerUp}
+            onClick={(e) => e.stopPropagation()}
+            sx={{
+              position: 'absolute',
+              top: -14,
+              right: -14,
+              width: 26,
+              height: 26,
+              zIndex: 61,
+              bgcolor: 'white',
+              color: 'earbore.gray',
+              border: '1px solid',
+              borderColor: 'divider',
+              opacity: hovered || isDragging ? 1 : 0,
+              transition: 'opacity 0.15s',
+              boxShadow: 2,
+              touchAction: 'none',
+              cursor: isDragging ? 'grabbing' : 'grab',
+              '&:hover': { bgcolor: 'earbore.50', color: 'primary.main' },
+            }}
+          >
+            <OpenWithIcon sx={{ fontSize: 15 }} />
+          </IconButton>
+        </Tooltip>
+      )}
 
       {/* Poza */}
       <Box
@@ -232,7 +235,7 @@ function MemberCard({
               borderTopRightRadius: 'inherit',
               borderBottomLeftRadius: imageExpanded ? '12px' : 0,
               borderBottomRightRadius: imageExpanded ? '12px' : 0,
-              transform: imageExpanded ? 'scale(2.3)' : 'scale(1)', // era 1.7 — acum mai mare
+              transform: imageExpanded ? 'scale(2.3)' : 'scale(1)',
               transformOrigin: 'center top',
               transition: 'transform 0.25s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.25s ease, border-radius 0.25s ease',
               boxShadow: imageExpanded ? '0 16px 32px rgba(20, 10, 40, 0.35)' : 'none',
