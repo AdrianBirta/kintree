@@ -1,7 +1,7 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { familyMembersService } from '../api/familyMembersService';
-import type { FamilyMember, FamilyMemberDetail, BloodType } from '../types/family';
+import type { FamilyMember, FamilyMemberDetail, BloodType, FamilyTreeData } from '../types/family';
 import { BLOOD_TYPE_LABELS } from '../types/family';
 import { calculateAge, isDeceased } from '../utils/age';
 import Header from '../components/layout/Header';
@@ -26,7 +26,7 @@ const memberLabel = (m: FamilyMember) => `${m.firstName} ${m.lastName}`;
 const estimateReadTime = (text?: string | null) => {
   if (!text) return 0;
   const words = text.trim().split(/\s+/).filter(Boolean).length;
-  return Math.max(1, Math.round(words / 180)); // ~180 cuvinte/minut
+  return Math.max(1, Math.round(words / 180));
 };
 
 const MemberDetailPage: React.FC = () => {
@@ -34,6 +34,7 @@ const MemberDetailPage: React.FC = () => {
   const navigate = useNavigate();
   const [member, setMember] = useState<FamilyMemberDetail | null>(null);
   const [allMembers, setAllMembers] = useState<FamilyMember[]>([]);
+  const [treeData, setTreeData] = useState<FamilyTreeData | undefined>();
   const [isLoading, setIsLoading] = useState(true);
   const [isEditing, setIsEditing] = useState(false);
   const [form, setForm] = useState<Partial<FamilyMember>>({});
@@ -58,11 +59,16 @@ const MemberDetailPage: React.FC = () => {
   const loadMember = useCallback(() => {
     if (!id) return;
     setIsLoading(true);
-    Promise.all([familyMembersService.getOne(id), familyMembersService.getAll()]).then(([data, all]) => {
+    Promise.all([
+      familyMembersService.getOne(id),
+      familyMembersService.getAll(),
+      familyMembersService.getTree(),
+    ]).then(([data, all, tree]) => {
       setMember(data);
       const { parents, children, partnersA, partnersB, ...editableFields } = data;
       setForm(editableFields);
       setAllMembers(all.filter((m) => m.id !== id));
+      setTreeData(tree);
       setIsLoading(false);
     });
   }, [id]);
@@ -214,11 +220,10 @@ const MemberDetailPage: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-earbore-grayLight">
-      <Header />
+      <Header treeData={treeData} />
 
       <div className="max-w-[1600px] mx-auto px-6 lg:px-10 py-6">
 
-        {/* ───────────── HERO — copertă în stil articol de blog ───────────── */}
         {!isEditing && (
           <div className="relative w-full rounded-2xl overflow-hidden mb-6 border border-earbore-border">
             <div
@@ -272,10 +277,8 @@ const MemberDetailPage: React.FC = () => {
           onCancel={() => setConfirmOpen(false)}
         />
 
-        {/* Layout principal: sidebar fix (identitate) + conținut (restul, pe lățime) */}
         <div className="grid grid-cols-1 lg:grid-cols-[340px_1fr] gap-6 items-start">
 
-          {/* ───────────── SIDEBAR STÂNGA — identitate, fixă la scroll ───────────── */}
           <div className="lg:sticky lg:top-6 bg-white rounded-2xl shadow-sm border border-earbore-border overflow-hidden">
             <div
               className="h-24 w-full"
@@ -335,7 +338,6 @@ const MemberDetailPage: React.FC = () => {
                 <p className="text-sm text-earbore-ink mt-3">{member.occupation}</p>
               )}
 
-              {/* Fapte rapide — o listă verticală simplă, potrivită unui sidebar îngust */}
               {!isEditing && (
                 <div className="mt-5 pt-5 border-t border-earbore-border space-y-3">
                   <SidebarFact label="Data nașterii" value={member.birthDate ? format(new Date(member.birthDate), 'd MMMM yyyy', { locale: ro }) : '—'} />
@@ -377,11 +379,8 @@ const MemberDetailPage: React.FC = () => {
             </div>
           </div>
 
-          {/* ───────────── CONȚINUT DREAPTA — bio + formular editare + relații pe grid ───────────── */}
           <div className="flex flex-col gap-6 min-w-0">
 
-            {/* Bio, ca introducere de articol */}
-            {/* Bio, ca articol de blog */}
             {!isEditing && member.bio && (
               <article className="bg-white rounded-2xl shadow-sm border border-earbore-border p-8 sm:p-10">
                 <h2 className="text-xs font-semibold text-earbore-500 uppercase tracking-wider mb-5">
@@ -409,7 +408,6 @@ const MemberDetailPage: React.FC = () => {
               </article>
             )}
 
-            {/* Stare goală — încurajăm completarea bio-ului, ca un "scrie primul articol" */}
             {!isEditing && !member.bio && (
               <div className="bg-white rounded-2xl shadow-sm border border-dashed border-earbore-border p-8 text-center">
                 <p className="text-earbore-gray text-sm mb-3">
@@ -421,7 +419,6 @@ const MemberDetailPage: React.FC = () => {
               </div>
             )}
 
-            {/* Formular de editare — toate câmpurile, pe lățimea disponibilă, 3 coloane */}
             {isEditing && (
               <div className="bg-white rounded-2xl shadow-sm border border-earbore-border p-8">
                 <h2 className="text-xs font-semibold text-earbore-gray uppercase tracking-wider mb-4">Editează detalii</h2>
@@ -459,10 +456,8 @@ const MemberDetailPage: React.FC = () => {
               </div>
             )}
 
-            {/* Relații — 3 carduri UNA LÂNGĂ ALTA pe ecrane late, nu stivuite */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6 items-start">
 
-              {/* Părinți */}
               <div className="bg-white rounded-2xl shadow-sm border border-earbore-border p-6 flex flex-col gap-4">
                 <h2 className="text-base font-bold text-earbore-ink">Părinți</h2>
 
@@ -507,7 +502,6 @@ const MemberDetailPage: React.FC = () => {
                 )}
               </div>
 
-              {/* Copii */}
               <div className="bg-white rounded-2xl shadow-sm border border-earbore-border p-6 flex flex-col gap-4">
                 <h2 className="text-base font-bold text-earbore-ink">Copii</h2>
 
@@ -552,7 +546,6 @@ const MemberDetailPage: React.FC = () => {
                 )}
               </div>
 
-              {/* Parteneri */}
               <div className="bg-white rounded-2xl shadow-sm border border-earbore-border p-6 flex flex-col gap-4">
                 <h2 className="text-base font-bold text-earbore-ink">Parteneri</h2>
 

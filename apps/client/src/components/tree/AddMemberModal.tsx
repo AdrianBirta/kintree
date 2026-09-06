@@ -1,8 +1,8 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import {
   Dialog, DialogTitle, DialogContent, DialogActions, Button, TextField, MenuItem,
-  Select, InputLabel, FormControl, Avatar, IconButton, Checkbox, FormControlLabel,
-  FormGroup, Divider, Typography, Alert, CircularProgress, Box, Autocomplete, Chip,
+  Select, InputLabel, FormControl, Avatar, IconButton,
+  Divider, Typography, Alert, CircularProgress, Box, Autocomplete, Chip,
 } from '@mui/material';
 import PhotoCameraIcon from '@mui/icons-material/PhotoCamera';
 import CloseIcon from '@mui/icons-material/Close';

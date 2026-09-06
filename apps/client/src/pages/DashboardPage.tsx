@@ -82,7 +82,7 @@ const DashboardPage: React.FC = () => {
 
   return (
     <Box sx={{ height: '100vh', display: 'flex', flexDirection: 'column', bgcolor: 'background.default' }}>
-      <Header members={treeData?.members ?? []} />
+      <Header treeData={treeData} />
 
       <Box sx={{ flex: 1, position: 'relative' }}>
         {isLoading ? (

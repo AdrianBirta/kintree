@@ -5,7 +5,7 @@ import { Canvas } from '@react-three/fiber';
 import { OrbitControls } from '@react-three/drei';
 import { useNavigate } from 'react-router-dom';
 import type { FamilyTreeData } from '../../types/family';
-import { layoutFamilyTree, LAYOUT, type TreeDirection } from '../../lib/treeLayout';
+import { layoutFamilyTree, type TreeDirection } from '../../lib/treeLayout';
 import MemberCard3D, { ORB_RADIUS } from './MemberCard3D';
 
 interface Props {

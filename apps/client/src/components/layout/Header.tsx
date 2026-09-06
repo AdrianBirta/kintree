@@ -1,13 +1,16 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { IconButton, Tooltip } from '@mui/material';
+import TableRowsIcon from '@mui/icons-material/TableRows';
 import { useAuth } from '../../hooks/useAuth';
-import type { FamilyMember } from '../../types/family';
+import type { FamilyTreeData } from '../../types/family';
+import MembersAccordionMenu from './MembersAccordionMenu';
 
 interface Props {
-  members?: FamilyMember[];
+  treeData?: FamilyTreeData;
 }
 
-const Header: React.FC<Props> = ({ members = [] }) => {
+const Header: React.FC<Props> = ({ treeData }) => {
   const navigate = useNavigate();
   const { user, logout } = useAuth();
   const [userMenuOpen, setUserMenuOpen] = useState(false);
@@ -29,6 +32,12 @@ const Header: React.FC<Props> = ({ members = [] }) => {
   }, []);
 
   const initials = user ? `${user.firstName[0]}${user.lastName[0]}` : '';
+  const memberCount = treeData?.members.length ?? 0;
+
+  const handleNavigateToMember = (id: string) => {
+    setMembersMenuOpen(false);
+    navigate(`/members/${id}`);
+  };
 
   return (
     <header className="w-full border-b border-earbore-border bg-white/90 backdrop-blur-sm z-20">
@@ -38,37 +47,26 @@ const Header: React.FC<Props> = ({ members = [] }) => {
         </button>
 
         <div className="flex items-center gap-3">
-          {/* Dropdown membri */}
+          {/* Buton către tabelul de membri (CRUD) */}
+          <Tooltip title="Tabel membri">
+            <IconButton size="small" onClick={() => navigate('/members')} sx={{ color: 'var(--color-earbore-gray)' }}>
+              <TableRowsIcon fontSize="small" />
+            </IconButton>
+          </Tooltip>
+
+          {/* Dropdown membri — arbore genealogic tip acordeon */}
           <div className="relative" ref={membersMenuRef}>
             <button
               onClick={() => setMembersMenuOpen((v) => !v)}
               className="flex items-center gap-2 text-sm font-medium text-earbore-gray hover:text-earbore-700 px-3 py-2 rounded-lg hover:bg-earbore-50 transition-colors cursor-pointer"
             >
-              Membri ({members.length})
+              Membri ({memberCount})
               <span className={`transition-transform ${membersMenuOpen ? 'rotate-180' : ''}`}>▾</span>
             </button>
 
             {membersMenuOpen && (
-              <div className="absolute right-0 mt-2 w-64 bg-white rounded-xl shadow-lg border border-earbore-border py-2 max-h-80 overflow-y-auto">
-                {members.length === 0 ? (
-                  <p className="px-4 py-3 text-sm text-earbore-gray">Niciun membru încă.</p>
-                ) : (
-                  members.map((m) => (
-                    <button
-                      key={m.id}
-                      onClick={() => {
-                        setMembersMenuOpen(false);
-                        navigate(`/members/${m.id}`);
-                      }}
-                      className="w-full text-left px-4 py-2 text-sm text-earbore-ink hover:bg-earbore-50 transition-colors cursor-pointer flex items-center gap-2"
-                    >
-                      <span className="w-7 h-7 rounded-full bg-earbore-100 text-earbore-700 flex items-center justify-center text-xs font-bold flex-shrink-0">
-                        {m.firstName[0]}{m.lastName[0]}
-                      </span>
-                      {m.firstName} {m.lastName}
-                    </button>
-                  ))
-                )}
+              <div className="absolute right-0 mt-2 w-80 bg-white rounded-xl shadow-lg border border-earbore-border py-2 max-h-96 overflow-y-auto">
+                <MembersAccordionMenu treeData={treeData} onNavigate={handleNavigateToMember} />
               </div>
             )}
           </div>

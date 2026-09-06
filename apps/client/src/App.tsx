@@ -1,10 +1,11 @@
-import React, { useEffect } from 'react';
+import { useEffect } from 'react';
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import { useAuthStore } from './store/authStore';
 import LandingPage from './pages/LandingPage';
 import AuthPage from './pages/AuthPage';
 import DashboardPage from './pages/DashboardPage';
 import MemberDetailPage from './pages/MemberDetailPage';
+import MembersListPage from './pages/MembersListPage';
 import PrivateRoute from './components/auth/PrivateRoute';
 import PublicRoute from './components/auth/PublicRoute';
 
@@ -34,6 +35,7 @@ function App() {
 
         <Route element={<PrivateRoute />}>
           <Route path="/dashboard" element={<DashboardPage />} />
+          <Route path="/members" element={<MembersListPage />} />
           <Route path="/members/:id" element={<MemberDetailPage />} />
         </Route>
       </Routes>
