@@ -8,6 +8,7 @@ import PhotoCameraIcon from '@mui/icons-material/PhotoCamera';
 import CloseIcon from '@mui/icons-material/Close';
 import { familyMembersService } from '../../api/familyMembersService';
 import type { FamilyMember } from '../../types/family';
+import { dedupeMembers, memberLabel, renderMemberOption } from '../common/memberOptionUtils';
 
 interface QuickRelation {
   memberId: string;
@@ -21,15 +22,20 @@ interface Props {
   initialRelation?: QuickRelation | null;
 }
 
-const memberLabel = (m: FamilyMember) => `${m.firstName} ${m.lastName}`;
-
 const AddMemberModal: React.FC<Props> = ({ members, onClose, onCreated, initialRelation }) => {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
 
+  // FIX — sursa `members` poate conține aceeași persoană de mai multe ori
+  // (join-uri pe relații în backend). Deduplicăm o singură dată aici, la
+  // intrare, ca toate listele derivate (tată/mamă/partener/copii) să
+  // pornească deja curate — altfel Autocomplete-ul arăta dubluri și, la
+  // filtrare, eticheta greșită pentru opțiunea selectată.
+  const uniqueMembers = useMemo(() => dedupeMembers(members), [members]);
+
   const relationTarget = useMemo(
-    () => (initialRelation ? members.find((m) => m.id === initialRelation.memberId) ?? null : null),
-    [initialRelation, members],
+    () => (initialRelation ? uniqueMembers.find((m) => m.id === initialRelation.memberId) ?? null : null),
+    [initialRelation, uniqueMembers],
   );
 
   const [form, setForm] = useState({
@@ -101,8 +107,8 @@ const AddMemberModal: React.FC<Props> = ({ members, onClose, onCreated, initialR
     }
   };
 
-  const fatherOptions = members.filter((m) => m.gender !== 'FEMALE');
-  const motherOptions = members.filter((m) => m.gender !== 'MALE');
+  const fatherOptions = uniqueMembers.filter((m) => m.gender !== 'FEMALE');
+  const motherOptions = uniqueMembers.filter((m) => m.gender !== 'MALE');
 
   return (
     <Dialog
@@ -193,7 +199,7 @@ const AddMemberModal: React.FC<Props> = ({ members, onClose, onCreated, initialR
               />
             </Box>
 
-            {members.length > 0 && (
+            {uniqueMembers.length > 0 && (
               <>
                 <Divider sx={{ mt: 1 }} />
                 <Typography variant="overline" color="text.secondary">Relații</Typography>
@@ -204,6 +210,7 @@ const AddMemberModal: React.FC<Props> = ({ members, onClose, onCreated, initialR
                     fullWidth
                     options={fatherOptions}
                     getOptionLabel={memberLabel}
+                    renderOption={renderMemberOption}
                     value={father}
                     onChange={(_, val) => setFather(val)}
                     disabled={isSaving}
@@ -215,6 +222,7 @@ const AddMemberModal: React.FC<Props> = ({ members, onClose, onCreated, initialR
                     fullWidth
                     options={motherOptions}
                     getOptionLabel={memberLabel}
+                    renderOption={renderMemberOption}
                     value={mother}
                     onChange={(_, val) => setMother(val)}
                     disabled={isSaving}
@@ -227,8 +235,9 @@ const AddMemberModal: React.FC<Props> = ({ members, onClose, onCreated, initialR
                   <Autocomplete
                     size="small"
                     fullWidth
-                    options={members}
+                    options={uniqueMembers}
                     getOptionLabel={memberLabel}
+                    renderOption={renderMemberOption}
                     value={partner}
                     onChange={(_, val) => setPartner(val)}
                     disabled={isSaving}
@@ -250,8 +259,9 @@ const AddMemberModal: React.FC<Props> = ({ members, onClose, onCreated, initialR
                   size="small"
                   fullWidth
                   multiple
-                  options={members}
+                  options={uniqueMembers}
                   getOptionLabel={memberLabel}
+                  renderOption={renderMemberOption}
                   value={children}
                   onChange={(_, val) => setChildren(val)}
                   disabled={isSaving}

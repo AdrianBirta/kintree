@@ -12,6 +12,7 @@ import IconButton from '@mui/material/IconButton';
 import PhotoCameraIcon from '@mui/icons-material/PhotoCamera';
 import { Autocomplete, TextField } from '@mui/material';
 import ConfirmDialog from '../components/common/ConfirmDialog';
+import { dedupeMembers, memberLabel, renderMemberOption } from '../components/common/memberOptionUtils';
 
 const GENDER_LABELS: Record<string, string> = { MALE: 'Masculin', FEMALE: 'Feminin', OTHER: 'Altul' };
 const STATUS_LABELS: Record<string, string> = {
@@ -20,8 +21,6 @@ const STATUS_LABELS: Record<string, string> = {
   DIVORCED: 'Divorțați',
   WIDOWED: 'Văduv/ă',
 };
-
-const memberLabel = (m: FamilyMember) => `${m.firstName} ${m.lastName}`;
 
 const estimateReadTime = (text?: string | null) => {
   if (!text) return 0;
@@ -67,7 +66,13 @@ const MemberDetailPage: React.FC = () => {
       setMember(data);
       const { parents, children, partnersA, partnersB, ...editableFields } = data;
       setForm(editableFields);
-      setAllMembers(all.filter((m) => m.id !== id));
+      // FIX — sursa `all` poate conține aceeași persoană de mai multe ori
+      // (join-uri pe relații în backend). Deduplicăm o singură dată aici,
+      // ca parentOptions / childOptions / partnerOptions (derivate mai jos
+      // din allMembers) să pornească deja curate — altfel Autocomplete-ul
+      // arăta dubluri și, la filtrare, eticheta greșită pentru opțiunea
+      // selectată.
+      setAllMembers(dedupeMembers(all.filter((m) => m.id !== id)));
       setTreeData(tree);
       setIsLoading(false);
     });
@@ -500,6 +505,7 @@ const MemberDetailPage: React.FC = () => {
                     <Autocomplete
                       options={parentOptions}
                       getOptionLabel={memberLabel}
+                      renderOption={renderMemberOption}
                       value={selectedParent}
                       onChange={(_, val) => setSelectedParentId(val?.id ?? '')}
                       isOptionEqualToValue={(a, b) => a.id === b.id}
@@ -544,6 +550,7 @@ const MemberDetailPage: React.FC = () => {
                     <Autocomplete
                       options={childOptions}
                       getOptionLabel={memberLabel}
+                      renderOption={renderMemberOption}
                       value={selectedChild}
                       onChange={(_, val) => setSelectedChildId(val?.id ?? '')}
                       isOptionEqualToValue={(a, b) => a.id === b.id}
@@ -591,6 +598,7 @@ const MemberDetailPage: React.FC = () => {
                     <Autocomplete
                       options={partnerOptions}
                       getOptionLabel={memberLabel}
+                      renderOption={renderMemberOption}
                       value={selectedPartner}
                       onChange={(_, val) => setSelectedPartnerId(val?.id ?? '')}
                       isOptionEqualToValue={(a, b) => a.id === b.id}

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import {
   Dialog, DialogTitle, DialogContent, DialogActions, Button, MenuItem,
   Select, InputLabel, FormControl, Typography, Alert, CircularProgress, IconButton,
@@ -8,14 +8,13 @@ import CloseIcon from '@mui/icons-material/Close';
 import FavoriteIcon from '@mui/icons-material/Favorite';
 import { familyMembersService } from '../../api/familyMembersService';
 import type { FamilyMember } from '../../types/family';
+import { dedupeMembers, memberLabel, renderMemberOption } from '../common/memberOptionUtils';
 
 interface Props {
   members: FamilyMember[];
   onClose: () => void;
   onLinked: () => void;
 }
-
-const memberLabel = (m: FamilyMember) => `${m.firstName} ${m.lastName}`;
 
 const LinkPartnersModal: React.FC<Props> = ({ members, onClose, onLinked }) => {
   const theme = useTheme();
@@ -27,11 +26,16 @@ const LinkPartnersModal: React.FC<Props> = ({ members, onClose, onLinked }) => {
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState('');
 
-  const partnerA = members.find((m) => m.id === partnerAId) ?? null;
-  const partnerB = members.find((m) => m.id === partnerBId) ?? null;
+  // FIX — aceeași deduplicare ca în AddMemberModal, pentru consistență;
+  // fără ea, Autocomplete-urile de mai jos puteau arăta aceeași persoană
+  // de mai multe ori și puteau confunda selecția în timpul filtrării.
+  const uniqueMembers = useMemo(() => dedupeMembers(members), [members]);
 
-  const partnerAOptions = members.filter((m) => m.id !== partnerBId);
-  const partnerBOptions = members.filter((m) => m.id !== partnerAId);
+  const partnerA = uniqueMembers.find((m) => m.id === partnerAId) ?? null;
+  const partnerB = uniqueMembers.find((m) => m.id === partnerBId) ?? null;
+
+  const partnerAOptions = uniqueMembers.filter((m) => m.id !== partnerBId);
+  const partnerBOptions = uniqueMembers.filter((m) => m.id !== partnerAId);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -89,6 +93,7 @@ const LinkPartnersModal: React.FC<Props> = ({ members, onClose, onLinked }) => {
           <Autocomplete
             options={partnerAOptions}
             getOptionLabel={memberLabel}
+            renderOption={renderMemberOption}
             value={partnerA}
             onChange={(_, val) => setPartnerAId(val?.id ?? '')}
             disabled={isSaving}
@@ -101,6 +106,7 @@ const LinkPartnersModal: React.FC<Props> = ({ members, onClose, onLinked }) => {
           <Autocomplete
             options={partnerBOptions}
             getOptionLabel={memberLabel}
+            renderOption={renderMemberOption}
             value={partnerB}
             onChange={(_, val) => setPartnerBId(val?.id ?? '')}
             disabled={isSaving}
