@@ -14,21 +14,30 @@ enum Role {
 }
 
 model User {
-  id        String @id @default(uuid())
-  email     String @unique
-  password  String
-  firstName String
-  lastName  String
-  role      Role   @default(USER)
-
-  refreshToken String? // hash-uit, folosit pentru validarea refresh-ului
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
+  id            String         @id @default(uuid())
+  email         String         @unique
+  password      String
+  firstName     String
+  lastName      String
+  role          Role           @default(USER)
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
   familyMembers FamilyMember[]
+  refreshTokens RefreshToken[] // NOU — o sesiune = un rând, nu un singur câmp
 
   @@map("users")
+}
+
+// NOU — permite mai multe sesiuni active simultan (telefon + laptop, etc.)
+model RefreshToken {
+  id        String   @id @default(uuid())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId    String
+  tokenHash String
+  createdAt DateTime @default(now())
+  expiresAt DateTime
+
+  @@map("refresh_tokens")
 }
 
 enum Gender {
@@ -71,14 +80,13 @@ model FamilyMember {
   partnersA   Partnership[]    @relation("PartnerA")
   partnersB   Partnership[]    @relation("PartnerB")
   manualOrder Int?
-  manualRank  Int? // NOU: generația (rank-ul) forțată manual prin drag vertical
-  alliancesA  FamilyAlliance[] @relation("AllianceA") // NOU
-  alliancesB  FamilyAlliance[] @relation("AllianceB") // NOU
+  manualRank  Int?
+  alliancesA  FamilyAlliance[] @relation("AllianceA")
+  alliancesB  FamilyAlliance[] @relation("AllianceB")
 
   @@map("family_members")
 }
 
-// NOU — de aici în jos, adăugat la finalul fișierului
 enum AllianceType {
   CUSCRI
 }
@@ -90,7 +98,7 @@ model FamilyAlliance {
   memberB          FamilyMember @relation("AllianceB", fields: [memberBId], references: [id], onDelete: Cascade)
   memberBId        String
   type             AllianceType @default(CUSCRI)
-  viaPartnershipId String? // parteneriatul copiilor care a generat această alianță
+  viaPartnershipId String?
   createdAt        DateTime     @default(now())
   updatedAt        DateTime     @updatedAt
 
@@ -110,15 +118,14 @@ model ParentChild {
 }
 
 model Partnership {
-  id         String       @id @default(uuid())
-  partnerA   FamilyMember @relation("PartnerA", fields: [partnerAId], references: [id], onDelete: Cascade)
+  id         String            @id @default(uuid())
+  partnerA   FamilyMember      @relation("PartnerA", fields: [partnerAId], references: [id], onDelete: Cascade)
   partnerAId String
-  partnerB   FamilyMember @relation("PartnerB", fields: [partnerBId], references: [id], onDelete: Cascade)
+  partnerB   FamilyMember      @relation("PartnerB", fields: [partnerBId], references: [id], onDelete: Cascade)
   partnerBId String
-
-  status    PartnershipStatus @default(MARRIED)
-  startDate DateTime?
-  endDate   DateTime?
+  status     PartnershipStatus @default(MARRIED)
+  startDate  DateTime?
+  endDate    DateTime?
 
   @@unique([partnerAId, partnerBId])
   @@map("partnerships")

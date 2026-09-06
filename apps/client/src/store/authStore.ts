@@ -63,8 +63,9 @@ export const useAuthStore = create<AuthState>((set) => ({
   },
 
   logout: async () => {
+    const refreshToken = localStorage.getItem('refresh_token');
     try {
-      await apiClient.post('/auth/logout');
+      await apiClient.post('/auth/logout', { refreshToken });
     } catch {
       // ignorăm eroarea — oricum curățăm local
     } finally {

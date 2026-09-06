@@ -33,9 +33,14 @@ export class AuthController {
     return this.authService.refresh(req.user.userId, req.user.refreshToken);
   }
 
+  // NOU — logout primește opțional refreshToken din body, ca să deconecteze
+  // doar sesiunea curentă, nu toate dispozitivele userului.
   @UseGuards(JwtAccessGuard)
   @Post('logout')
-  logout(@CurrentUser() user: { userId: string }) {
-    return this.authService.logout(user.userId);
+  logout(
+    @CurrentUser() user: { userId: string },
+    @Body() body: { refreshToken?: string },
+  ) {
+    return this.authService.logout(user.userId, body?.refreshToken);
   }
 }
