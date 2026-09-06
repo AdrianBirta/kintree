@@ -1,5 +1,8 @@
 import React, { useEffect, useState, useCallback } from 'react';
-import { Box, Button, ToggleButtonGroup, ToggleButton, Stack, CircularProgress, Typography, IconButton, Tooltip } from '@mui/material';
+import {
+  Box, Button, ToggleButtonGroup, ToggleButton, Stack, CircularProgress, Typography,
+  IconButton, Tooltip, useMediaQuery, useTheme,
+} from '@mui/material';
 import ViewInArIcon from '@mui/icons-material/ViewInAr';
 import ViewAgendaIcon from '@mui/icons-material/ViewAgenda';
 import FavoriteIcon from '@mui/icons-material/Favorite';
@@ -15,6 +18,9 @@ import FamilyTreeCanvas from '../components/tree/FamilyTreeCanvas';
 import FamilyTree3D from '../components/tree/FamilyTree3D';
 
 const DashboardPage: React.FC = () => {
+  const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
+
   const [treeData, setTreeData] = useState<FamilyTreeData | undefined>();
   const [isLoading, setIsLoading] = useState(true);
   const [showAddModal, setShowAddModal] = useState(false);
@@ -81,10 +87,10 @@ const DashboardPage: React.FC = () => {
   const toggleDirection = () => setDirection((d) => (d === 'top-down' ? 'bottom-up' : 'top-down'));
 
   return (
-    <Box sx={{ height: '100vh', display: 'flex', flexDirection: 'column', bgcolor: 'background.default' }}>
+    <Box sx={{ height: '100dvh', display: 'flex', flexDirection: 'column', bgcolor: 'background.default' }}>
       <Header treeData={treeData} />
 
-      <Box sx={{ flex: 1, position: 'relative' }}>
+      <Box sx={{ flex: 1, position: 'relative', minHeight: 0 }}>
         {isLoading ? (
           <Box sx={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
             <CircularProgress />
@@ -112,11 +118,27 @@ const DashboardPage: React.FC = () => {
               <FamilyTree3D treeData={treeData} direction={direction} />
             )}
 
-            <Stack direction="row" spacing={1.5} sx={{ position: 'absolute', top: 16, right: 16 }}>
+            {/* NOU — pe mobil, butoanele devin doar-iconiță (cu tooltip),
+                se înghesuie compact și fac wrap dacă spațiul e insuficient,
+                ca să nu iasă niciodată din ecran. */}
+            <Stack
+              direction="row"
+              spacing={{ xs: 0.75, sm: 1.5 }}
+              useFlexGap
+              sx={{
+                position: 'absolute',
+                top: { xs: 8, sm: 16 },
+                right: { xs: 8, sm: 16 },
+                left: { xs: 8, sm: 'auto' },
+                justifyContent: 'flex-end',
+                flexWrap: 'wrap',
+                maxWidth: { xs: 'calc(100% - 16px)', sm: 'none' },
+              }}
+            >
               {viewMode === '2d' && (
                 <Tooltip title={direction === 'top-down' ? 'Strămoșii sus, urmașii jos' : 'Strămoșii jos, urmașii sus'}>
                   <IconButton onClick={toggleDirection} sx={{ bgcolor: 'background.paper', boxShadow: 1 }}>
-                    <SwapVertIcon />
+                    <SwapVertIcon fontSize={isMobile ? 'small' : 'medium'} />
                   </IconButton>
                 </Tooltip>
               )}
@@ -128,20 +150,42 @@ const DashboardPage: React.FC = () => {
                 onChange={(_, val) => val && setViewMode(val)}
                 sx={{ bgcolor: 'background.paper', boxShadow: 1, borderRadius: 3 }}
               >
-                <ToggleButton value="2d" sx={{ borderRadius: 3, px: 1.5 }}>
-                  <ViewAgendaIcon fontSize="small" sx={{ mr: 0.5 }} /> 2D
+                <ToggleButton value="2d" sx={{ borderRadius: 3, px: { xs: 1, sm: 1.5 } }}>
+                  <ViewAgendaIcon fontSize="small" sx={{ mr: { xs: 0, sm: 0.5 } }} />
+                  {!isMobile && '2D'}
                 </ToggleButton>
-                <ToggleButton value="3d" sx={{ borderRadius: 3, px: 1.5 }}>
-                  <ViewInArIcon fontSize="small" sx={{ mr: 0.5 }} /> 3D
+                <ToggleButton value="3d" sx={{ borderRadius: 3, px: { xs: 1, sm: 1.5 } }}>
+                  <ViewInArIcon fontSize="small" sx={{ mr: { xs: 0, sm: 0.5 } }} />
+                  {!isMobile && '3D'}
                 </ToggleButton>
               </ToggleButtonGroup>
 
-              <Button variant="outlined" startIcon={<FavoriteIcon />} onClick={() => setShowPartnerModal(true)} sx={{ bgcolor: 'background.paper', boxShadow: 1 }}>
-                Leagă parteneri
-              </Button>
-              <Button variant="contained" startIcon={<AddIcon />} onClick={() => setShowAddModal(true)} sx={{ boxShadow: 1 }}>
-                Adaugă membru
-              </Button>
+              {isMobile ? (
+                <Tooltip title="Leagă parteneri">
+                  <IconButton onClick={() => setShowPartnerModal(true)} sx={{ bgcolor: 'background.paper', boxShadow: 1 }}>
+                    <FavoriteIcon fontSize="small" color="primary" />
+                  </IconButton>
+                </Tooltip>
+              ) : (
+                <Button variant="outlined" startIcon={<FavoriteIcon />} onClick={() => setShowPartnerModal(true)} sx={{ bgcolor: 'background.paper', boxShadow: 1 }}>
+                  Leagă parteneri
+                </Button>
+              )}
+
+              {isMobile ? (
+                <Tooltip title="Adaugă membru">
+                  <IconButton
+                    onClick={() => setShowAddModal(true)}
+                    sx={{ bgcolor: 'primary.main', color: 'white', boxShadow: 1, '&:hover': { bgcolor: 'primary.dark' } }}
+                  >
+                    <AddIcon fontSize="small" />
+                  </IconButton>
+                </Tooltip>
+              ) : (
+                <Button variant="contained" startIcon={<AddIcon />} onClick={() => setShowAddModal(true)} sx={{ boxShadow: 1 }}>
+                  Adaugă membru
+                </Button>
+              )}
             </Stack>
           </>
         )}

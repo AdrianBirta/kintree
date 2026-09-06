@@ -1,9 +1,12 @@
-import React from 'react';
 import { Navigate, Outlet } from 'react-router-dom';
+import { useAuthStore } from '../../store/authStore';
 
 const PublicRoute: React.FC = () => {
-  const token = localStorage.getItem('access_token');
-  return token ? <Navigate to="/dashboard" replace /> : <Outlet />;
+  const user = useAuthStore((s) => s.user);
+  const isLoading = useAuthStore((s) => s.isLoading);
+
+  if (isLoading) return null;
+  return user ? <Navigate to="/dashboard" replace /> : <Outlet />;
 };
 
 export default PublicRoute;

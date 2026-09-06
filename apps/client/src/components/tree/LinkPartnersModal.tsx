@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import {
   Dialog, DialogTitle, DialogContent, DialogActions, Button, MenuItem,
   Select, InputLabel, FormControl, Typography, Alert, CircularProgress, IconButton,
-  Autocomplete, TextField,
+  Autocomplete, TextField, useMediaQuery, useTheme,
 } from '@mui/material';
 import CloseIcon from '@mui/icons-material/Close';
 import FavoriteIcon from '@mui/icons-material/Favorite';
@@ -18,6 +18,9 @@ interface Props {
 const memberLabel = (m: FamilyMember) => `${m.firstName} ${m.lastName}`;
 
 const LinkPartnersModal: React.FC<Props> = ({ members, onClose, onLinked }) => {
+  const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
+
   const [partnerAId, setPartnerAId] = useState('');
   const [partnerBId, setPartnerBId] = useState('');
   const [status, setStatus] = useState('MARRIED');
@@ -27,7 +30,6 @@ const LinkPartnersModal: React.FC<Props> = ({ members, onClose, onLinked }) => {
   const partnerA = members.find((m) => m.id === partnerAId) ?? null;
   const partnerB = members.find((m) => m.id === partnerBId) ?? null;
 
-  // în lista pentru al doilea membru, îl excludem pe cel deja ales ca prim membru (și invers)
   const partnerAOptions = members.filter((m) => m.id !== partnerBId);
   const partnerBOptions = members.filter((m) => m.id !== partnerAId);
 
@@ -59,7 +61,8 @@ const LinkPartnersModal: React.FC<Props> = ({ members, onClose, onLinked }) => {
       onClose={isSaving ? undefined : onClose}
       maxWidth="sm"
       fullWidth
-      slotProps={{ paper: { sx: { borderRadius: 2 } } }}
+      fullScreen={isMobile}
+      slotProps={{ paper: { sx: { borderRadius: isMobile ? 0 : 2 } } }}
     >
       <DialogTitle
         sx={{
@@ -77,7 +80,7 @@ const LinkPartnersModal: React.FC<Props> = ({ members, onClose, onLinked }) => {
         <IconButton onClick={onClose} disabled={isSaving} size="small"><CloseIcon /></IconButton>
       </DialogTitle>
 
-      <form onSubmit={handleSubmit}>
+      <form onSubmit={handleSubmit} autoComplete="off">
         <DialogContent sx={{ display: 'flex', flexDirection: 'column', gap: 2.5, py: 3 }}>
           <Typography variant="body2" color="text.secondary">
             Marchează doi membri ca soț și soție / parteneri.
@@ -91,7 +94,7 @@ const LinkPartnersModal: React.FC<Props> = ({ members, onClose, onLinked }) => {
             disabled={isSaving}
             isOptionEqualToValue={(a, b) => a.id === b.id}
             renderInput={(params) => (
-              <TextField {...params} required label="Primul membru" placeholder="Caută după nume..." />
+              <TextField {...params} required label="Primul membru" placeholder="Caută după nume..." autoComplete="off" />
             )}
           />
 
@@ -103,7 +106,7 @@ const LinkPartnersModal: React.FC<Props> = ({ members, onClose, onLinked }) => {
             disabled={isSaving}
             isOptionEqualToValue={(a, b) => a.id === b.id}
             renderInput={(params) => (
-              <TextField {...params} required label="Al doilea membru" placeholder="Caută după nume..." />
+              <TextField {...params} required label="Al doilea membru" placeholder="Caută după nume..." autoComplete="off" />
             )}
           />
 

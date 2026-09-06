@@ -22,10 +22,6 @@ interface Props {
   onQuickAdd: (memberId: string, kind: 'parent' | 'child') => void;
 }
 
-// NOU — "pasul" de bază pentru manualOrder în cadrul unui rând. Fiecare unitate
-// (cuplu sau single) primește index * ORDER_STEP ca poziție de bază. Pentru
-// cupluri, bitul rămas (0 sau 1) codifică cine e stânga/dreapta — vezi
-// handleDrop și handleSwapPartners mai jos, și treeLayout.ts -> buildUnits.
 const ORDER_STEP = 2;
 
 const FamilyTreeCanvas: React.FC<Props> = ({ treeData, direction, onReorder, onQuickAdd }) => {
@@ -46,12 +42,6 @@ const FamilyTreeCanvas: React.FC<Props> = ({ treeData, direction, onReorder, onQ
 
   const layout = useMemo(() => layoutFamilyTree(treeData, direction), [treeData, direction]);
 
-  // FIX — la primul randare (mai ales imediat după refresh), containerul
-  // poate să nu aibă încă dimensiuni reale în DOM. Înainte, dacă fitToContent
-  // rula pe un dreptunghi gol, arborele era "aruncat" undeva departe în
-  // stânga și marcam fit-ul ca terminat (hasFitted=true), deci nu se mai
-  // repara singur. Acum reîncercăm pe requestAnimationFrame până când
-  // fitToContent reușește efectiv (containerul are dimensiuni reale).
   const hasFitted = useRef(false);
   useEffect(() => {
     if (hasFitted.current || layout.contentWidth === 0) return;
@@ -107,10 +97,6 @@ const FamilyTreeCanvas: React.FC<Props> = ({ treeData, direction, onReorder, onQ
       orderedUnitIds.forEach((unitId, index) => {
         const memberIds = memberIdsByUnit.get(unitId) ?? [];
         memberIds.forEach((memberId) => {
-          // Păstrăm bitul de orientare stânga/dreapta al fiecărui membru (0
-          // sau 1 — vezi handleSwapPartners) și schimbăm doar poziția de bază
-          // în rând. Altfel, orice drag&drop ar reseta orientarea aleasă
-          // anterior prin butonul de swap.
           const existing = membersById.get(memberId);
           const orientationBit = existing?.manualOrder != null ? existing.manualOrder % ORDER_STEP : 0;
           const update: { memberId: string; manualOrder: number; manualRank?: number } = {
@@ -131,8 +117,6 @@ const FamilyTreeCanvas: React.FC<Props> = ({ treeData, direction, onReorder, onQ
 
   const { dragState, startDrag, updateDrag, endDrag } = useCardDrag(layout, transform, containerRef, handleDrop);
 
-  // ordinea vizuală curentă (stânga → dreapta) a unităților de pe un rând,
-  // citită direct din layout — folosită de swap ca să "înghețe" poziția reală
   const getRankOrderedUnitIds = useCallback(
     (rank: number) => {
       const seen = new Set<string>();
@@ -149,13 +133,6 @@ const FamilyTreeCanvas: React.FC<Props> = ({ treeData, direction, onReorder, onQ
     [layout],
   );
 
-  // FIX — swap-ul de parteneri folosea valori fixe 0/1 pentru manualOrder,
-  // ceea ce "fura" din câmpul folosit și pentru poziția cuplului printre
-  // frații lui pe rând, provocând răsturnarea vizuală a întregului rând.
-  // Acum: "înghețăm" poziția curentă (reală) a TUTUROR unităților din acel
-  // rând ca manualOrder = index*ORDER_STEP (exact ca la un drag&drop lăsat
-  // pe loc), iar pentru cuplul selectat inversăm doar bitul de orientare
-  // (+1). Nimic altceva din rând nu se mișcă.
   const handleSwapPartners = useCallback(
     (unitId: string) => {
       const memberIds = memberIdsByUnit.get(unitId);
@@ -237,9 +214,6 @@ const FamilyTreeCanvas: React.FC<Props> = ({ treeData, direction, onReorder, onQ
           const isDraggingThis = dragState?.unitId === m.unitId;
           const dx = isDraggingThis ? dragState!.currentX - dragState!.originalCenterX : 0;
           const dy = isDraggingThis ? dragState!.currentY - dragState!.originalTopY : 0;
-          // NOU — membrii unui cuplu (unitate cu 2 persoane) NU mai au propriul
-          // handle de mutare pe card; mutarea se face din chenarul mare al
-          // cuplului (mai jos). Membrii singuri păstrează handle-ul pe card.
           const isCoupled = (memberIdsByUnit.get(m.unitId)?.length ?? 1) === 2;
           return (
             <MemberCard
@@ -265,10 +239,6 @@ const FamilyTreeCanvas: React.FC<Props> = ({ treeData, direction, onReorder, onQ
           );
         })}
 
-        {/* Controale pentru cupluri: buton de swap (mereu vizibil) + buton de
-            mutare a întregului cuplu (apare la hover pe colțul chenarului).
-            Zonele de hover rămân mici, ca să nu blocheze cardurile de
-            dedesubt. */}
         {layout.couples.map((c) => {
           const ids = memberIdsByUnit.get(c.unitId) ?? [];
           if (ids.length !== 2) return null;
@@ -277,7 +247,7 @@ const FamilyTreeCanvas: React.FC<Props> = ({ treeData, direction, onReorder, onQ
 
           return (
             <React.Fragment key={`couple-controls-${c.unitId}`}>
-              {/* Buton swap — mereu vizibil, mai mare și mai vizibil */}
+              {/* Buton swap — mereu vizibil, indiferent de dispozitiv */}
               <div
                 style={{
                   position: 'absolute',
@@ -297,7 +267,7 @@ const FamilyTreeCanvas: React.FC<Props> = ({ treeData, direction, onReorder, onQ
                       e.stopPropagation();
                       handleSwapPartners(c.unitId);
                     }}
-                    style={{
+                    sx={{
                       position: 'absolute',
                       top: 0,
                       left: '50%',
@@ -309,6 +279,7 @@ const FamilyTreeCanvas: React.FC<Props> = ({ treeData, direction, onReorder, onQ
                       opacity: 1,
                       boxShadow: '0 3px 8px rgba(20,10,40,0.3)',
                       cursor: 'pointer',
+                      '&:hover': { background: 'var(--color-earbore-600)' },
                     }}
                   >
                     <SwapHorizIcon sx={{ fontSize: 18, color: 'white' }} />
@@ -316,7 +287,8 @@ const FamilyTreeCanvas: React.FC<Props> = ({ treeData, direction, onReorder, onQ
                 </Tooltip>
               </div>
 
-              {/* Buton mutare cuplu — pe colțul chenarului, apare la hover */}
+              {/* Buton mutare cuplu — la hover pe desktop, MEREU vizibil pe
+                  touch (era complet inaccesibil pe mobil înainte). */}
               <div
                 onMouseEnter={() => setHoveredMoveId(c.unitId)}
                 onMouseLeave={() => setHoveredMoveId((prev) => (prev === c.unitId ? null : prev))}
@@ -338,7 +310,7 @@ const FamilyTreeCanvas: React.FC<Props> = ({ treeData, direction, onReorder, onQ
                     onPointerUp={handleCoupleMovePointerUp}
                     onPointerCancel={handleCoupleMovePointerUp}
                     onClick={(e) => e.stopPropagation()}
-                    style={{
+                    sx={{
                       position: 'absolute',
                       top: 0,
                       left: '50%',
@@ -346,12 +318,14 @@ const FamilyTreeCanvas: React.FC<Props> = ({ treeData, direction, onReorder, onQ
                       width: 26,
                       height: 26,
                       background: 'white',
-                      border: '1px solid var(--color-earbore-border)',
+                      border: '1px solid',
+                      borderColor: 'divider',
                       opacity: isMoveHovered || isDraggingThisCouple ? 1 : 0,
                       transition: 'opacity 0.15s',
                       boxShadow: '0 2px 6px rgba(20,10,40,0.15)',
                       cursor: isDraggingThisCouple ? 'grabbing' : 'grab',
                       touchAction: 'none',
+                      '@media (hover: none)': { opacity: 1, width: 32, height: 32 },
                     }}
                   >
                     <OpenWithIcon sx={{ fontSize: 15, color: 'var(--color-earbore-gray)' }} />
@@ -379,7 +353,19 @@ const FamilyTreeCanvas: React.FC<Props> = ({ treeData, direction, onReorder, onQ
         )}
       </div>
 
-      <Paper elevation={3} sx={{ position: 'absolute', bottom: 16, right: 16, display: 'flex', flexDirection: 'column', gap: 0.5, p: 0.5, borderRadius: 3 }}>
+      <Paper
+        elevation={3}
+        sx={{
+          position: 'absolute',
+          bottom: { xs: 8, sm: 16 },
+          right: { xs: 8, sm: 16 },
+          display: 'flex',
+          flexDirection: 'column',
+          gap: 0.5,
+          p: 0.5,
+          borderRadius: 3,
+        }}
+      >
         <Tooltip title="Mărește" placement="left">
           <IconButton size="small" onClick={() => zoomBy(1.2)}><AddIcon fontSize="small" /></IconButton>
         </Tooltip>

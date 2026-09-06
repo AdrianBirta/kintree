@@ -1,8 +1,8 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import {
   Dialog, DialogTitle, DialogContent, DialogActions, Button, TextField, MenuItem,
-  Select, InputLabel, FormControl, Avatar, IconButton,
-  Divider, Typography, Alert, CircularProgress, Box, Autocomplete, Chip,
+  Select, InputLabel, FormControl, Avatar, IconButton, Divider, Typography, Alert,
+  CircularProgress, Box, Autocomplete, Chip, useMediaQuery, useTheme,
 } from '@mui/material';
 import PhotoCameraIcon from '@mui/icons-material/PhotoCamera';
 import CloseIcon from '@mui/icons-material/Close';
@@ -24,6 +24,9 @@ interface Props {
 const memberLabel = (m: FamilyMember) => `${m.firstName} ${m.lastName}`;
 
 const AddMemberModal: React.FC<Props> = ({ members, onClose, onCreated, initialRelation }) => {
+  const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
+
   const relationTarget = useMemo(
     () => (initialRelation ? members.find((m) => m.id === initialRelation.memberId) ?? null : null),
     [initialRelation, members],
@@ -107,14 +110,15 @@ const AddMemberModal: React.FC<Props> = ({ members, onClose, onCreated, initialR
       onClose={isSaving ? undefined : onClose}
       maxWidth="md"
       fullWidth
-      slotProps={{ paper: { sx: { borderRadius: 2, width: { md: 760 } } } }}
+      fullScreen={isMobile}
+      slotProps={{ paper: { sx: { borderRadius: isMobile ? 0 : 2, width: { md: 760 } } } }}
     >
       <DialogTitle sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontWeight: 700, borderBottom: '1px solid', borderColor: 'divider' }}>
         Adaugă membru
         <IconButton onClick={onClose} disabled={isSaving} size="small"><CloseIcon /></IconButton>
       </DialogTitle>
 
-      <form onSubmit={handleSubmit}>
+      <form onSubmit={handleSubmit} autoComplete="off">
         <DialogContent sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: '220px 1fr' }, gap: 3, py: 3 }}>
 
           {/* Coloana stângă — poza */}
@@ -123,7 +127,7 @@ const AddMemberModal: React.FC<Props> = ({ members, onClose, onCreated, initialR
               <Avatar
                 src={photoPreview ?? undefined}
                 variant="rounded"
-                sx={{ width: 160, height: 160, borderRadius: 2, bgcolor: 'primary.light', fontSize: 40 }}
+                sx={{ width: { xs: 120, sm: 160 }, height: { xs: 120, sm: 160 }, borderRadius: 2, bgcolor: 'primary.light', fontSize: 40 }}
               >
                 {form.firstName ? form.firstName[0] : '?'}
               </Avatar>
@@ -162,11 +166,17 @@ const AddMemberModal: React.FC<Props> = ({ members, onClose, onCreated, initialR
           {/* Coloana dreaptă — formular */}
           <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2.5 }}>
             <Typography variant="overline" color="text.secondary">Identitate</Typography>
-            <Box sx={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 2 }}>
-              <TextField size="small" label="Prenume" name="firstName" value={form.firstName} onChange={handleChange} required fullWidth disabled={isSaving} />
-              <TextField size="small" label="Nume" name="lastName" value={form.lastName} onChange={handleChange} required fullWidth disabled={isSaving} />
+            <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr' }, gap: 2 }}>
+              <TextField
+                size="small" label="Prenume" name="firstName" autoComplete="given-name"
+                value={form.firstName} onChange={handleChange} required fullWidth disabled={isSaving}
+              />
+              <TextField
+                size="small" label="Nume" name="lastName" autoComplete="family-name"
+                value={form.lastName} onChange={handleChange} required fullWidth disabled={isSaving}
+              />
             </Box>
-            <Box sx={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 2 }}>
+            <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr' }, gap: 2 }}>
               <FormControl size="small" fullWidth disabled={isSaving}>
                 <InputLabel>Gen</InputLabel>
                 <Select label="Gen" value={form.gender} onChange={handleSelectChange('gender')}>
@@ -177,7 +187,8 @@ const AddMemberModal: React.FC<Props> = ({ members, onClose, onCreated, initialR
                 </Select>
               </FormControl>
               <TextField
-                size="small" label="Data nașterii" type="date" name="birthDate" value={form.birthDate} onChange={handleChange}
+                size="small" label="Data nașterii" type="date" name="birthDate" autoComplete="bday"
+                value={form.birthDate} onChange={handleChange}
                 fullWidth disabled={isSaving} slotProps={{ inputLabel: { shrink: true } }}
               />
             </Box>
@@ -187,11 +198,7 @@ const AddMemberModal: React.FC<Props> = ({ members, onClose, onCreated, initialR
                 <Divider sx={{ mt: 1 }} />
                 <Typography variant="overline" color="text.secondary">Relații</Typography>
 
-                <Box sx={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 2 }}>
-                  {/* FIX — size="small" și fullWidth explicit pe Autocomplete, nu doar
-                      pe TextField-ul din renderInput. Fără astea, Autocomplete rămânea
-                      la înălțimea implicită "medium", vizibil mai mare decât Select-urile
-                      "small" de lângă el, indiferent de ce e setat în temă. */}
+                <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr' }, gap: 2 }}>
                   <Autocomplete
                     size="small"
                     fullWidth
@@ -201,7 +208,7 @@ const AddMemberModal: React.FC<Props> = ({ members, onClose, onCreated, initialR
                     onChange={(_, val) => setFather(val)}
                     disabled={isSaving}
                     isOptionEqualToValue={(a, b) => a.id === b.id}
-                    renderInput={(params) => <TextField {...params} size="small" label="Tată" placeholder="Caută..." />}
+                    renderInput={(params) => <TextField {...params} size="small" label="Tată" placeholder="Caută..." autoComplete="off" />}
                   />
                   <Autocomplete
                     size="small"
@@ -212,11 +219,11 @@ const AddMemberModal: React.FC<Props> = ({ members, onClose, onCreated, initialR
                     onChange={(_, val) => setMother(val)}
                     disabled={isSaving}
                     isOptionEqualToValue={(a, b) => a.id === b.id}
-                    renderInput={(params) => <TextField {...params} size="small" label="Mamă" placeholder="Caută..." />}
+                    renderInput={(params) => <TextField {...params} size="small" label="Mamă" placeholder="Caută..." autoComplete="off" />}
                   />
                 </Box>
 
-                <Box sx={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 2 }}>
+                <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr' }, gap: 2 }}>
                   <Autocomplete
                     size="small"
                     fullWidth
@@ -226,7 +233,7 @@ const AddMemberModal: React.FC<Props> = ({ members, onClose, onCreated, initialR
                     onChange={(_, val) => setPartner(val)}
                     disabled={isSaving}
                     isOptionEqualToValue={(a, b) => a.id === b.id}
-                    renderInput={(params) => <TextField {...params} size="small" label="Partener" placeholder="Caută..." />}
+                    renderInput={(params) => <TextField {...params} size="small" label="Partener" placeholder="Caută..." autoComplete="off" />}
                   />
                   <FormControl size="small" fullWidth disabled={isSaving}>
                     <InputLabel>Status</InputLabel>
@@ -250,7 +257,7 @@ const AddMemberModal: React.FC<Props> = ({ members, onClose, onCreated, initialR
                   disabled={isSaving}
                   isOptionEqualToValue={(a, b) => a.id === b.id}
                   renderInput={(params) => (
-                    <TextField {...params} size="small" label="Copii" placeholder="Caută și adaugă..." />
+                    <TextField {...params} size="small" label="Copii" placeholder="Caută și adaugă..." autoComplete="off" />
                   )}
                 />
                 <Typography variant="caption" color="text.secondary" sx={{ mt: -1.5 }}>

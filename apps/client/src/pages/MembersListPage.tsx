@@ -4,7 +4,7 @@ import {
   Box, Paper, Table, TableBody, TableCell, TableContainer, TableHead, TableRow,
   TableSortLabel, TextField, IconButton, Avatar, Chip, Button, InputAdornment,
   TablePagination, Tooltip, CircularProgress, Select, MenuItem, FormControl,
-  Typography,
+  Typography, useMediaQuery, useTheme, InputLabel,
 } from '@mui/material';
 import SearchIcon from '@mui/icons-material/Search';
 import EditIcon from '@mui/icons-material/Edit';
@@ -28,8 +28,186 @@ const GENDER_LABELS: Record<string, string> = { MALE: 'Masculin', FEMALE: 'Femin
 
 type SortField = 'name' | 'gender' | 'birthDate' | 'age' | 'occupation' | 'bloodType';
 
+// ─────────────────────────────────────────────────────────────
+// NOU — listă de carduri pentru mobil, folosită în loc de <Table>.
+// Reutilizează exact aceeași logică de editare/ștergere ca tabelul.
+// ─────────────────────────────────────────────────────────────
+interface MobileListProps {
+  members: FamilyMember[];
+  editingId: string | null;
+  editForm: Partial<FamilyMember>;
+  isSavingRow: boolean;
+  onStartEdit: (m: FamilyMember) => void;
+  onCancelEdit: () => void;
+  onSaveEdit: (id: string) => void;
+  onFieldChange: (field: keyof FamilyMember) => (e: React.ChangeEvent<HTMLInputElement>) => void;
+  onSelectFieldChange: (field: 'gender' | 'bloodType', value: string) => void;
+  onPhotoChange: (id: string, file: File) => void;
+  onView: (id: string) => void;
+  onDeleteRequest: (m: FamilyMember) => void;
+}
+
+const MobileMemberList: React.FC<MobileListProps> = ({
+  members, editingId, editForm, isSavingRow,
+  onStartEdit, onCancelEdit, onSaveEdit, onFieldChange, onSelectFieldChange, onPhotoChange, onView, onDeleteRequest,
+}) => {
+  if (members.length === 0) {
+    return (
+      <Box sx={{ py: 6, textAlign: 'center', color: 'text.secondary' }}>
+        <Typography variant="body2">Niciun membru găsit.</Typography>
+      </Box>
+    );
+  }
+
+  return (
+    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5, p: 1.5 }}>
+      {members.map((m) => {
+        const editing = editingId === m.id;
+        const age = calculateAge(m.birthDate, m.deathDate);
+        const deceased = isDeceased(m.deathDate);
+
+        return (
+          <Paper key={m.id} variant="outlined" sx={{ borderRadius: 3, p: 2 }}>
+            <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 1.5 }}>
+              <Box sx={{ position: 'relative', width: 48, height: 48, flexShrink: 0 }}>
+                <Avatar src={m.imageUrl ?? undefined} sx={{ width: 48, height: 48 }}>
+                  {m.firstName[0]}{m.lastName[0]}
+                </Avatar>
+                {editing && (
+                  <IconButton
+                    component="label"
+                    size="small"
+                    sx={{
+                      position: 'absolute', bottom: -4, right: -4, width: 22, height: 22,
+                      bgcolor: 'primary.main', color: 'white', '&:hover': { bgcolor: 'primary.dark' },
+                    }}
+                  >
+                    <PhotoCameraIcon sx={{ fontSize: 13 }} />
+                    <input
+                      hidden
+                      type="file"
+                      accept="image/*"
+                      onChange={(e) => {
+                        const file = e.target.files?.[0];
+                        if (file) onPhotoChange(m.id, file);
+                      }}
+                    />
+                  </IconButton>
+                )}
+              </Box>
+
+              <Box sx={{ flex: 1, minWidth: 0 }}>
+                {editing ? (
+                  <Box sx={{ display: 'flex', gap: 1 }}>
+                    <TextField
+                      size="small" autoComplete="given-name" value={editForm.firstName ?? ''}
+                      onChange={onFieldChange('firstName')} placeholder="Prenume" fullWidth
+                    />
+                    <TextField
+                      size="small" autoComplete="family-name" value={editForm.lastName ?? ''}
+                      onChange={onFieldChange('lastName')} placeholder="Nume" fullWidth
+                    />
+                  </Box>
+                ) : (
+                  <Typography
+                    variant="subtitle2"
+                    sx={{ fontWeight: 700, cursor: 'pointer' }}
+                    onClick={() => onView(m.id)}
+                  >
+                    {m.firstName} {m.lastName}
+                  </Typography>
+                )}
+
+                {!editing && (
+                  <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5, mt: 0.75 }}>
+                    {m.gender && <Chip size="small" label={GENDER_LABELS[m.gender]} variant="outlined" />}
+                    {age !== null && <Chip size="small" label={`${age} ani`} variant="outlined" />}
+                    {m.bloodType && <Chip size="small" label={BLOOD_TYPE_LABELS[m.bloodType as BloodType]} variant="outlined" />}
+                    {deceased ? (
+                      <Chip size="small" label="✝ decedat" variant="outlined" />
+                    ) : (
+                      <Chip size="small" label="în viață" color="success" variant="outlined" />
+                    )}
+                  </Box>
+                )}
+
+                {!editing && m.occupation && (
+                  <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 0.5 }}>
+                    {m.occupation}
+                  </Typography>
+                )}
+              </Box>
+
+              {!editing && (
+                <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.25, flexShrink: 0 }}>
+                  <IconButton size="small" onClick={() => onView(m.id)}><VisibilityIcon fontSize="small" /></IconButton>
+                  <IconButton size="small" onClick={() => onStartEdit(m)}><EditIcon fontSize="small" /></IconButton>
+                  <IconButton size="small" color="error" onClick={() => onDeleteRequest(m)}><DeleteIcon fontSize="small" /></IconButton>
+                </Box>
+              )}
+            </Box>
+
+            {editing && (
+              <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5, mt: 1.5 }}>
+                <Box sx={{ display: 'flex', gap: 1 }}>
+                  <FormControl size="small" fullWidth>
+                    <InputLabel>Gen</InputLabel>
+                    <Select
+                      label="Gen"
+                      value={editForm.gender ?? ''}
+                      onChange={(e) => onSelectFieldChange('gender', e.target.value)}
+                    >
+                      <MenuItem value="">Nespecificat</MenuItem>
+                      <MenuItem value="MALE">Masculin</MenuItem>
+                      <MenuItem value="FEMALE">Feminin</MenuItem>
+                      <MenuItem value="OTHER">Altul</MenuItem>
+                    </Select>
+                  </FormControl>
+                  <TextField
+                    size="small" type="date" autoComplete="bday"
+                    value={editForm.birthDate?.slice(0, 10) ?? ''}
+                    onChange={onFieldChange('birthDate')} fullWidth
+                  />
+                </Box>
+                <TextField
+                  size="small" autoComplete="organization-title" label="Ocupație"
+                  value={editForm.occupation ?? ''} onChange={onFieldChange('occupation')} fullWidth
+                />
+                <FormControl size="small" fullWidth>
+                  <InputLabel>Grupă sanguină</InputLabel>
+                  <Select
+                    label="Grupă sanguină"
+                    value={editForm.bloodType ?? ''}
+                    onChange={(e) => onSelectFieldChange('bloodType', e.target.value)}
+                  >
+                    <MenuItem value="">—</MenuItem>
+                    {Object.entries(BLOOD_TYPE_LABELS).map(([key, label]) => (
+                      <MenuItem key={key} value={key}>{label}</MenuItem>
+                    ))}
+                  </Select>
+                </FormControl>
+
+                <Box sx={{ display: 'flex', gap: 1 }}>
+                  <Button fullWidth variant="outlined" color="inherit" disabled={isSavingRow} onClick={onCancelEdit}>
+                    Anulează
+                  </Button>
+                  <Button fullWidth variant="contained" disabled={isSavingRow} onClick={() => onSaveEdit(m.id)}>
+                    {isSavingRow ? 'Se salvează...' : 'Salvează'}
+                  </Button>
+                </Box>
+              </Box>
+            )}
+          </Paper>
+        );
+      })}
+    </Box>
+  );
+};
+
 const MembersListPage: React.FC = () => {
   const navigate = useNavigate();
+  const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
 
   const [members, setMembers] = useState<FamilyMember[]>([]);
   const [treeData, setTreeData] = useState<FamilyTreeData | undefined>();
@@ -146,6 +324,12 @@ const MembersListPage: React.FC = () => {
     setEditForm((prev) => ({ ...prev, [field]: value === '' ? undefined : value }));
   };
 
+  // NOU — folosit atât de select-urile din cardul mobil, cât și (indirect)
+  // aliniat cu logica selecturilor din tabel.
+  const handleEditSelectChange = (field: 'gender' | 'bloodType', value: string) => {
+    setEditForm((prev) => ({ ...prev, [field]: (value || undefined) as any }));
+  };
+
   const handlePhotoChange = async (id: string, file: File) => {
     const updated = await familyMembersService.uploadPhoto(id, file);
     setMembers((prev) => prev.map((m) => (m.id === id ? { ...m, imageUrl: updated.imageUrl } : m)));
@@ -164,21 +348,31 @@ const MembersListPage: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-earbore-grayLight">
+    <div className="min-h-dvh bg-earbore-grayLight">
       <Header treeData={treeData} />
 
-      <Box sx={{ maxWidth: 1400, mx: 'auto', px: { xs: 2, sm: 4 }, py: 4 }}>
-        <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 3, flexWrap: 'wrap', gap: 2 }}>
-          <Typography variant="h5" sx={{ fontWeight: 800 }}>
+      <Box sx={{ maxWidth: 1400, mx: 'auto', px: { xs: 1.5, sm: 4 }, py: { xs: 2, sm: 4 } }}>
+        <Box
+          sx={{
+            display: 'flex',
+            flexDirection: { xs: 'column', sm: 'row' },
+            alignItems: { xs: 'stretch', sm: 'center' },
+            justifyContent: 'space-between',
+            mb: 3,
+            gap: 2,
+          }}
+        >
+          <Typography variant="h5" sx={{ fontWeight: 800, px: { xs: 0.5, sm: 0 } }}>
             Toți membrii ({filtered.length})
           </Typography>
 
-          <Box sx={{ display: 'flex', gap: 2, alignItems: 'center', flexWrap: 'wrap' }}>
+          <Box sx={{ display: 'flex', gap: 2, alignItems: 'center', flexDirection: { xs: 'column', sm: 'row' } }}>
             <TextField
               size="small"
               placeholder="Caută după nume, ocupație..."
               value={search}
               onChange={(e) => { setSearch(e.target.value); setPage(0); }}
+              autoComplete="off"
               slotProps={{
                 input: {
                   startAdornment: (
@@ -188,9 +382,15 @@ const MembersListPage: React.FC = () => {
                   ),
                 },
               }}
-              sx={{ minWidth: 260, bgcolor: 'white', borderRadius: 2 }}
+              sx={{ width: { xs: '100%', sm: 260 }, bgcolor: 'white', borderRadius: 2 }}
             />
-            <Button variant="contained" startIcon={<AddIcon />} onClick={() => setShowAddModal(true)}>
+            <Button
+              variant="contained"
+              startIcon={<AddIcon />}
+              onClick={() => setShowAddModal(true)}
+              fullWidth={isMobile}
+              sx={{ flexShrink: 0 }}
+            >
               Adaugă membru
             </Button>
           </Box>
@@ -201,6 +401,39 @@ const MembersListPage: React.FC = () => {
             <Box sx={{ display: 'flex', justifyContent: 'center', py: 8 }}>
               <CircularProgress />
             </Box>
+          ) : isMobile ? (
+            <>
+              {/* NOU — pe telefon: listă de carduri în loc de tabel */}
+              <MobileMemberList
+                members={paginated}
+                editingId={editingId}
+                editForm={editForm}
+                isSavingRow={isSavingRow}
+                onStartEdit={startEdit}
+                onCancelEdit={cancelEdit}
+                onSaveEdit={saveEdit}
+                onFieldChange={handleEditTextChange}
+                onSelectFieldChange={handleEditSelectChange}
+                onPhotoChange={handlePhotoChange}
+                onView={(id) => navigate(`/members/${id}`)}
+                onDeleteRequest={(m) => setDeleteTarget(m)}
+              />
+
+              <TablePagination
+                component="div"
+                count={filtered.length}
+                page={page}
+                onPageChange={(_, newPage) => setPage(newPage)}
+                rowsPerPage={rowsPerPage}
+                onRowsPerPageChange={(e) => { setRowsPerPage(parseInt(e.target.value, 10)); setPage(0); }}
+                rowsPerPageOptions={[10, 25, 50]}
+                labelRowsPerPage="Pe pagină"
+                sx={{
+                  '.MuiTablePagination-toolbar': { flexWrap: 'wrap', justifyContent: 'center', rowGap: 1, px: 1 },
+                  '.MuiTablePagination-spacer': { display: 'none' },
+                }}
+              />
+            </>
           ) : (
             <>
               <TableContainer sx={{ maxHeight: 620 }}>
@@ -283,8 +516,8 @@ const MembersListPage: React.FC = () => {
                           <TableCell>
                             {editing ? (
                               <Box sx={{ display: 'flex', gap: 1 }}>
-                                <TextField size="small" value={editForm.firstName ?? ''} onChange={handleEditTextChange('firstName')} placeholder="Prenume" sx={{ width: 100 }} />
-                                <TextField size="small" value={editForm.lastName ?? ''} onChange={handleEditTextChange('lastName')} placeholder="Nume" sx={{ width: 100 }} />
+                                <TextField size="small" autoComplete="given-name" value={editForm.firstName ?? ''} onChange={handleEditTextChange('firstName')} placeholder="Prenume" sx={{ width: 100 }} />
+                                <TextField size="small" autoComplete="family-name" value={editForm.lastName ?? ''} onChange={handleEditTextChange('lastName')} placeholder="Nume" sx={{ width: 100 }} />
                               </Box>
                             ) : (
                               <Box sx={{ cursor: 'pointer', fontWeight: 600 }} onClick={() => navigate(`/members/${m.id}`)}>
@@ -298,7 +531,7 @@ const MembersListPage: React.FC = () => {
                               <FormControl size="small" sx={{ minWidth: 110 }}>
                                 <Select
                                   value={editForm.gender ?? ''}
-                                  onChange={(e) => setEditForm((prev) => ({ ...prev, gender: (e.target.value || undefined) as any }))}
+                                  onChange={(e) => handleEditSelectChange('gender', e.target.value)}
                                   displayEmpty
                                 >
                                   <MenuItem value="">Nespecificat</MenuItem>
@@ -315,7 +548,7 @@ const MembersListPage: React.FC = () => {
                           <TableCell>
                             {editing ? (
                               <TextField
-                                size="small" type="date" value={editForm.birthDate?.slice(0, 10) ?? ''}
+                                size="small" type="date" autoComplete="bday" value={editForm.birthDate?.slice(0, 10) ?? ''}
                                 onChange={handleEditTextChange('birthDate')} sx={{ width: 150 }}
                               />
                             ) : (
@@ -327,7 +560,7 @@ const MembersListPage: React.FC = () => {
 
                           <TableCell>
                             {editing ? (
-                              <TextField size="small" value={editForm.occupation ?? ''} onChange={handleEditTextChange('occupation')} sx={{ width: 140 }} />
+                              <TextField size="small" autoComplete="organization-title" value={editForm.occupation ?? ''} onChange={handleEditTextChange('occupation')} sx={{ width: 140 }} />
                             ) : (
                               m.occupation || '—'
                             )}
@@ -338,7 +571,7 @@ const MembersListPage: React.FC = () => {
                               <FormControl size="small" sx={{ minWidth: 90 }}>
                                 <Select
                                   value={editForm.bloodType ?? ''}
-                                  onChange={(e) => setEditForm((prev) => ({ ...prev, bloodType: (e.target.value || undefined) as any }))}
+                                  onChange={(e) => handleEditSelectChange('bloodType', e.target.value)}
                                   displayEmpty
                                 >
                                   <MenuItem value="">—</MenuItem>
