@@ -1,6 +1,7 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import LandingHeader from '../components/layout/LandingHeader';
+import TreePreviewSvg from '../components/landing/TreePreviewSvg';
 
 const DONATE_URL = 'https://buymeacoffee.com/earbore'; // TODO: înlocuiește cu link-ul tău real (Stripe Payment Link / BMC / Ko-fi)
 
@@ -47,8 +48,8 @@ const LandingPage: React.FC = () => {
 
           {/* mockup vizual simplu */}
           <div className="mt-14 max-w-3xl mx-auto rounded-3xl border border-earbore-border bg-white shadow-xl p-3 sm:p-4">
-            <div className="rounded-2xl bg-earbore-grayLight h-64 sm:h-80 flex items-center justify-center text-earbore-gray text-sm">
-              [ previzualizare arbore genealogic / screenshot al aplicației ]
+            <div className="rounded-2xl h-64 sm:h-80 overflow-hidden">
+              <TreePreviewSvg />
             </div>
           </div>
         </div>
