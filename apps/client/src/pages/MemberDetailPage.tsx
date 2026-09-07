@@ -55,6 +55,10 @@ const MemberDetailPage: React.FC = () => {
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
 
+  // NOU — state pentru marcarea "eu" + dialogul de confirmare la reasociere
+  const [isTogglingSelf, setIsTogglingSelf] = useState(false);
+  const [confirmSelfSwapOpen, setConfirmSelfSwapOpen] = useState(false);
+
   const loadMember = useCallback(() => {
     if (!id) return;
     setIsLoading(true);
@@ -66,12 +70,6 @@ const MemberDetailPage: React.FC = () => {
       setMember(data);
       const { parents, children, partnersA, partnersB, ...editableFields } = data;
       setForm(editableFields);
-      // FIX — sursa `all` poate conține aceeași persoană de mai multe ori
-      // (join-uri pe relații în backend). Deduplicăm o singură dată aici,
-      // ca parentOptions / childOptions / partnerOptions (derivate mai jos
-      // din allMembers) să pornească deja curate — altfel Autocomplete-ul
-      // arăta dubluri și, la filtrare, eticheta greșită pentru opțiunea
-      // selectată.
       setAllMembers(dedupeMembers(all.filter((m) => m.id !== id)));
       setTreeData(tree);
       setIsLoading(false);
@@ -191,6 +189,51 @@ const MemberDetailPage: React.FC = () => {
     }
   };
 
+  // ── logică "marchează ca fiind tu" ──
+  const isSelf = !!id && treeData?.selfMemberId === id;
+  // există deja un alt membru marcat ca "eu", diferit de cel curent?
+  const currentSelfMember = treeData?.selfMemberId
+    ? allMembers.find((m) => m.id === treeData.selfMemberId)
+    : undefined;
+  const hasOtherSelf = !!treeData?.selfMemberId && treeData.selfMemberId !== id;
+
+  const performMarkAsMe = async () => {
+    if (!id) return;
+    setIsTogglingSelf(true);
+    try {
+      await familyMembersService.markAsMe(id);
+      loadMember();
+    } finally {
+      setIsTogglingSelf(false);
+      setConfirmSelfSwapOpen(false);
+    }
+  };
+
+  const handleToggleSelf = async () => {
+    if (!id) return;
+
+    if (isSelf) {
+      // deja marcat — dezasociază direct, fără confirmare (acțiune non-distructivă)
+      setIsTogglingSelf(true);
+      try {
+        await familyMembersService.unmarkAsMe();
+        loadMember();
+      } finally {
+        setIsTogglingSelf(false);
+      }
+      return;
+    }
+
+    if (hasOtherSelf) {
+      // NOU — există deja alt membru marcat ca "eu": cerem confirmare
+      // explicită înainte de a-l dezasocia silențios pe celălalt.
+      setConfirmSelfSwapOpen(true);
+      return;
+    }
+
+    performMarkAsMe();
+  };
+
   if (isLoading || !member) {
     return (
       <div className="min-h-screen bg-earbore-grayLight flex items-center justify-center">
@@ -245,6 +288,11 @@ const MemberDetailPage: React.FC = () => {
                 style={{ background: 'linear-gradient(to top, rgba(20,10,40,0.82) 0%, rgba(20,10,40,0.35) 55%, rgba(20,10,40,0) 100%)' }}
               >
                 <div className="text-white max-w-3xl">
+                  {isSelf && (
+                    <span className="inline-block text-xs font-semibold uppercase tracking-wider bg-earbore-500/90 backdrop-blur-sm px-3 py-1 rounded-full mb-3 mr-2">
+                      Tu
+                    </span>
+                  )}
                   {member.occupation && (
                     <span className="inline-block text-xs font-semibold uppercase tracking-wider bg-white/15 backdrop-blur-sm px-3 py-1 rounded-full mb-3">
                       {member.occupation}
@@ -280,6 +328,22 @@ const MemberDetailPage: React.FC = () => {
           isLoading={isDeleting}
           onConfirm={handleDelete}
           onCancel={() => setConfirmOpen(false)}
+        />
+
+        {/* NOU — confirmare la reasocierea "eu" pe alt membru */}
+        <ConfirmDialog
+          open={confirmSelfSwapOpen}
+          title="Schimbi cine ești tu în arbore?"
+          description={
+            currentSelfMember
+              ? `Ești deja marcat ca fiind ${currentSelfMember.firstName} ${currentSelfMember.lastName}. Dacă continui, acea asociere va fi eliminată și ${member.firstName} ${member.lastName} va deveni noul tău profil.`
+              : `Ești deja asociat cu un alt membru. Dacă continui, acea asociere va fi eliminată și ${member.firstName} ${member.lastName} va deveni noul tău profil.`
+          }
+          confirmLabel="Da, schimbă"
+          isLoading={isTogglingSelf}
+          destructive={false}
+          onConfirm={performMarkAsMe}
+          onCancel={() => setConfirmSelfSwapOpen(false)}
         />
 
         <div className="grid grid-cols-1 lg:grid-cols-[340px_1fr] gap-6 items-start">
@@ -371,6 +435,25 @@ const MemberDetailPage: React.FC = () => {
                 >
                   {isEditing ? (isSaving ? 'Se salvează...' : 'Salvează') : 'Editează profilul'}
                 </button>
+
+                {/* NOU — marchează/demarchează membrul curent ca fiind userul logat */}
+                {!isEditing && (
+                  <Button
+                    size="small"
+                    variant={isSelf ? 'contained' : 'outlined'}
+                    color={isSelf ? 'success' : 'inherit'}
+                    onClick={handleToggleSelf}
+                    disabled={isTogglingSelf}
+                    sx={{ borderRadius: 1.5, textTransform: 'none', py: 1.1 }}
+                  >
+                    {isTogglingSelf
+                      ? 'Se salvează...'
+                      : isSelf
+                        ? '✓ Acesta ești tu'
+                        : 'Marchează ca fiind tu'}
+                  </Button>
+                )}
+
                 <Button
                   size="small"
                   color="error"

@@ -1,9 +1,12 @@
 import React, { useState, useRef, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../../hooks/useAuth';
 import AccountTreeIcon from '@mui/icons-material/AccountTree';
 import TableRowsIcon from '@mui/icons-material/TableRows';
 import GroupsIcon from '@mui/icons-material/Groups';
+import CloseIcon from '@mui/icons-material/Close';
+import { IconButton, useMediaQuery, useTheme } from '@mui/material';
 import type { FamilyTreeData } from '../../types/family';
 import MembersAccordionMenu from './MembersAccordionMenu';
 
@@ -15,6 +18,9 @@ const Header: React.FC<Props> = ({ treeData }) => {
   const navigate = useNavigate();
   const location = useLocation();
   const { user, logout } = useAuth();
+  const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
+
   const [userMenuOpen, setUserMenuOpen] = useState(false);
   const [membersMenuOpen, setMembersMenuOpen] = useState(false);
   const userMenuRef = useRef<HTMLDivElement>(null);
@@ -25,13 +31,20 @@ const Header: React.FC<Props> = ({ treeData }) => {
       if (userMenuRef.current && !userMenuRef.current.contains(e.target as Node)) {
         setUserMenuOpen(false);
       }
-      if (membersMenuRef.current && !membersMenuRef.current.contains(e.target as Node)) {
+      if (!isMobile && membersMenuRef.current && !membersMenuRef.current.contains(e.target as Node)) {
         setMembersMenuOpen(false);
       }
     };
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, []);
+  }, [isMobile]);
+
+  useEffect(() => {
+    if (isMobile && membersMenuOpen) {
+      document.body.style.overflow = 'hidden';
+      return () => { document.body.style.overflow = ''; };
+    }
+  }, [isMobile, membersMenuOpen]);
 
   const initials = user ? `${user.firstName[0]}${user.lastName[0]}` : '';
   const memberCount = treeData?.members.length ?? 0;
@@ -41,8 +54,6 @@ const Header: React.FC<Props> = ({ treeData }) => {
     navigate(`/members/${id}`);
   };
 
-  // NOU — "Arbore" e considerat activ inclusiv pe pagina de detaliu a unui
-  // membru (/members/:id), pentru că acolo tot din arbore ai venit conceptual.
   const isTreeActive = location.pathname === '/dashboard' || /^\/members\/.+/.test(location.pathname);
   const isTableActive = location.pathname === '/members';
 
@@ -53,15 +64,12 @@ const Header: React.FC<Props> = ({ treeData }) => {
     }`;
 
   return (
-    <header className="w-full border-b border-earbore-border bg-white/90 backdrop-blur-sm z-20">
+    <header className="w-full border-b border-earbore-border bg-white/90 backdrop-blur-sm sticky top-0 z-30">
       <div className="px-3 sm:px-6 py-2.5 sm:py-3 flex items-center justify-between gap-2">
         <button onClick={() => navigate('/dashboard')} className="flex items-center gap-2 cursor-pointer flex-shrink-0">
           <span className="text-lg sm:text-xl font-extrabold text-earbore-700">eArbore</span>
         </button>
 
-        {/* NOU — Arbore / Tabel membri mutate lângă dropdown-ul de membri,
-            în partea dreaptă. Pe mobil rămân doar iconițe, ca să nu aglomereze
-            bara — dar sunt mereu vizibile, în același loc, indiferent de pagină. */}
         <div className="flex items-center gap-1 sm:gap-2 min-w-0">
           <button onClick={() => navigate('/dashboard')} className={navButtonClass(isTreeActive)}>
             <AccountTreeIcon fontSize="small" />
@@ -72,7 +80,7 @@ const Header: React.FC<Props> = ({ treeData }) => {
             <span className="hidden sm:inline">Tabel membri</span>
           </button>
 
-          {/* Dropdown membri — arbore genealogic tip acordeon */}
+          {/* Dropdown / overlay membri */}
           <div className="relative flex-shrink-0" ref={membersMenuRef}>
             <button
               onClick={() => setMembersMenuOpen((v) => !v)}
@@ -84,14 +92,15 @@ const Header: React.FC<Props> = ({ treeData }) => {
               <span className={`hidden sm:inline transition-transform ${membersMenuOpen ? 'rotate-180' : ''}`}>▾</span>
             </button>
 
-            {membersMenuOpen && (
+            {/* Dropdown normal — DOAR pe desktop, rămâne copil al header-ului */}
+            {membersMenuOpen && !isMobile && (
               <div className="absolute right-0 mt-2 w-72 sm:w-80 max-w-[85vw] bg-white rounded-xl shadow-lg border border-earbore-border py-2 max-h-96 overflow-y-auto">
                 <MembersAccordionMenu treeData={treeData} onNavigate={handleNavigateToMember} />
               </div>
             )}
           </div>
 
-          {/* Dropdown user */}
+          {/* Dropdown user — neschimbat */}
           <div className="relative flex-shrink-0" ref={userMenuRef}>
             <button
               onClick={() => setUserMenuOpen((v) => !v)}
@@ -107,10 +116,7 @@ const Header: React.FC<Props> = ({ treeData }) => {
                   <p className="text-xs text-earbore-gray truncate">{user?.email}</p>
                 </div>
                 <button
-                  onClick={() => {
-                    setUserMenuOpen(false);
-                    navigate('/profile');
-                  }}
+                  onClick={() => { setUserMenuOpen(false); navigate('/profile'); }}
                   className="w-full text-left px-4 py-2 text-sm text-earbore-ink hover:bg-earbore-50 transition-colors cursor-pointer"
                 >
                   Profilul meu
@@ -126,6 +132,29 @@ const Header: React.FC<Props> = ({ treeData }) => {
           </div>
         </div>
       </div>
+
+      {/* NOU — overlay full-screen pe mobil, randat printr-un PORTAL direct în
+          document.body. E OBLIGATORIU să fie portal aici: header-ul are
+          `backdrop-blur-sm` (backdrop-filter), iar backdrop-filter creează un
+          "containing block" nou pentru orice descendent `position: fixed`.
+          Fără portal, `fixed inset-0` s-ar raporta la cutia header-ului
+          (înaltă doar cât bara de sus), nu la tot ecranul — exact bug-ul
+          apărut inițial, unde overlay-ul se comprima și lăsa să se vadă
+          conținutul paginii din spate. */}
+      {membersMenuOpen && isMobile && createPortal(
+        <div className="fixed inset-0 z-50 bg-white flex flex-col">
+          <div className="flex items-center justify-between px-4 py-3 border-b border-earbore-border flex-shrink-0">
+            <h2 className="text-base font-bold text-earbore-ink">Membri ({memberCount})</h2>
+            <IconButton onClick={() => setMembersMenuOpen(false)} size="small">
+              <CloseIcon />
+            </IconButton>
+          </div>
+          <div className="flex-1 overflow-y-auto py-2">
+            <MembersAccordionMenu treeData={treeData} onNavigate={handleNavigateToMember} />
+          </div>
+        </div>,
+        document.body,
+      )}
     </header>
   );
 };

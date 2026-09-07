@@ -23,12 +23,17 @@ model User {
   createdAt     DateTime       @default(now())
   updatedAt     DateTime       @updatedAt
   familyMembers FamilyMember[]
-  refreshTokens RefreshToken[] // NOU — o sesiune = un rând, nu un singur câmp
+  refreshTokens RefreshToken[]
+
+  // NOU — leagă acest user de UN SINGUR FamilyMember, care reprezintă
+  // "eu" în arborele lui. @unique garantează că un membru nu poate fi
+  // "eu" pentru doi useri diferiți simultan.
+  selfMemberId String?       @unique
+  selfMember   FamilyMember? @relation("SelfMember", fields: [selfMemberId], references: [id], onDelete: SetNull)
 
   @@map("users")
 }
 
-// NOU — permite mai multe sesiuni active simultan (telefon + laptop, etc.)
 model RefreshToken {
   id        String   @id @default(uuid())
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -83,6 +88,9 @@ model FamilyMember {
   manualRank  Int?
   alliancesA  FamilyAlliance[] @relation("AllianceA")
   alliancesB  FamilyAlliance[] @relation("AllianceB")
+
+  // NOU — reverse relation pentru User.selfMember
+  selfOfUser User? @relation("SelfMember")
 
   @@map("family_members")
 }

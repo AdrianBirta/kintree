@@ -3,12 +3,14 @@ import { PrismaService } from '../prisma/prisma.service';
 import { CreateFamilyMemberDto } from './dto/create-family-member.dto';
 import { UpdateFamilyMemberDto } from './dto/update-family-member.dto';
 import { UploadService } from '../upload/upload.service';
+import { UsersService } from '../users/users.service';
 
 @Injectable()
 export class FamilyMembersService {
   constructor(
     private prisma: PrismaService,
     private uploadService: UploadService,
+    private usersService: UsersService, // NOU
   ) { }
 
   private normalizeDates<T extends { birthDate?: string; deathDate?: string }>(dto: T) {
@@ -61,9 +63,6 @@ export class FamilyMembersService {
     return removed;
   }
 
-  // NOU — încarcă poza pe Cloudinary și salvează URL-ul rezultat pe membru.
-  // Notă: nu ștergem poza veche de pe Cloudinary la înlocuire — dacă vrei asta,
-  // adaugă un câmp `imagePublicId` în schema Prisma și apelează uploadService.deleteImage().
   async uploadPhoto(userId: string, id: string, file: Parameters<UploadService['uploadImage']>[0]) {
     await this.findOne(userId, id);
     if (!file) throw new BadRequestException('Niciun fișier trimis.');
@@ -77,12 +76,17 @@ export class FamilyMembersService {
   }
 
   async getFamilyTree(userId: string) {
-    const members = await this.prisma.familyMember.findMany({ where: { ownerId: userId } });
-    const relations = await this.prisma.parentChild.findMany({ where: { parent: { ownerId: userId } } });
-    const partnerships = await this.prisma.partnership.findMany({ where: { partnerA: { ownerId: userId } } });
-    const alliances = await this.prisma.familyAlliance.findMany({ where: { memberA: { ownerId: userId } } });
+    const [members, relations, partnerships, alliances, user] = await Promise.all([
+      this.prisma.familyMember.findMany({ where: { ownerId: userId } }),
+      this.prisma.parentChild.findMany({ where: { parent: { ownerId: userId } } }),
+      this.prisma.partnership.findMany({ where: { partnerA: { ownerId: userId } } }),
+      this.prisma.familyAlliance.findMany({ where: { memberA: { ownerId: userId } } }),
+      this.usersService.findById(userId), // NOU
+    ]);
 
-    return { members, relations, partnerships, alliances };
+    // NOU — includem selfMemberId, ca front-end-ul să știe pe cine să
+    // marcheze ca "Tu" fără un apel suplimentar.
+    return { members, relations, partnerships, alliances, selfMemberId: user?.selfMemberId ?? null };
   }
 
   async linkParentChild(userId: string, parentId: string, childId: string) {
@@ -145,6 +149,29 @@ export class FamilyMembersService {
 
     await this.syncAlliances(userId);
     return result;
+  }
+
+  // NOU — marchează un membru (deja al userului curent) ca fiind "eu".
+  // findOne verifică deja ownership-ul, deci userul nu poate marca un
+  // membru care nu-i aparține.
+  async markAsMe(userId: string, memberId: string) {
+    await this.findOne(userId, memberId);
+    await this.usersService.setSelfMember(userId, memberId);
+    return this.getSelfMember(userId);
+  }
+
+  // NOU — elimină legătura "eu" pentru userul curent.
+  async unmarkAsMe(userId: string) {
+    await this.usersService.setSelfMember(userId, null);
+    return { success: true };
+  }
+
+  // NOU — returnează membrul complet marcat ca "eu", sau null dacă
+  // userul nu a marcat încă pe nimeni.
+  async getSelfMember(userId: string) {
+    const user = await this.usersService.findById(userId);
+    if (!user?.selfMemberId) return null;
+    return this.findOne(userId, user.selfMemberId);
   }
 
   private async syncAlliances(userId: string) {

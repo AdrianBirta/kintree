@@ -24,7 +24,7 @@ export interface FamilyMember {
   createdAt: string;
   updatedAt: string;
   manualOrder?: number | null;
-  manualRank?: number | null; // NOU: generația forțată manual prin drag vertical
+  manualRank?: number | null;
 }
 
 export interface ParentChildRelation {
@@ -40,7 +40,6 @@ export interface Partnership {
   status: string;
 }
 
-// NOU
 export interface Alliance {
   id: string;
   memberAId: string;
@@ -53,7 +52,8 @@ export interface FamilyTreeData {
   members: FamilyMember[];
   relations: ParentChildRelation[];
   partnerships: Partnership[];
-  alliances: Alliance[]; // NOU
+  alliances: Alliance[];
+  selfMemberId?: string | null; // NOU
 }
 
 export const BLOOD_TYPE_LABELS: Record<BloodType, string> = {

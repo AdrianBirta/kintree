@@ -21,6 +21,12 @@ export class FamilyMembersController {
     return this.familyMembersService.getFamilyTree(user.userId);
   }
 
+  // NOU — trebuie ÎNAINTE de @Get(':id'), altfel "self" e tratat ca id
+  @Get('self')
+  getSelf(@CurrentUser() user: { userId: string }) {
+    return this.familyMembersService.getSelfMember(user.userId);
+  }
+
   @Post('partnerships')
   linkPartners(@CurrentUser() user: { userId: string }, @Body() dto: LinkPartnersDto) {
     return this.familyMembersService.linkPartners(user.userId, dto.partnerAId, dto.partnerBId, dto.status);
@@ -39,6 +45,12 @@ export class FamilyMembersController {
   @Delete('relations')
   unlinkParentChild(@CurrentUser() user: { userId: string }, @Body() dto: LinkParentChildDto) {
     return this.familyMembersService.unlinkParentChild(user.userId, dto.parentId, dto.childId);
+  }
+
+  // NOU — elimină legătura "eu" (fără id în URL, e per user)
+  @Delete('self-link')
+  unmarkAsMe(@CurrentUser() user: { userId: string }) {
+    return this.familyMembersService.unmarkAsMe(user.userId);
   }
 
   @Post()
@@ -61,11 +73,10 @@ export class FamilyMembersController {
     return this.familyMembersService.update(user.userId, id, dto);
   }
 
-  // NOU — încărcare poză de profil (multipart/form-data, câmpul "file")
   @Post(':id/photo')
   @UseInterceptors(
     FileInterceptor('file', {
-      limits: { fileSize: 5 * 1024 * 1024 }, // 5MB
+      limits: { fileSize: 5 * 1024 * 1024 },
       fileFilter: imageFileFilter,
     }),
   )
@@ -75,6 +86,12 @@ export class FamilyMembersController {
     @UploadedFile() file: Parameters<FamilyMembersService['uploadPhoto']>[2],
   ) {
     return this.familyMembersService.uploadPhoto(user.userId, id, file);
+  }
+
+  // NOU — marchează acest membru ca fiind "eu"
+  @Post(':id/mark-as-me')
+  markAsMe(@CurrentUser() user: { userId: string }, @Param('id') id: string) {
+    return this.familyMembersService.markAsMe(user.userId, id);
   }
 
   @Delete(':id')

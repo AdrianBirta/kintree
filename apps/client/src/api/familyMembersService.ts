@@ -20,7 +20,6 @@ export const familyMembersService = {
   updatePosition: (id: string, manualOrder: number | null) =>
     apiClient.patch<FamilyMember>(`/family-members/${id}`, { manualOrder }).then((r) => r.data),
 
-  // NOU — încărcare poză de profil prin Cloudinary (backend-ul face proxy)
   uploadPhoto: (id: string, file: File) => {
     const formData = new FormData();
     formData.append('file', file);
@@ -30,4 +29,9 @@ export const familyMembersService = {
       })
       .then((r) => r.data);
   },
+
+  // NOU — legătura "eu" ↔ membru
+  markAsMe: (id: string) => apiClient.post<FamilyMemberDetail>(`/family-members/${id}/mark-as-me`).then((r) => r.data),
+  unmarkAsMe: () => apiClient.delete('/family-members/self-link').then((r) => r.data),
+  getSelf: () => apiClient.get<FamilyMemberDetail | null>('/family-members/self').then((r) => r.data),
 };
