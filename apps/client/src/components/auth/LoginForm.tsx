@@ -54,8 +54,6 @@ const LoginForm: React.FC<Props> = ({ onGoRegister }) => {
           <label htmlFor="password" className="block text-xs font-semibold text-earbore-gray uppercase tracking-wider mb-1.5">
             Parolă
           </label>
-          {/* NOU — wrapper relativ, ca butonul de vizibilitate să se poziționeze
-              absolut în dreapta inputului, fără să afecteze layout-ul restului formularului */}
           <div className="relative">
             <input
               type={showPassword ? 'text' : 'password'}
@@ -73,6 +71,12 @@ const LoginForm: React.FC<Props> = ({ onGoRegister }) => {
               type="button"
               size="small"
               onClick={() => setShowPassword((v) => !v)}
+              // FIX — pe mobil, tap-ul pe buton declanșează un blur pe input
+              // ÎNAINTE de onClick, ceea ce închide tastatura virtuală.
+              // preventDefault() pe mousedown (evenimentul care precede
+              // efectiv blur-ul, inclusiv pe touch) oprește input-ul să-și
+              // piardă focus-ul, deci tastatura rămâne deschisă.
+              onMouseDown={(e) => e.preventDefault()}
               disabled={isLoggingIn}
               tabIndex={-1}
               aria-label={showPassword ? 'Ascunde parola' : 'Arată parola'}

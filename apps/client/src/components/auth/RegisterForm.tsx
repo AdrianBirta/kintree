@@ -78,7 +78,6 @@ const RegisterForm: React.FC<Props> = ({ onGoLogin }) => {
 
         <div>
           <label className="block text-xs font-semibold text-earbore-gray uppercase tracking-wider mb-1.5">Parolă</label>
-          {/* NOU — la fel ca în LoginForm, wrapper relativ + buton absolut */}
           <div className="relative">
             <input
               type={showPassword ? 'text' : 'password'}
@@ -96,6 +95,10 @@ const RegisterForm: React.FC<Props> = ({ onGoLogin }) => {
               type="button"
               size="small"
               onClick={() => setShowPassword((v) => !v)}
+              // FIX — la fel ca în LoginForm: preventDefault pe mousedown ca
+              // input-ul de parolă să nu-și piardă focusul (și implicit
+              // tastatura de pe mobil să nu se închidă) când apeși pe ochi.
+              onMouseDown={(e) => e.preventDefault()}
               disabled={isRegistering}
               tabIndex={-1}
               aria-label={showPassword ? 'Ascunde parola' : 'Arată parola'}
