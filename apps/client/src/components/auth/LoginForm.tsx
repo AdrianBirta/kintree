@@ -1,5 +1,8 @@
 import React, { useState } from 'react';
 import { useAuth } from '../../hooks/useAuth';
+import { IconButton } from '@mui/material';
+import VisibilityIcon from '@mui/icons-material/Visibility';
+import VisibilityOffIcon from '@mui/icons-material/VisibilityOff';
 
 interface Props {
   onGoRegister: () => void;
@@ -7,6 +10,7 @@ interface Props {
 
 const LoginForm: React.FC<Props> = ({ onGoRegister }) => {
   const [credentials, setCredentials] = useState({ email: '', password: '' });
+  const [showPassword, setShowPassword] = useState(false);
   const { login, isLoggingIn, loginError } = useAuth();
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -50,18 +54,39 @@ const LoginForm: React.FC<Props> = ({ onGoRegister }) => {
           <label htmlFor="password" className="block text-xs font-semibold text-earbore-gray uppercase tracking-wider mb-1.5">
             Parolă
           </label>
-          <input
-            type="password"
-            id="password"
-            name="password"
-            value={credentials.password}
-            onChange={handleChange}
-            className="input-base"
-            required
-            disabled={isLoggingIn}
-            placeholder="Introdu parola"
-            autoComplete="current-password"
-          />
+          {/* NOU — wrapper relativ, ca butonul de vizibilitate să se poziționeze
+              absolut în dreapta inputului, fără să afecteze layout-ul restului formularului */}
+          <div className="relative">
+            <input
+              type={showPassword ? 'text' : 'password'}
+              id="password"
+              name="password"
+              value={credentials.password}
+              onChange={handleChange}
+              className="input-base pr-11"
+              required
+              disabled={isLoggingIn}
+              placeholder="Introdu parola"
+              autoComplete="current-password"
+            />
+            <IconButton
+              type="button"
+              size="small"
+              onClick={() => setShowPassword((v) => !v)}
+              disabled={isLoggingIn}
+              tabIndex={-1}
+              aria-label={showPassword ? 'Ascunde parola' : 'Arată parola'}
+              sx={{
+                position: 'absolute',
+                right: 4,
+                top: '50%',
+                transform: 'translateY(-50%)',
+                color: 'var(--color-earbore-gray)',
+              }}
+            >
+              {showPassword ? <VisibilityOffIcon fontSize="small" /> : <VisibilityIcon fontSize="small" />}
+            </IconButton>
+          </div>
         </div>
 
         {loginError && (

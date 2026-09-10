@@ -93,6 +93,7 @@ const LinkPartnersModal: React.FC<Props> = ({ members, onClose, onLinked }) => {
           <Autocomplete
             options={partnerAOptions}
             getOptionLabel={memberLabel}
+            getOptionKey={(option) => option.id}
             renderOption={renderMemberOption}
             value={partnerA}
             onChange={(_, val) => setPartnerAId(val?.id ?? '')}
@@ -106,6 +107,7 @@ const LinkPartnersModal: React.FC<Props> = ({ members, onClose, onLinked }) => {
           <Autocomplete
             options={partnerBOptions}
             getOptionLabel={memberLabel}
+            getOptionKey={(option) => option.id}
             renderOption={renderMemberOption}
             value={partnerB}
             onChange={(_, val) => setPartnerBId(val?.id ?? '')}

@@ -3,9 +3,11 @@ import {
   Dialog, DialogTitle, DialogContent, DialogActions, Button, TextField, MenuItem,
   Select, InputLabel, FormControl, Avatar, IconButton, Divider, Typography, Alert,
   CircularProgress, Box, Autocomplete, Chip, useMediaQuery, useTheme,
+  FormControlLabel, Checkbox,
 } from '@mui/material';
 import PhotoCameraIcon from '@mui/icons-material/PhotoCamera';
 import CloseIcon from '@mui/icons-material/Close';
+import StarIcon from '@mui/icons-material/Star';
 import { familyMembersService } from '../../api/familyMembersService';
 import type { FamilyMember } from '../../types/family';
 import { dedupeMembers, memberLabel, renderMemberOption } from '../common/memberOptionUtils';
@@ -20,9 +22,12 @@ interface Props {
   onClose: () => void;
   onCreated: () => void;
   initialRelation?: QuickRelation | null;
+  // NOU — id-ul membrului marcat curent ca "eu" (dacă există), ca să putem
+  // avertiza userul că bifarea checkbox-ului îl va înlocui.
+  currentSelfId?: string | null;
 }
 
-const AddMemberModal: React.FC<Props> = ({ members, onClose, onCreated, initialRelation }) => {
+const AddMemberModal: React.FC<Props> = ({ members, onClose, onCreated, initialRelation, currentSelfId }) => {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
 
@@ -33,11 +38,15 @@ const AddMemberModal: React.FC<Props> = ({ members, onClose, onCreated, initialR
   // filtrare, eticheta greșită pentru opțiunea selectată.
   const uniqueMembers = useMemo(() => dedupeMembers(members), [members]);
 
-  console.log('render, uniqueMembers count:', uniqueMembers.length, uniqueMembers.map(m => m.id));
-
   const relationTarget = useMemo(
     () => (initialRelation ? uniqueMembers.find((m) => m.id === initialRelation.memberId) ?? null : null),
     [initialRelation, uniqueMembers],
+  );
+
+  // NOU — membrul care e în prezent marcat ca "eu", dacă există în lista primită
+  const currentSelfMember = useMemo(
+    () => (currentSelfId ? uniqueMembers.find((m) => m.id === currentSelfId) ?? null : null),
+    [currentSelfId, uniqueMembers],
   );
 
   const [form, setForm] = useState({
@@ -54,6 +63,9 @@ const AddMemberModal: React.FC<Props> = ({ members, onClose, onCreated, initialR
   const [photoPreview, setPhotoPreview] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState('');
+
+  // NOU — bifă "acesta sunt eu"
+  const [markAsMe, setMarkAsMe] = useState(false);
 
   useEffect(() => {
     if (!relationTarget || !initialRelation) return;
@@ -99,6 +111,14 @@ const AddMemberModal: React.FC<Props> = ({ members, onClose, onCreated, initialR
 
       if (photoFile) {
         await familyMembersService.uploadPhoto(newMember.id, photoFile);
+      }
+
+      // NOU — dacă userul a bifat "acesta sunt eu", marcăm noul membru.
+      // Backend-ul face automat switch-ul (constrângere @unique pe
+      // selfMemberId + onDelete: SetNull), deci un singur apel e suficient,
+      // indiferent dacă exista deja alt membru marcat anterior.
+      if (markAsMe) {
+        await familyMembersService.markAsMe(newMember.id);
       }
 
       onCreated();
@@ -199,6 +219,29 @@ const AddMemberModal: React.FC<Props> = ({ members, onClose, onCreated, initialR
                 value={form.birthDate} onChange={handleChange}
                 fullWidth disabled={isSaving} slotProps={{ inputLabel: { shrink: true } }}
               />
+            </Box>
+
+            {/* NOU — secțiunea "Sunt eu" */}
+            <Divider sx={{ mt: 1 }} />
+            <Box>
+              <FormControlLabel
+                control={
+                  <Checkbox
+                    checked={markAsMe}
+                    onChange={(e) => setMarkAsMe(e.target.checked)}
+                    disabled={isSaving}
+                    icon={<StarIcon sx={{ opacity: 0.35 }} />}
+                    checkedIcon={<StarIcon color="primary" />}
+                  />
+                }
+                label="Acesta sunt eu"
+              />
+              {markAsMe && currentSelfMember && (
+                <Alert severity="warning" sx={{ mt: 1 }}>
+                  Ești deja marcat ca fiind <strong>{memberLabel(currentSelfMember)}</strong>. Dacă continui,
+                  acea asociere va fi eliminată și acest membru nou va deveni profilul tău.
+                </Alert>
+              )}
             </Box>
 
             {uniqueMembers.length > 0 && (

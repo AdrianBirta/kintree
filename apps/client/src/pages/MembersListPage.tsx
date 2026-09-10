@@ -1038,6 +1038,7 @@ const MembersListPage: React.FC = () => {
       {showAddModal && (
         <AddMemberModal
           members={members}
+          currentSelfId={treeData?.selfMemberId}
           onClose={() => setShowAddModal(false)}
           onCreated={() => { setShowAddModal(false); loadData(); }}
         />

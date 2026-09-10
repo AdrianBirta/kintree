@@ -1,5 +1,8 @@
 import React, { useState } from 'react';
 import { useAuth } from '../../hooks/useAuth';
+import { IconButton } from '@mui/material';
+import VisibilityIcon from '@mui/icons-material/Visibility';
+import VisibilityOffIcon from '@mui/icons-material/VisibilityOff';
 
 interface Props {
   onGoLogin: () => void;
@@ -7,6 +10,7 @@ interface Props {
 
 const RegisterForm: React.FC<Props> = ({ onGoLogin }) => {
   const [formData, setFormData] = useState({ firstName: '', lastName: '', email: '', password: '' });
+  const [showPassword, setShowPassword] = useState(false);
   const { register, isRegistering, loginError } = useAuth();
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -74,18 +78,38 @@ const RegisterForm: React.FC<Props> = ({ onGoLogin }) => {
 
         <div>
           <label className="block text-xs font-semibold text-earbore-gray uppercase tracking-wider mb-1.5">Parolă</label>
-          <input
-            type="password"
-            name="password"
-            value={formData.password}
-            onChange={handleChange}
-            className="input-base"
-            required
-            minLength={8}
-            disabled={isRegistering}
-            placeholder="Minim 8 caractere"
-            autoComplete="new-password"
-          />
+          {/* NOU — la fel ca în LoginForm, wrapper relativ + buton absolut */}
+          <div className="relative">
+            <input
+              type={showPassword ? 'text' : 'password'}
+              name="password"
+              value={formData.password}
+              onChange={handleChange}
+              className="input-base pr-11"
+              required
+              minLength={8}
+              disabled={isRegistering}
+              placeholder="Minim 8 caractere"
+              autoComplete="new-password"
+            />
+            <IconButton
+              type="button"
+              size="small"
+              onClick={() => setShowPassword((v) => !v)}
+              disabled={isRegistering}
+              tabIndex={-1}
+              aria-label={showPassword ? 'Ascunde parola' : 'Arată parola'}
+              sx={{
+                position: 'absolute',
+                right: 4,
+                top: '50%',
+                transform: 'translateY(-50%)',
+                color: 'var(--color-earbore-gray)',
+              }}
+            >
+              {showPassword ? <VisibilityOffIcon fontSize="small" /> : <VisibilityIcon fontSize="small" />}
+            </IconButton>
+          </div>
         </div>
 
         {loginError && (

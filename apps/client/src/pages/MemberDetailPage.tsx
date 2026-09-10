@@ -12,6 +12,7 @@ import IconButton from '@mui/material/IconButton';
 import PhotoCameraIcon from '@mui/icons-material/PhotoCamera';
 import { Autocomplete, TextField } from '@mui/material';
 import ConfirmDialog from '../components/common/ConfirmDialog';
+import MemberStatsPanel from '../components/common/MemberStatsPanel';
 import { dedupeMembers, memberLabel, renderMemberOption } from '../components/common/memberOptionUtils';
 
 const GENDER_LABELS: Record<string, string> = { MALE: 'Masculin', FEMALE: 'Feminin', OTHER: 'Altul' };
@@ -55,7 +56,6 @@ const MemberDetailPage: React.FC = () => {
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
 
-  // NOU — state pentru marcarea "eu" + dialogul de confirmare la reasociere
   const [isTogglingSelf, setIsTogglingSelf] = useState(false);
   const [confirmSelfSwapOpen, setConfirmSelfSwapOpen] = useState(false);
 
@@ -191,7 +191,6 @@ const MemberDetailPage: React.FC = () => {
 
   // ── logică "marchează ca fiind tu" ──
   const isSelf = !!id && treeData?.selfMemberId === id;
-  // există deja un alt membru marcat ca "eu", diferit de cel curent?
   const currentSelfMember = treeData?.selfMemberId
     ? allMembers.find((m) => m.id === treeData.selfMemberId)
     : undefined;
@@ -213,7 +212,6 @@ const MemberDetailPage: React.FC = () => {
     if (!id) return;
 
     if (isSelf) {
-      // deja marcat — dezasociază direct, fără confirmare (acțiune non-distructivă)
       setIsTogglingSelf(true);
       try {
         await familyMembersService.unmarkAsMe();
@@ -225,8 +223,6 @@ const MemberDetailPage: React.FC = () => {
     }
 
     if (hasOtherSelf) {
-      // NOU — există deja alt membru marcat ca "eu": cerem confirmare
-      // explicită înainte de a-l dezasocia silențios pe celălalt.
       setConfirmSelfSwapOpen(true);
       return;
     }
@@ -270,12 +266,12 @@ const MemberDetailPage: React.FC = () => {
     <div className="min-h-screen bg-earbore-grayLight">
       <Header treeData={treeData} />
 
-      <div className="max-w-[1600px] mx-auto px-6 lg:px-10 py-6">
+      <div className="max-w-[1600px] mx-auto px-4 sm:px-6 lg:px-10 py-4 sm:py-6">
 
         {!isEditing && (
           <div className="relative w-full rounded-2xl overflow-hidden mb-6 border border-earbore-border">
             <div
-              className="h-56 sm:h-72 w-full bg-cover bg-center"
+              className="h-48 sm:h-56 md:h-72 w-full bg-cover bg-center"
               style={{
                 backgroundImage: member.imageUrl
                   ? `url(${member.imageUrl})`
@@ -284,7 +280,7 @@ const MemberDetailPage: React.FC = () => {
               }}
             >
               <div
-                className="w-full h-full flex items-end p-6 sm:p-10"
+                className="w-full h-full flex items-end p-4 sm:p-6 md:p-10"
                 style={{ background: 'linear-gradient(to top, rgba(20,10,40,0.82) 0%, rgba(20,10,40,0.35) 55%, rgba(20,10,40,0) 100%)' }}
               >
                 <div className="text-white max-w-3xl">
@@ -298,10 +294,10 @@ const MemberDetailPage: React.FC = () => {
                       {member.occupation}
                     </span>
                   )}
-                  <h1 className="text-3xl sm:text-5xl font-extrabold leading-tight drop-shadow-sm">
+                  <h1 className="text-2xl sm:text-3xl md:text-5xl font-extrabold leading-tight drop-shadow-sm">
                     {member.firstName} {member.lastName}
                   </h1>
-                  <p className="text-white/85 text-sm sm:text-base mt-2 flex items-center gap-2 flex-wrap">
+                  <p className="text-white/85 text-xs sm:text-sm md:text-base mt-2 flex items-center gap-2 flex-wrap">
                     {member.birthDate && (
                       <span>
                         {format(new Date(member.birthDate), 'd MMMM yyyy', { locale: ro })}
@@ -330,7 +326,6 @@ const MemberDetailPage: React.FC = () => {
           onCancel={() => setConfirmOpen(false)}
         />
 
-        {/* NOU — confirmare la reasocierea "eu" pe alt membru */}
         <ConfirmDialog
           open={confirmSelfSwapOpen}
           title="Schimbi cine ești tu în arbore?"
@@ -346,7 +341,7 @@ const MemberDetailPage: React.FC = () => {
           onCancel={() => setConfirmSelfSwapOpen(false)}
         />
 
-        <div className="grid grid-cols-1 lg:grid-cols-[340px_1fr] gap-6 items-start">
+        <div className="grid grid-cols-1 lg:grid-cols-[340px_1fr] gap-4 sm:gap-6 items-start">
 
           <div className="lg:sticky lg:top-6 bg-white rounded-2xl shadow-sm border border-earbore-border overflow-hidden">
             <div
@@ -357,7 +352,7 @@ const MemberDetailPage: React.FC = () => {
                   : 'linear-gradient(135deg, var(--color-earbore-400), var(--color-earbore-700))',
               }}
             />
-            <div className="px-6 pb-6">
+            <div className="px-5 sm:px-6 pb-6">
               <div className="relative -mt-12 mb-3">
                 <div
                   className={`w-24 h-24 rounded-full overflow-hidden border-4 border-white shadow-lg flex items-center justify-center text-2xl font-bold ${deceased ? 'bg-earbore-grayLight text-earbore-gray' : 'bg-earbore-100 text-earbore-700'
@@ -436,7 +431,6 @@ const MemberDetailPage: React.FC = () => {
                   {isEditing ? (isSaving ? 'Se salvează...' : 'Salvează') : 'Editează profilul'}
                 </button>
 
-                {/* NOU — marchează/demarchează membrul curent ca fiind userul logat */}
                 {!isEditing && (
                   <Button
                     size="small"
@@ -467,10 +461,10 @@ const MemberDetailPage: React.FC = () => {
             </div>
           </div>
 
-          <div className="flex flex-col gap-6 min-w-0">
+          <div className="flex flex-col gap-4 sm:gap-6 min-w-0">
 
             {!isEditing && member.bio && (
-              <article className="bg-white rounded-2xl shadow-sm border border-earbore-border p-8 sm:p-10">
+              <article className="bg-white rounded-2xl shadow-sm border border-earbore-border p-5 sm:p-8 md:p-10">
                 <h2 className="text-xs font-semibold text-earbore-500 uppercase tracking-wider mb-5">
                   Povestea vieții
                 </h2>
@@ -478,11 +472,11 @@ const MemberDetailPage: React.FC = () => {
                   {member.bio.split(/\n{2,}|\n/).filter((p) => p.trim().length > 0).map((paragraph, i) => (
                     <p
                       key={i}
-                      className={`text-earbore-ink/90 text-[17px] leading-[1.85] font-normal ${i > 0 ? 'mt-5' : ''}`}
+                      className={`text-earbore-ink/90 text-[15px] sm:text-[17px] leading-[1.85] font-normal ${i > 0 ? 'mt-5' : ''}`}
                     >
                       {i === 0 ? (
                         <>
-                          <span className="float-left text-6xl font-extrabold text-earbore-600 leading-[0.8] pr-2 pt-1">
+                          <span className="float-left text-5xl sm:text-6xl font-extrabold text-earbore-600 leading-[0.8] pr-2 pt-1">
                             {paragraph.trim()[0]}
                           </span>
                           {paragraph.trim().slice(1)}
@@ -497,7 +491,7 @@ const MemberDetailPage: React.FC = () => {
             )}
 
             {!isEditing && !member.bio && (
-              <div className="bg-white rounded-2xl shadow-sm border border-dashed border-earbore-border p-8 text-center">
+              <div className="bg-white rounded-2xl shadow-sm border border-dashed border-earbore-border p-6 sm:p-8 text-center">
                 <p className="text-earbore-gray text-sm mb-3">
                   {member.firstName} nu are încă o poveste scrisă. Fiecare viață merită o istorie păstrată.
                 </p>
@@ -508,7 +502,7 @@ const MemberDetailPage: React.FC = () => {
             )}
 
             {isEditing && (
-              <div className="bg-white rounded-2xl shadow-sm border border-earbore-border p-8">
+              <div className="bg-white rounded-2xl shadow-sm border border-earbore-border p-5 sm:p-8">
                 <h2 className="text-xs font-semibold text-earbore-gray uppercase tracking-wider mb-4">Editează detalii</h2>
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                   <Field label="Prenume">
@@ -560,9 +554,9 @@ const MemberDetailPage: React.FC = () => {
               </div>
             )}
 
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 items-start">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 sm:gap-6 items-start">
 
-              <div className="bg-white rounded-2xl shadow-sm border border-earbore-border p-6 flex flex-col gap-4">
+              <div className="bg-white rounded-2xl shadow-sm border border-earbore-border p-5 sm:p-6 flex flex-col gap-4">
                 <h2 className="text-base font-bold text-earbore-ink">Părinți</h2>
 
                 {currentParents.length > 0 ? (
@@ -588,6 +582,7 @@ const MemberDetailPage: React.FC = () => {
                     <Autocomplete
                       options={parentOptions}
                       getOptionLabel={memberLabel}
+                      getOptionKey={(option) => option.id}
                       renderOption={renderMemberOption}
                       value={selectedParent}
                       onChange={(_, val) => setSelectedParentId(val?.id ?? '')}
@@ -607,7 +602,7 @@ const MemberDetailPage: React.FC = () => {
                 )}
               </div>
 
-              <div className="bg-white rounded-2xl shadow-sm border border-earbore-border p-6 flex flex-col gap-4">
+              <div className="bg-white rounded-2xl shadow-sm border border-earbore-border p-5 sm:p-6 flex flex-col gap-4">
                 <h2 className="text-base font-bold text-earbore-ink">Copii</h2>
 
                 {currentChildren.length > 0 ? (
@@ -633,6 +628,7 @@ const MemberDetailPage: React.FC = () => {
                     <Autocomplete
                       options={childOptions}
                       getOptionLabel={memberLabel}
+                      getOptionKey={(option) => option.id}
                       renderOption={renderMemberOption}
                       value={selectedChild}
                       onChange={(_, val) => setSelectedChildId(val?.id ?? '')}
@@ -652,7 +648,7 @@ const MemberDetailPage: React.FC = () => {
                 )}
               </div>
 
-              <div className="bg-white rounded-2xl shadow-sm border border-earbore-border p-6 flex flex-col gap-4">
+              <div className="bg-white rounded-2xl shadow-sm border border-earbore-border p-5 sm:p-6 flex flex-col gap-4">
                 <h2 className="text-base font-bold text-earbore-ink">Parteneri</h2>
 
                 {partners.length > 0 ? (
@@ -681,6 +677,7 @@ const MemberDetailPage: React.FC = () => {
                     <Autocomplete
                       options={partnerOptions}
                       getOptionLabel={memberLabel}
+                      getOptionKey={(option) => option.id}
                       renderOption={renderMemberOption}
                       value={selectedPartner}
                       onChange={(_, val) => setSelectedPartnerId(val?.id ?? '')}
@@ -706,6 +703,12 @@ const MemberDetailPage: React.FC = () => {
                 )}
               </div>
             </div>
+
+            {/* NOU — aceleași statistici + grafice de pe pagina de profil,
+                acum disponibile pentru orice membru din arbore. */}
+            {!isEditing && treeData && (
+              <MemberStatsPanel memberId={member.id} treeData={treeData} />
+            )}
           </div>
         </div>
       </div>

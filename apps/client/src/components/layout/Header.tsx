@@ -46,7 +46,7 @@ const Header: React.FC<Props> = ({ treeData }) => {
     }
   }, [isMobile, membersMenuOpen]);
 
-  const initials = user ? `${user.firstName[0]}${user.lastName[0]}` : '';
+  const initials = user ? `${user.firstName?.[0] ?? ''}${user.lastName?.[0] ?? ''}`.toUpperCase() : '';
   const memberCount = treeData?.members.length ?? 0;
 
   const handleNavigateToMember = (id: string) => {

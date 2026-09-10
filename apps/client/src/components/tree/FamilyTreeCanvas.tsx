@@ -223,6 +223,7 @@ const FamilyTreeCanvas: React.FC<Props> = ({ treeData, direction, onReorder, onQ
               y={m.y + dy}
               unitId={m.unitId}
               canDrag={!isCoupled}
+              isSelf={!!treeData?.selfMemberId && treeData.selfMemberId === m.id}
               onAddTop={handleAddTop}
               onAddBottom={handleAddBottom}
               topLabel={topMeansParent ? 'Adaugă părinte' : 'Adaugă copil'}

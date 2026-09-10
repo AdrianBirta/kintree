@@ -195,6 +195,7 @@ const DashboardPage: React.FC = () => {
         <AddMemberModal
           members={treeData?.members ?? []}
           initialRelation={quickAddRelation}
+          currentSelfId={treeData?.selfMemberId}
           onClose={handleCloseAddModal}
           onCreated={() => { handleCloseAddModal(); loadTree(); }}
         />

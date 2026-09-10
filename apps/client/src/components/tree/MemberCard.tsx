@@ -2,6 +2,7 @@ import React, { useRef, useState } from 'react';
 import { Card, Typography, Chip, Box, IconButton, Tooltip } from '@mui/material';
 import AddIcon from '@mui/icons-material/Add';
 import OpenWithIcon from '@mui/icons-material/OpenWith';
+import StarIcon from '@mui/icons-material/Star';
 import type { FamilyMember } from '../../types/family';
 import { calculateAge, isDeceased } from '../../utils/age';
 import { LAYOUT } from '../../lib/treeLayout';
@@ -29,6 +30,8 @@ interface Props {
   // duplicăm handle-ul pe fiecare card din cuplu. Pentru membri singuri,
   // rămâne exact ca înainte (implicit true).
   canDrag?: boolean;
+  // NOU — true dacă acest membru e cel marcat ca "eu" (treeData.selfMemberId)
+  isSelf?: boolean;
 }
 
 // culoarea borderului în funcție de gen: roșu pt. femei, albastru pt. bărbați,
@@ -41,7 +44,7 @@ function getBorderColor(gender?: string | null): string {
 
 function MemberCard({
   member, x, y, unitId, onClick, onDragStart, onDragMove, onDragEnd, isDragging, onMouseEnter, onMouseLeave, style,
-  onAddTop, onAddBottom, topLabel = 'Adaugă', bottomLabel = 'Adaugă', canDrag = true,
+  onAddTop, onAddBottom, topLabel = 'Adaugă', bottomLabel = 'Adaugă', canDrag = true, isSelf = false,
 }: Props) {
   const deceased = isDeceased(member.deathDate);
   const age = calculateAge(member.birthDate, member.deathDate);
@@ -109,7 +112,7 @@ function MemberCard({
   };
 
   const initials = `${member.firstName[0] ?? ''}${member.lastName[0] ?? ''}`;
-  const borderColor = deceased ? 'divider' : getBorderColor(member.gender);
+  const borderColor = isSelf ? 'var(--color-earbore-500)' : deceased ? 'divider' : getBorderColor(member.gender);
 
   return (
     <Card
@@ -127,9 +130,10 @@ function MemberCard({
         touchAction: 'none',
         zIndex: isDragging ? 50 : imageExpanded ? 70 : hovered ? 40 : undefined,
         cursor: 'pointer',
-        borderWidth: 3,
+        borderWidth: isSelf ? 4 : 3,
         borderStyle: 'solid',
         borderColor,
+        boxShadow: isSelf ? '0 0 0 3px var(--color-earbore-100)' : undefined,
         filter: deceased ? 'grayscale(40%)' : undefined,
         display: 'flex',
         flexDirection: 'column',
@@ -139,6 +143,32 @@ function MemberCard({
         ...style,
       }}
     >
+      {/* NOU — badge "Tu" pentru membrul marcat ca "eu" */}
+      {isSelf && (
+        <Tooltip title="Acesta ești tu" placement="top">
+          <Box
+            sx={{
+              position: 'absolute',
+              top: -12,
+              left: -12,
+              width: 28,
+              height: 28,
+              borderRadius: '50%',
+              bgcolor: 'primary.main',
+              color: 'white',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              zIndex: 62,
+              boxShadow: 2,
+              border: '2px solid white',
+            }}
+          >
+            <StarIcon sx={{ fontSize: 16 }} />
+          </Box>
+        </Tooltip>
+      )}
+
       {/* Buton sus — adaugă părinte/copil, apare la hover */}
       {onAddTop && (
         <Tooltip title={topLabel} placement="top">
