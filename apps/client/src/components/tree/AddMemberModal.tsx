@@ -33,6 +33,8 @@ const AddMemberModal: React.FC<Props> = ({ members, onClose, onCreated, initialR
   // filtrare, eticheta greșită pentru opțiunea selectată.
   const uniqueMembers = useMemo(() => dedupeMembers(members), [members]);
 
+  console.log('render, uniqueMembers count:', uniqueMembers.length, uniqueMembers.map(m => m.id));
+
   const relationTarget = useMemo(
     () => (initialRelation ? uniqueMembers.find((m) => m.id === initialRelation.memberId) ?? null : null),
     [initialRelation, uniqueMembers],
@@ -210,6 +212,7 @@ const AddMemberModal: React.FC<Props> = ({ members, onClose, onCreated, initialR
                     fullWidth
                     options={fatherOptions}
                     getOptionLabel={memberLabel}
+                    getOptionKey={(option) => option.id}
                     renderOption={renderMemberOption}
                     value={father}
                     onChange={(_, val) => setFather(val)}
@@ -222,6 +225,7 @@ const AddMemberModal: React.FC<Props> = ({ members, onClose, onCreated, initialR
                     fullWidth
                     options={motherOptions}
                     getOptionLabel={memberLabel}
+                    getOptionKey={(option) => option.id}
                     renderOption={renderMemberOption}
                     value={mother}
                     onChange={(_, val) => setMother(val)}
@@ -237,6 +241,7 @@ const AddMemberModal: React.FC<Props> = ({ members, onClose, onCreated, initialR
                     fullWidth
                     options={uniqueMembers}
                     getOptionLabel={memberLabel}
+                    getOptionKey={(option) => option.id}
                     renderOption={renderMemberOption}
                     value={partner}
                     onChange={(_, val) => setPartner(val)}
@@ -261,6 +266,7 @@ const AddMemberModal: React.FC<Props> = ({ members, onClose, onCreated, initialR
                   multiple
                   options={uniqueMembers}
                   getOptionLabel={memberLabel}
+                  getOptionKey={(option) => option.id}
                   renderOption={renderMemberOption}
                   value={children}
                   onChange={(_, val) => setChildren(val)}
