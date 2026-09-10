@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
-  Autocomplete, TextField, Button, IconButton, CircularProgress, Alert, Box,
+  Autocomplete, TextField, Button, IconButton, CircularProgress, Alert,
 } from '@mui/material';
 import PhotoCameraIcon from '@mui/icons-material/PhotoCamera';
 import StarIcon from '@mui/icons-material/Star';
