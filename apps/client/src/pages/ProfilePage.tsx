@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   Autocomplete, TextField, Button, IconButton, CircularProgress, Alert, Box,
@@ -7,8 +7,7 @@ import PhotoCameraIcon from '@mui/icons-material/PhotoCamera';
 import StarIcon from '@mui/icons-material/Star';
 import BarChartIcon from '@mui/icons-material/BarChart';
 import EditNoteIcon from '@mui/icons-material/EditNote';
-import { familyMembersService } from '../api/familyMembersService';
-import type { FamilyMember, FamilyMemberDetail, FamilyTreeData, BloodType } from '../types/family';
+import type { FamilyMember, FamilyMemberDetail, BloodType } from '../types/family';
 import { BLOOD_TYPE_LABELS } from '../types/family';
 import { calculateAge, isDeceased } from '../utils/age';
 import Header from '../components/layout/Header';
@@ -16,6 +15,8 @@ import ConfirmDialog from '../components/common/ConfirmDialog';
 import MemberStatsPanel from '../components/common/MemberStatsPanel';
 import { dedupeMembers, memberLabel, renderMemberOption } from '../components/common/memberOptionUtils';
 import { useAuth } from '../hooks/useAuth';
+import { useMembersQuery, useSelfQuery, useTreeQuery } from '../hooks/queries/useFamilyQueries';
+import { useUpdateMember, useUploadPhoto, useMarkAsMe, useUnmarkAsMe } from '../hooks/queries/useFamilyMutations';
 
 const GENDER_LABELS: Record<string, string> = { MALE: 'Masculin', FEMALE: 'Feminin', OTHER: 'Altul' };
 
@@ -33,7 +34,6 @@ const SidebarFact: React.FC<{ label: string; value: string }> = ({ label, value 
   </div>
 );
 
-// mic bloc reutilizat în cardul "de ce să te asociezi"
 const BenefitRow: React.FC<{ icon: React.ReactNode; title: string; desc: string }> = ({ icon, title, desc }) => (
   <div className="flex items-start gap-3">
     <div className="w-9 h-9 rounded-xl bg-earbore-100 text-earbore-700 flex items-center justify-center flex-shrink-0">
@@ -46,9 +46,6 @@ const BenefitRow: React.FC<{ icon: React.ReactNode; title: string; desc: string 
   </div>
 );
 
-// NOU — cardul de cont, extras ca subcomponentă ca să poată fi randat atât
-// în ecranul de picker (fără membru asociat), cât și în profilul complet.
-// `variant` schimbă doar mesajul explicativ de sub date.
 const AccountInfoCard: React.FC<{
   userInitials: string;
   fullName: string;
@@ -77,60 +74,51 @@ const AccountInfoCard: React.FC<{
   </div>
 );
 
-// FIX — normalizăm ce vine de la backend: singura sursă de adevăr pentru
-// "există un membru asociat" e prezența unui `id` valid. Orice altceva
-// (null, undefined, obiect gol, răspuns neașteptat) devine strict `null`,
-// ca restul componentei să poată face un singur test simplu: `!selfMember`.
 function normalizeSelf(data: FamilyMemberDetail | null | undefined): FamilyMemberDetail | null {
   return data && typeof data === 'object' && data.id ? data : null;
 }
 
 const ProfilePage: React.FC = () => {
   const navigate = useNavigate();
-  const { user } = useAuth(); // contul autentificat, disponibil indiferent dacă ai un membru asociat sau nu
+  const { user } = useAuth();
 
-  const [selfMember, setSelfMember] = useState<FamilyMemberDetail | null | undefined>(undefined); // undefined = loading
-  const [allMembers, setAllMembers] = useState<FamilyMember[]>([]);
-  const [treeData, setTreeData] = useState<FamilyTreeData | undefined>();
+  // NOU — "eu", lista de membri şi arborele vin din React Query, aceeaşi
+  // cache-uri folosite şi de restul paginilor.
+  const { data: rawSelf, isLoading: isLoadingSelf } = useSelfQuery();
+  const selfMember = useMemo(() => normalizeSelf(rawSelf), [rawSelf]);
+  const { data: allMembersRaw = [] } = useMembersQuery();
+  const allMembers = useMemo(() => dedupeMembers(allMembersRaw), [allMembersRaw]);
+  const { data: treeData } = useTreeQuery();
 
   const [isEditing, setIsEditing] = useState(false);
   const [form, setForm] = useState<Partial<FamilyMember>>({});
-  const [isSaving, setIsSaving] = useState(false);
 
   const [photoFile, setPhotoFile] = useState<File | null>(null);
   const [photoPreview, setPhotoPreview] = useState<string | null>(null);
 
   const [selectedMemberId, setSelectedMemberId] = useState('');
-  const [isLinking, setIsLinking] = useState(false);
-
   const [showPicker, setShowPicker] = useState(false);
-
   const [confirmRemoveOpen, setConfirmRemoveOpen] = useState(false);
-  const [isRemoving, setIsRemoving] = useState(false);
 
-  const loadData = useCallback(async () => {
-    const [self, all, tree] = await Promise.all([
-      familyMembersService.getSelf(),
-      familyMembersService.getAll(),
-      familyMembersService.getTree(),
-    ]);
+  const updateMemberMutation = useUpdateMember();
+  const uploadPhotoMutation = useUploadPhoto();
+  const markAsMeMutation = useMarkAsMe();
+  const unmarkAsMeMutation = useUnmarkAsMe();
 
-    const normalizedSelf = normalizeSelf(self);
-    setSelfMember(normalizedSelf);
-    setAllMembers(dedupeMembers(all));
-    setTreeData(tree);
+  const isSaving = updateMemberMutation.isPending || uploadPhotoMutation.isPending;
+  const isLinking = markAsMeMutation.isPending;
+  const isRemoving = unmarkAsMeMutation.isPending;
 
-    if (normalizedSelf) {
-      const { parents, children, partnersA, partnersB, ...editableFields } = normalizedSelf;
+  useEffect(() => {
+    if (selfMember) {
+      const { parents, children, partnersA, partnersB, ...editableFields } = selfMember;
       setForm(editableFields);
     } else {
       // FIX — dacă nu există membru asociat, nu lăsăm în `form` datele
-      // rămase de la o încărcare anterioară (ex. după "Elimină legătura").
+      // rămase de la o încărcare anterioară (ex. după "Elimină legătura")
       setForm({});
     }
-  }, []);
-
-  useEffect(() => { loadData(); }, [loadData]);
+  }, [selfMember]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
@@ -158,60 +146,50 @@ const ProfilePage: React.FC = () => {
 
   const handleSave = async () => {
     if (!selfMember) return;
-    setIsSaving(true);
     try {
-      await familyMembersService.update(selfMember.id, form);
+      await updateMemberMutation.mutateAsync({ id: selfMember.id, data: form });
       if (photoFile) {
-        await familyMembersService.uploadPhoto(selfMember.id, photoFile);
+        await uploadPhotoMutation.mutateAsync({ id: selfMember.id, file: photoFile });
       }
       setPhotoFile(null);
       setPhotoPreview(null);
       setIsEditing(false);
-      loadData();
-    } finally {
-      setIsSaving(false);
+    } catch {
+      // eroarea rămâne vizibilă prin starea mutaţiei
     }
   };
 
   const handleLink = async () => {
     if (!selectedMemberId) return;
-    setIsLinking(true);
     try {
-      await familyMembersService.markAsMe(selectedMemberId);
+      await markAsMeMutation.mutateAsync(selectedMemberId);
       setSelectedMemberId('');
       setShowPicker(false);
-      await loadData();
-    } finally {
-      setIsLinking(false);
+    } catch {
+      // eroarea rămâne implicită
     }
   };
 
   const handleConfirmRemove = async () => {
-    setIsRemoving(true);
     try {
-      await familyMembersService.unmarkAsMe();
+      await unmarkAsMeMutation.mutateAsync();
       setSelectedMemberId('');
       setShowPicker(false);
-      await loadData();
     } finally {
-      setIsRemoving(false);
       setConfirmRemoveOpen(false);
     }
   };
 
-  // inițialele userului autentificat — folosite atât în cardul de cont
-  // din ecranul de picker, cât și în cel din profilul complet
   const firstInitial = user?.firstName?.[0] ?? '';
   const lastInitial = user?.lastName?.[0] ?? '';
   const userInitials = (firstInitial + lastInitial).toUpperCase() || '?';
   const userFullName = user ? `${user.firstName} ${user.lastName}` : '—';
   const userEmail = user?.email ?? '—';
 
-  // ── stare de loading inițială ──
-  if (selfMember === undefined) {
+  if (isLoadingSelf) {
     return (
       <div className="min-h-dvh bg-earbore-grayLight">
-        <Header treeData={treeData} />
+        <Header />
         <div className="flex items-center justify-center py-24">
           <CircularProgress />
         </div>
@@ -219,24 +197,15 @@ const ProfilePage: React.FC = () => {
     );
   }
 
-  // ── ecran de selecție — fie pentru că nimeni nu e marcat încă, fie
-  //    pentru că userul a ales explicit să-și schimbe asocierea ──
-  // FIX — `!selfMember` în loc de `selfMember === null`: acoperă orice
-  // valoare falsy neașteptată, nu doar `null` strict. Aici e SINGURUL loc
-  // unde decidem dacă randăm profilul complet sau doar ecranul de picker —
-  // odată ce treci de acest `if`, mai jos ai garanția că `selfMember` e un
-  // obiect valid, cu `id`, `firstName`, `lastName`.
   if (!selfMember || showPicker) {
     const selected = allMembers.find((m) => m.id === selectedMemberId) ?? null;
     const isReselecting = !!selfMember;
 
     return (
       <div className="min-h-dvh bg-earbore-grayLight">
-        <Header treeData={treeData} />
+        <Header />
         <div className="max-w-2xl mx-auto px-4 sm:px-6 py-8 sm:py-16 flex flex-col gap-5 sm:gap-6">
 
-          {/* Cardul contului — rămâne vizibil indiferent dacă ai sau nu un
-              membru asociat, ca pagina să nu pară niciodată goală. */}
           <AccountInfoCard
             userInitials={userInitials}
             fullName={userFullName}
@@ -244,8 +213,6 @@ const ProfilePage: React.FC = () => {
             variant={isReselecting ? 'linked' : 'unlinked'}
           />
 
-          {/* secțiune "de ce să te asociezi", vizibilă doar când chiar nu
-              ai încă niciun membru marcat ca fiind tu */}
           {!isReselecting && (
             <div className="bg-white rounded-2xl shadow-sm border border-earbore-border p-5 sm:p-8">
               <h2 className="text-xs font-semibold text-earbore-500 uppercase tracking-wider mb-4">
@@ -271,7 +238,6 @@ const ProfilePage: React.FC = () => {
             </div>
           )}
 
-          {/* Card selecție membru */}
           <div className="bg-white rounded-2xl shadow-sm border border-earbore-border p-5 sm:p-8 text-center">
             <h1 className="text-xl font-extrabold text-earbore-ink mb-2">Cine ești tu în arbore?</h1>
             <p className="text-sm text-earbore-gray mb-6">
@@ -348,11 +314,6 @@ const ProfilePage: React.FC = () => {
     );
   }
 
-  // ── profil setat — afișare + editare, layout lat, tip blog ──
-  // La acest punct `selfMember` e garantat un obiect valid (vezi guard-ul
-  // de mai sus), dar păstrăm optional chaining pe firstName/lastName ca
-  // plasă de siguranță suplimentară, în caz că vreo actualizare parțială
-  // din backend lasă temporar câmpul gol.
   const deceased = isDeceased(selfMember.deathDate);
   const age = calculateAge(selfMember.birthDate, selfMember.deathDate);
   const displayedImageUrl = photoPreview ?? selfMember.imageUrl;
@@ -360,11 +321,10 @@ const ProfilePage: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-earbore-grayLight">
-      <Header treeData={treeData} />
+      <Header />
 
       <div className="max-w-[1600px] mx-auto px-4 sm:px-6 lg:px-10 py-4 sm:py-6">
 
-        {/* Hero — bandou lat cu poza de fundal, ca la pagina de membru */}
         {!isEditing && (
           <div className="relative w-full rounded-2xl overflow-hidden mb-6 border border-earbore-border">
             <div
@@ -407,7 +367,6 @@ const ProfilePage: React.FC = () => {
 
         <div className="grid grid-cols-1 lg:grid-cols-[340px_1fr] gap-4 sm:gap-6 items-start">
 
-          {/* Sidebar sticky */}
           <div className="lg:sticky lg:top-6 bg-white rounded-2xl shadow-sm border border-earbore-border overflow-hidden">
             <div
               className="h-24 w-full"
@@ -512,10 +471,8 @@ const ProfilePage: React.FC = () => {
             </div>
           </div>
 
-          {/* Coloana principală */}
           <div className="flex flex-col gap-4 sm:gap-6 min-w-0">
 
-            {/* NOU — cardul de cont, acum vizibil și când ești asociat cu un membru */}
             {!isEditing && (
               <AccountInfoCard
                 userInitials={userInitials}

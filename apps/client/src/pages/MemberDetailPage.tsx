@@ -1,7 +1,6 @@
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { familyMembersService } from '../api/familyMembersService';
-import type { FamilyMember, FamilyMemberDetail, BloodType, FamilyTreeData } from '../types/family';
+import type { FamilyMember, BloodType } from '../types/family';
 import { BLOOD_TYPE_LABELS } from '../types/family';
 import { calculateAge, isDeceased } from '../utils/age';
 import Header from '../components/layout/Header';
@@ -14,6 +13,12 @@ import { Autocomplete, TextField } from '@mui/material';
 import ConfirmDialog from '../components/common/ConfirmDialog';
 import MemberStatsPanel from '../components/common/MemberStatsPanel';
 import { dedupeMembers, memberLabel, renderMemberOption } from '../components/common/memberOptionUtils';
+import { useMemberQuery, useMembersQuery, useTreeQuery } from '../hooks/queries/useFamilyQueries';
+import {
+  useUpdateMember, useUploadPhoto, useRemoveMember,
+  useLinkParentChild, useUnlinkParentChild, useLinkPartners, useUnlinkPartners,
+  useMarkAsMe, useUnmarkAsMe,
+} from '../hooks/queries/useFamilyMutations';
 
 const GENDER_LABELS: Record<string, string> = { MALE: 'Masculin', FEMALE: 'Feminin', OTHER: 'Altul' };
 const STATUS_LABELS: Record<string, string> = {
@@ -32,53 +37,66 @@ const estimateReadTime = (text?: string | null) => {
 const MemberDetailPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const [member, setMember] = useState<FamilyMemberDetail | null>(null);
-  const [allMembers, setAllMembers] = useState<FamilyMember[]>([]);
-  const [treeData, setTreeData] = useState<FamilyTreeData | undefined>();
-  const [isLoading, setIsLoading] = useState(true);
+
+  // NOU — datele vin din React Query. `member` e cerut pe cheia lui de
+  // detaliu (invalidată punctual la orice schimbare care-l atinge),
+  // `allMembers`/`treeData` sunt aceleași query-uri partajate cu restul
+  // aplicației — deja calde din cache dacă ai trecut prin Dashboard sau
+  // prin tabelul de membri înainte de a ajunge aici.
+  const { data: member, isLoading } = useMemberQuery(id);
+  const { data: allMembersRaw = [] } = useMembersQuery();
+  const { data: treeData } = useTreeQuery();
+
+  const allMembers = useMemo(
+    () => dedupeMembers(allMembersRaw.filter((m) => m.id !== id)),
+    [allMembersRaw, id],
+  );
+
   const [isEditing, setIsEditing] = useState(false);
   const [form, setForm] = useState<Partial<FamilyMember>>({});
-  const [isSaving, setIsSaving] = useState(false);
 
   const [photoFile, setPhotoFile] = useState<File | null>(null);
   const [photoPreview, setPhotoPreview] = useState<string | null>(null);
 
   const [selectedPartnerId, setSelectedPartnerId] = useState('');
   const [partnerStatus, setPartnerStatus] = useState('MARRIED');
-  const [isLinkingPartner, setIsLinkingPartner] = useState(false);
 
   const [selectedParentId, setSelectedParentId] = useState('');
-  const [isLinkingParent, setIsLinkingParent] = useState(false);
-
   const [selectedChildId, setSelectedChildId] = useState('');
-  const [isLinkingChild, setIsLinkingChild] = useState(false);
 
   const [confirmOpen, setConfirmOpen] = useState(false);
-  const [isDeleting, setIsDeleting] = useState(false);
-
-  const [isTogglingSelf, setIsTogglingSelf] = useState(false);
   const [confirmSelfSwapOpen, setConfirmSelfSwapOpen] = useState(false);
 
-  const loadMember = useCallback(() => {
-    if (!id) return;
-    setIsLoading(true);
-    Promise.all([
-      familyMembersService.getOne(id),
-      familyMembersService.getAll(),
-      familyMembersService.getTree(),
-    ]).then(([data, all, tree]) => {
-      setMember(data);
-      const { parents, children, partnersA, partnersB, ...editableFields } = data;
-      setForm(editableFields);
-      setAllMembers(dedupeMembers(all.filter((m) => m.id !== id)));
-      setTreeData(tree);
-      setIsLoading(false);
-    });
-  }, [id]);
+  const updateMemberMutation = useUpdateMember();
+  const uploadPhotoMutation = useUploadPhoto();
+  const removeMemberMutation = useRemoveMember();
+  const linkPartnerMutation = useLinkPartners();
+  const unlinkPartnerMutation = useUnlinkPartners();
+  // NOU — instanțe separate pentru "adaugă părinte" şi "adaugă copil", deşi
+  // folosesc acelaşi endpoint dedesubt: fiecare are propria stare de
+  // isPending, ca butoanele din cele două secţiuni să nu se blocheze una
+  // pe alta când se dă click simultan-ish pe ambele.
+  const linkParentMutation = useLinkParentChild();
+  const linkChildMutation = useLinkParentChild();
+  const unlinkRelationMutation = useUnlinkParentChild();
+  const markAsMeMutation = useMarkAsMe();
+  const unmarkAsMeMutation = useUnmarkAsMe();
 
+  const isSaving = updateMemberMutation.isPending || uploadPhotoMutation.isPending;
+  const isLinkingPartner = linkPartnerMutation.isPending;
+  const isLinkingParent = linkParentMutation.isPending;
+  const isLinkingChild = linkChildMutation.isPending;
+  const isDeleting = removeMemberMutation.isPending;
+  const isTogglingSelf = markAsMeMutation.isPending || unmarkAsMeMutation.isPending;
+
+  // formularul de editare se resincronizează din datele proaspete ale
+  // membrului de fiecare dată când acestea se schimbă
   useEffect(() => {
-    loadMember();
-  }, [loadMember]);
+    if (member) {
+      const { parents, children, partnersA, partnersB, ...editableFields } = member;
+      setForm(editableFields);
+    }
+  }, [member]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
@@ -108,83 +126,70 @@ const MemberDetailPage: React.FC = () => {
 
   const handleSave = async () => {
     if (!id) return;
-    setIsSaving(true);
     try {
-      await familyMembersService.update(id, form);
+      await updateMemberMutation.mutateAsync({ id, data: form });
       if (photoFile) {
-        await familyMembersService.uploadPhoto(id, photoFile);
+        await uploadPhotoMutation.mutateAsync({ id, file: photoFile });
       }
       setPhotoFile(null);
       setPhotoPreview(null);
-      loadMember();
       setIsEditing(false);
-    } finally {
-      setIsSaving(false);
+    } catch {
+      // eroarea rămâne vizibilă prin starea mutaţiei — formularul rămâne deschis
     }
   };
 
   const handleLinkPartner = async () => {
     if (!id || !selectedPartnerId) return;
-    setIsLinkingPartner(true);
     try {
-      await familyMembersService.linkPartners(id, selectedPartnerId, partnerStatus);
+      await linkPartnerMutation.mutateAsync({ partnerAId: id, partnerBId: selectedPartnerId, status: partnerStatus });
       setSelectedPartnerId('');
-      loadMember();
-    } finally {
-      setIsLinkingPartner(false);
+    } catch {
+      // eroarea rămâne implicită
     }
   };
 
   const handleUnlinkPartner = async (partnerId: string) => {
     if (!id) return;
-    await familyMembersService.unlinkPartners(id, partnerId);
-    loadMember();
+    await unlinkPartnerMutation.mutateAsync({ partnerAId: id, partnerBId: partnerId });
   };
 
   const handleLinkParent = async () => {
     if (!id || !selectedParentId) return;
-    setIsLinkingParent(true);
     try {
-      await familyMembersService.linkParentChild(selectedParentId, id);
+      await linkParentMutation.mutateAsync({ parentId: selectedParentId, childId: id });
       setSelectedParentId('');
-      loadMember();
-    } finally {
-      setIsLinkingParent(false);
+    } catch {
+      // eroarea rămâne implicită
     }
   };
 
   const handleUnlinkParent = async (parentId: string) => {
     if (!id) return;
-    await familyMembersService.unlinkParentChild(parentId, id);
-    loadMember();
+    await unlinkRelationMutation.mutateAsync({ parentId, childId: id });
   };
 
   const handleLinkChild = async () => {
     if (!id || !selectedChildId) return;
-    setIsLinkingChild(true);
     try {
-      await familyMembersService.linkParentChild(id, selectedChildId);
+      await linkChildMutation.mutateAsync({ parentId: id, childId: selectedChildId });
       setSelectedChildId('');
-      loadMember();
-    } finally {
-      setIsLinkingChild(false);
+    } catch {
+      // eroarea rămâne implicită
     }
   };
 
   const handleUnlinkChild = async (childId: string) => {
     if (!id) return;
-    await familyMembersService.unlinkParentChild(id, childId);
-    loadMember();
+    await unlinkRelationMutation.mutateAsync({ parentId: id, childId });
   };
 
   const handleDelete = async () => {
-    if (!id || !member) return;
-    setIsDeleting(true);
+    if (!id) return;
     try {
-      await familyMembersService.remove(id);
+      await removeMemberMutation.mutateAsync(id);
       navigate('/dashboard');
     } finally {
-      setIsDeleting(false);
       setConfirmOpen(false);
     }
   };
@@ -198,12 +203,9 @@ const MemberDetailPage: React.FC = () => {
 
   const performMarkAsMe = async () => {
     if (!id) return;
-    setIsTogglingSelf(true);
     try {
-      await familyMembersService.markAsMe(id);
-      loadMember();
+      await markAsMeMutation.mutateAsync(id);
     } finally {
-      setIsTogglingSelf(false);
       setConfirmSelfSwapOpen(false);
     }
   };
@@ -212,13 +214,7 @@ const MemberDetailPage: React.FC = () => {
     if (!id) return;
 
     if (isSelf) {
-      setIsTogglingSelf(true);
-      try {
-        await familyMembersService.unmarkAsMe();
-        loadMember();
-      } finally {
-        setIsTogglingSelf(false);
-      }
+      await unmarkAsMeMutation.mutateAsync();
       return;
     }
 
@@ -264,7 +260,7 @@ const MemberDetailPage: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-earbore-grayLight">
-      <Header treeData={treeData} />
+      <Header />
 
       <div className="max-w-[1600px] mx-auto px-4 sm:px-6 lg:px-10 py-4 sm:py-6">
 
@@ -582,7 +578,6 @@ const MemberDetailPage: React.FC = () => {
                     <Autocomplete
                       options={parentOptions}
                       getOptionLabel={memberLabel}
-                      getOptionKey={(option) => option.id}
                       renderOption={renderMemberOption}
                       value={selectedParent}
                       onChange={(_, val) => setSelectedParentId(val?.id ?? '')}
@@ -628,7 +623,6 @@ const MemberDetailPage: React.FC = () => {
                     <Autocomplete
                       options={childOptions}
                       getOptionLabel={memberLabel}
-                      getOptionKey={(option) => option.id}
                       renderOption={renderMemberOption}
                       value={selectedChild}
                       onChange={(_, val) => setSelectedChildId(val?.id ?? '')}
@@ -677,7 +671,6 @@ const MemberDetailPage: React.FC = () => {
                     <Autocomplete
                       options={partnerOptions}
                       getOptionLabel={memberLabel}
-                      getOptionKey={(option) => option.id}
                       renderOption={renderMemberOption}
                       value={selectedPartner}
                       onChange={(_, val) => setSelectedPartnerId(val?.id ?? '')}
@@ -704,8 +697,6 @@ const MemberDetailPage: React.FC = () => {
               </div>
             </div>
 
-            {/* NOU — aceleași statistici + grafice de pe pagina de profil,
-                acum disponibile pentru orice membru din arbore. */}
             {!isEditing && treeData && (
               <MemberStatsPanel memberId={member.id} treeData={treeData} />
             )}

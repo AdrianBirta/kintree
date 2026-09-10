@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useCallback, useState } from 'react';
 import {
   Box, Button, ToggleButtonGroup, ToggleButton, Stack, CircularProgress, Typography,
   IconButton, Tooltip, useMediaQuery, useTheme,
@@ -8,21 +8,25 @@ import ViewAgendaIcon from '@mui/icons-material/ViewAgenda';
 import FavoriteIcon from '@mui/icons-material/Favorite';
 import AddIcon from '@mui/icons-material/Add';
 import SwapVertIcon from '@mui/icons-material/SwapVert';
-import { familyMembersService } from '../api/familyMembersService';
-import type { FamilyTreeData } from '../types/family';
 import type { TreeDirection } from '../lib/treeLayout';
 import Header from '../components/layout/Header';
 import AddMemberModal from '../components/tree/AddMemberModal';
 import LinkPartnersModal from '../components/tree/LinkPartnersModal';
 import FamilyTreeCanvas from '../components/tree/FamilyTreeCanvas';
 import FamilyTree3D from '../components/tree/FamilyTree3D';
+import { useTreeQuery } from '../hooks/queries/useFamilyQueries';
+import { useReorderMembers } from '../hooks/queries/useFamilyMutations';
 
 const DashboardPage: React.FC = () => {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
 
-  const [treeData, setTreeData] = useState<FamilyTreeData | undefined>();
-  const [isLoading, setIsLoading] = useState(true);
+  // NOU — arborele vine din React Query, nu mai din useState + useEffect
+  // local. Dacă altă pagină (sau Header-ul) l-a cerut deja recent, aici se
+  // afișează instant din cache, fără alt request.
+  const { data: treeData, isLoading } = useTreeQuery();
+  const reorderMutation = useReorderMembers();
+
   const [showAddModal, setShowAddModal] = useState(false);
   const [showPartnerModal, setShowPartnerModal] = useState(false);
   const [viewMode, setViewMode] = useState<'2d' | '3d'>('2d');
@@ -40,55 +44,18 @@ const DashboardPage: React.FC = () => {
     setQuickAddRelation(null);
   }, []);
 
-  const loadTree = useCallback(async () => {
-    setIsLoading(true);
-    try {
-      const data = await familyMembersService.getTree();
-      setTreeData(data);
-    } finally {
-      setIsLoading(false);
-    }
-  }, []);
-
-  useEffect(() => { loadTree(); }, [loadTree]);
-
   const handleReorder = useCallback(
-    async (updates: { memberId: string; manualOrder: number; manualRank?: number }[]) => {
-      setTreeData((prev) => {
-        if (!prev) return prev;
-        const byId = new Map(updates.map((u) => [u.memberId, u]));
-        return {
-          ...prev,
-          members: prev.members.map((m) => {
-            const u = byId.get(m.id);
-            if (!u) return m;
-            return { ...m, manualOrder: u.manualOrder, ...(u.manualRank !== undefined ? { manualRank: u.manualRank } : {}) };
-          }),
-        };
-      });
-
-      try {
-        await Promise.all(
-          updates.map((u) =>
-            familyMembersService.update(u.memberId, {
-              manualOrder: u.manualOrder,
-              ...(u.manualRank !== undefined ? { manualRank: u.manualRank } : {}),
-            }),
-          ),
-        );
-      } catch (err) {
-        console.error('Reorder failed:', err)
-        loadTree();
-      }
+    (updates: { memberId: string; manualOrder: number; manualRank?: number }[]) => {
+      reorderMutation.mutate(updates);
     },
-    [loadTree],
+    [reorderMutation],
   );
 
   const toggleDirection = () => setDirection((d) => (d === 'top-down' ? 'bottom-up' : 'top-down'));
 
   return (
     <Box sx={{ height: '100dvh', display: 'flex', flexDirection: 'column', bgcolor: 'background.default' }}>
-      <Header treeData={treeData} />
+      <Header />
 
       <Box sx={{ flex: 1, position: 'relative', minHeight: 0 }}>
         {isLoading ? (
@@ -118,9 +85,8 @@ const DashboardPage: React.FC = () => {
               <FamilyTree3D treeData={treeData} direction={direction} />
             )}
 
-            {/* NOU — pe mobil, butoanele devin doar-iconiță (cu tooltip),
-                se înghesuie compact și fac wrap dacă spațiul e insuficient,
-                ca să nu iasă niciodată din ecran. */}
+            {/* pe mobil, butoanele devin doar-iconiță (cu tooltip), se
+                înghesuie compact și fac wrap dacă spațiul e insuficient */}
             <Stack
               direction="row"
               spacing={{ xs: 0.75, sm: 1.5 }}
@@ -197,7 +163,7 @@ const DashboardPage: React.FC = () => {
           initialRelation={quickAddRelation}
           currentSelfId={treeData?.selfMemberId}
           onClose={handleCloseAddModal}
-          onCreated={() => { handleCloseAddModal(); loadTree(); }}
+          onCreated={handleCloseAddModal}
         />
       )}
 
@@ -205,7 +171,7 @@ const DashboardPage: React.FC = () => {
         <LinkPartnersModal
           members={treeData?.members ?? []}
           onClose={() => setShowPartnerModal(false)}
-          onLinked={() => { setShowPartnerModal(false); loadTree(); }}
+          onLinked={() => setShowPartnerModal(false)}
         />
       )}
     </Box>

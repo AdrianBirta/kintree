@@ -1,5 +1,6 @@
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useQueryClient } from '@tanstack/react-query';
 import {
   Box, Paper, Table, TableBody, TableCell, TableContainer, TableHead, TableRow,
   TableSortLabel, TextField, IconButton, Avatar, Chip, Button, InputAdornment,
@@ -21,12 +22,14 @@ import FilterListIcon from '@mui/icons-material/FilterList';
 import { format } from 'date-fns';
 import { ro } from 'date-fns/locale';
 import { familyMembersService } from '../api/familyMembersService';
-import type { FamilyMember, FamilyTreeData, BloodType } from '../types/family';
+import type { FamilyMember, BloodType } from '../types/family';
 import { BLOOD_TYPE_LABELS } from '../types/family';
 import { calculateAge, isDeceased } from '../utils/age';
 import Header from '../components/layout/Header';
 import ConfirmDialog from '../components/common/ConfirmDialog';
 import AddMemberModal from '../components/tree/AddMemberModal';
+import { useMembersQuery, useTreeQuery } from '../hooks/queries/useFamilyQueries';
+import { useUpdateMember, useUploadPhoto, useRemoveMember, invalidateFamilyData } from '../hooks/queries/useFamilyMutations';
 
 const GENDER_LABELS: Record<string, string> = { MALE: 'Masculin', FEMALE: 'Feminin', OTHER: 'Altul' };
 
@@ -45,18 +48,12 @@ const OPTIONAL_COLUMNS: { key: ColumnKey; label: string }[] = [
 
 const COLUMNS_STORAGE_KEY = 'earbore-members-visible-columns-v1';
 
-// culoare de accent după gen — aceeași logică ca în MemberCard, pentru
-// consistență vizuală între arbore și tabelul de membri
 function getGenderAccent(gender?: string | null): string {
   if (gender === 'FEMALE') return 'var(--color-earbore-danger)';
   if (gender === 'MALE') return 'var(--color-earbore-info)';
   return 'var(--color-earbore-400)';
 }
 
-// ─────────────────────────────────────────────────────────────
-// Stiluri partajate — inspirate din densitatea și grila ServiceNow,
-// dar cu paleta earbore
-// ─────────────────────────────────────────────────────────────
 const headerCellSx = {
   fontWeight: 700,
   fontSize: 12.5,
@@ -104,9 +101,6 @@ const toggleGroupSx = {
   },
 };
 
-// ─────────────────────────────────────────────────────────────
-// Listă pentru mobil — carduri compacte cu bară de accent + meniu kebab
-// ─────────────────────────────────────────────────────────────
 interface MobileListProps {
   members: FamilyMember[];
   editingId: string | null;
@@ -145,7 +139,6 @@ const MobileMemberList: React.FC<MobileListProps> = ({
 
         return (
           <Paper key={m.id} variant="outlined" sx={{ borderRadius: 2.5, overflow: 'hidden', display: 'flex' }}>
-            {/* bară de accent — gen / decedat, ca să identifici rapid membrul dintr-o privire */}
             <Box sx={{ width: 4, flexShrink: 0, bgcolor: deceased ? 'var(--color-earbore-border)' : getGenderAccent(m.gender) }} />
 
             <Box sx={{ flex: 1, p: 1.5, minWidth: 0 }}>
@@ -306,17 +299,23 @@ const MobileMemberList: React.FC<MobileListProps> = ({
   );
 };
 
-// ─────────────────────────────────────────────────────────────
-// Pagina principală
-// ─────────────────────────────────────────────────────────────
 const MembersListPage: React.FC = () => {
   const navigate = useNavigate();
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
+  const queryClient = useQueryClient();
 
-  const [members, setMembers] = useState<FamilyMember[]>([]);
-  const [treeData, setTreeData] = useState<FamilyTreeData | undefined>();
-  const [isLoading, setIsLoading] = useState(true);
+  // NOU — membrii şi arborele vin din cache-ul React Query, partajat cu
+  // celelalte pagini — nu mai cer din nou acelaşi lucru la fiecare navigare.
+  const { data: members = [], isLoading } = useMembersQuery();
+  const { data: treeData } = useTreeQuery();
+
+  const updateMemberMutation = useUpdateMember();
+  const uploadPhotoMutation = useUploadPhoto();
+  const removeMemberMutation = useRemoveMember();
+
+  const isSavingRow = updateMemberMutation.isPending;
+  const isDeleting = removeMemberMutation.isPending;
 
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('all');
@@ -328,19 +327,15 @@ const MembersListPage: React.FC = () => {
 
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editForm, setEditForm] = useState<Partial<FamilyMember>>({});
-  const [isSavingRow, setIsSavingRow] = useState(false);
 
   const [deleteTarget, setDeleteTarget] = useState<FamilyMember | null>(null);
-  const [isDeleting, setIsDeleting] = useState(false);
 
   const [showAddModal, setShowAddModal] = useState(false);
 
-  // selecție în masă — comportament tip ServiceNow (bifezi rânduri, apare bara de acțiuni)
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [bulkDeleteOpen, setBulkDeleteOpen] = useState(false);
   const [isBulkDeleting, setIsBulkDeleting] = useState(false);
 
-  // coloane configurabile — persistate local, ca preferințele de "list view" din ServiceNow
   const [visibleColumns, setVisibleColumns] = useState<Set<ColumnKey>>(() => {
     try {
       const raw = localStorage.getItem(COLUMNS_STORAGE_KEY);
@@ -352,7 +347,6 @@ const MembersListPage: React.FC = () => {
   });
   const [columnsMenuAnchor, setColumnsMenuAnchor] = useState<HTMLElement | null>(null);
 
-  // meniul kebab per rând (desktop)
   const [rowMenu, setRowMenu] = useState<{ anchor: HTMLElement; member: FamilyMember } | null>(null);
 
   useEffect(() => {
@@ -363,24 +357,6 @@ const MembersListPage: React.FC = () => {
     }
   }, [visibleColumns]);
 
-  const loadData = useCallback(async () => {
-    setIsLoading(true);
-    try {
-      const [all, tree] = await Promise.all([
-        familyMembersService.getAll(),
-        familyMembersService.getTree(),
-      ]);
-      setMembers(all);
-      setTreeData(tree);
-    } finally {
-      setIsLoading(false);
-    }
-  }, []);
-
-  useEffect(() => { loadData(); }, [loadData]);
-
-  // resetăm pagina și selecția când se schimbă filtrele — evită confuzia
-  // "am bifat 3 rânduri, dar acum nu mai sunt vizibile"
   useEffect(() => {
     setPage(0);
     setSelected(new Set());
@@ -484,14 +460,12 @@ const MembersListPage: React.FC = () => {
   };
 
   const saveEdit = async (id: string) => {
-    setIsSavingRow(true);
     try {
-      const updated = await familyMembersService.update(id, editForm);
-      setMembers((prev) => prev.map((m) => (m.id === id ? { ...m, ...updated } : m)));
+      await updateMemberMutation.mutateAsync({ id, data: editForm });
       setEditingId(null);
       setEditForm({});
-    } finally {
-      setIsSavingRow(false);
+    } catch {
+      // eroarea rămâne implicită — rândul rămâne deschis ca să poţi reîncerca
     }
   };
 
@@ -507,28 +481,28 @@ const MembersListPage: React.FC = () => {
   };
 
   const handlePhotoChange = async (id: string, file: File) => {
-    const updated = await familyMembersService.uploadPhoto(id, file);
-    setMembers((prev) => prev.map((m) => (m.id === id ? { ...m, imageUrl: updated.imageUrl } : m)));
+    await uploadPhotoMutation.mutateAsync({ id, file });
   };
 
   const handleDelete = async () => {
     if (!deleteTarget) return;
-    setIsDeleting(true);
     try {
-      await familyMembersService.remove(deleteTarget.id);
-      setMembers((prev) => prev.filter((m) => m.id !== deleteTarget.id));
+      await removeMemberMutation.mutateAsync(deleteTarget.id);
       setDeleteTarget(null);
-    } finally {
-      setIsDeleting(false);
+    } catch {
+      // dialogul rămâne deschis, ca să poţi reîncerca
     }
   };
 
+  // NOU — la ştergerea în masă facem toate cererile direct (fără să trecem
+  // prin mutaţia individuală), ca să nu invalidăm cache-ul de N ori la
+  // rând — o singură invalidare, după ce toate ştergerile s-au terminat.
   const handleBulkDelete = async () => {
     setIsBulkDeleting(true);
     try {
       const ids = [...selected];
       await Promise.all(ids.map((id) => familyMembersService.remove(id)));
-      setMembers((prev) => prev.filter((m) => !selected.has(m.id)));
+      invalidateFamilyData(queryClient, ids);
       clearSelection();
       setBulkDeleteOpen(false);
     } finally {
@@ -546,10 +520,9 @@ const MembersListPage: React.FC = () => {
 
   return (
     <div className="min-h-dvh bg-earbore-grayLight">
-      <Header treeData={treeData} />
+      <Header />
 
       <Box sx={{ maxWidth: 1400, mx: 'auto', px: { xs: 1.5, sm: 4 }, py: { xs: 2, sm: 4 } }}>
-        {/* ── Header de pagină ── */}
         <Box
           sx={{
             display: 'flex',
@@ -599,10 +572,8 @@ const MembersListPage: React.FC = () => {
           </Box>
         </Box>
 
-        {/* ── Container principal — "list view" ── */}
         <Paper sx={{ borderRadius: 1, overflow: 'hidden', border: '1px solid', borderColor: 'var(--color-earbore-border)' }}>
 
-          {/* Bara de selecție în masă — apare doar când ai rânduri bifate */}
           {selected.size > 0 && (
             <Box
               sx={{
@@ -627,7 +598,6 @@ const MembersListPage: React.FC = () => {
             </Box>
           )}
 
-          {/* Bara de filtre rapide */}
           <Box
             sx={{
               display: 'flex', alignItems: 'center', gap: 1.5, px: { xs: 1.5, sm: 2 }, py: 1.25,
@@ -987,7 +957,6 @@ const MembersListPage: React.FC = () => {
         </Paper>
       </Box>
 
-      {/* Meniu configurare coloane */}
       <Menu anchorEl={columnsMenuAnchor} open={!!columnsMenuAnchor} onClose={() => setColumnsMenuAnchor(null)}>
         <Typography variant="caption" sx={{ px: 2, py: 1, display: 'block', color: 'text.secondary', fontWeight: 700 }}>
           COLOANE VIZIBILE
@@ -1000,7 +969,6 @@ const MembersListPage: React.FC = () => {
         ))}
       </Menu>
 
-      {/* Meniu acțiuni per rând (desktop) */}
       <Menu anchorEl={rowMenu?.anchor ?? null} open={!!rowMenu} onClose={closeRowMenu}>
         <MenuItem onClick={() => { if (rowMenu) navigate(`/members/${rowMenu.member.id}`); closeRowMenu(); }}>
           <ListItemIcon><VisibilityIcon fontSize="small" /></ListItemIcon>
@@ -1040,7 +1008,7 @@ const MembersListPage: React.FC = () => {
           members={members}
           currentSelfId={treeData?.selfMemberId}
           onClose={() => setShowAddModal(false)}
-          onCreated={() => { setShowAddModal(false); loadData(); }}
+          onCreated={() => setShowAddModal(false)}
         />
       )}
     </div>

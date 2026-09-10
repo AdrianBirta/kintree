@@ -8,9 +8,11 @@ import {
 import PhotoCameraIcon from '@mui/icons-material/PhotoCamera';
 import CloseIcon from '@mui/icons-material/Close';
 import StarIcon from '@mui/icons-material/Star';
+import { useQueryClient } from '@tanstack/react-query';
 import { familyMembersService } from '../../api/familyMembersService';
 import type { FamilyMember } from '../../types/family';
 import { dedupeMembers, memberLabel, renderMemberOption } from '../common/memberOptionUtils';
+import { invalidateFamilyData } from '../../hooks/queries/useFamilyMutations';
 
 interface QuickRelation {
   memberId: string;
@@ -22,20 +24,14 @@ interface Props {
   onClose: () => void;
   onCreated: () => void;
   initialRelation?: QuickRelation | null;
-  // NOU — id-ul membrului marcat curent ca "eu" (dacă există), ca să putem
-  // avertiza userul că bifarea checkbox-ului îl va înlocui.
   currentSelfId?: string | null;
 }
 
 const AddMemberModal: React.FC<Props> = ({ members, onClose, onCreated, initialRelation, currentSelfId }) => {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
+  const queryClient = useQueryClient();
 
-  // FIX — sursa `members` poate conține aceeași persoană de mai multe ori
-  // (join-uri pe relații în backend). Deduplicăm o singură dată aici, la
-  // intrare, ca toate listele derivate (tată/mamă/partener/copii) să
-  // pornească deja curate — altfel Autocomplete-ul arăta dubluri și, la
-  // filtrare, eticheta greșită pentru opțiunea selectată.
   const uniqueMembers = useMemo(() => dedupeMembers(members), [members]);
 
   const relationTarget = useMemo(
@@ -43,7 +39,6 @@ const AddMemberModal: React.FC<Props> = ({ members, onClose, onCreated, initialR
     [initialRelation, uniqueMembers],
   );
 
-  // NOU — membrul care e în prezent marcat ca "eu", dacă există în lista primită
   const currentSelfMember = useMemo(
     () => (currentSelfId ? uniqueMembers.find((m) => m.id === currentSelfId) ?? null : null),
     [currentSelfId, uniqueMembers],
@@ -64,7 +59,6 @@ const AddMemberModal: React.FC<Props> = ({ members, onClose, onCreated, initialR
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState('');
 
-  // NOU — bifă "acesta sunt eu"
   const [markAsMe, setMarkAsMe] = useState(false);
 
   useEffect(() => {
@@ -113,13 +107,20 @@ const AddMemberModal: React.FC<Props> = ({ members, onClose, onCreated, initialR
         await familyMembersService.uploadPhoto(newMember.id, photoFile);
       }
 
-      // NOU — dacă userul a bifat "acesta sunt eu", marcăm noul membru.
-      // Backend-ul face automat switch-ul (constrângere @unique pe
-      // selfMemberId + onDelete: SetNull), deci un singur apel e suficient,
-      // indiferent dacă exista deja alt membru marcat anterior.
       if (markAsMe) {
         await familyMembersService.markAsMe(newMember.id);
       }
+
+      // NOU — o singură invalidare, la finalul întregii secvenţe (creare +
+      // legături + poză + eventual markAsMe), nu una după fiecare pas.
+      const touchedIds = [
+        newMember.id,
+        father?.id,
+        mother?.id,
+        partner?.id,
+        ...children.map((c) => c.id),
+      ].filter((v): v is string => !!v);
+      invalidateFamilyData(queryClient, touchedIds);
 
       onCreated();
     } catch (err: any) {
@@ -149,7 +150,6 @@ const AddMemberModal: React.FC<Props> = ({ members, onClose, onCreated, initialR
       <form onSubmit={handleSubmit} autoComplete="off">
         <DialogContent sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: '220px 1fr' }, gap: 3, py: 3 }}>
 
-          {/* Coloana stângă — poza */}
           <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 1.5, pt: 1 }}>
             <Box sx={{ position: 'relative' }}>
               <Avatar
@@ -191,7 +191,6 @@ const AddMemberModal: React.FC<Props> = ({ members, onClose, onCreated, initialR
             )}
           </Box>
 
-          {/* Coloana dreaptă — formular */}
           <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2.5 }}>
             <Typography variant="overline" color="text.secondary">Identitate</Typography>
             <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr' }, gap: 2 }}>
@@ -221,7 +220,6 @@ const AddMemberModal: React.FC<Props> = ({ members, onClose, onCreated, initialR
               />
             </Box>
 
-            {/* NOU — secțiunea "Sunt eu" */}
             <Divider sx={{ mt: 1 }} />
             <Box>
               <FormControlLabel

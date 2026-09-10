@@ -2,24 +2,25 @@ import React, { useState, useRef, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../../hooks/useAuth';
+import { useTreeQuery } from '../../hooks/queries/useFamilyQueries';
 import AccountTreeIcon from '@mui/icons-material/AccountTree';
 import TableRowsIcon from '@mui/icons-material/TableRows';
 import GroupsIcon from '@mui/icons-material/Groups';
 import CloseIcon from '@mui/icons-material/Close';
 import { IconButton, useMediaQuery, useTheme } from '@mui/material';
-import type { FamilyTreeData } from '../../types/family';
 import MembersAccordionMenu from './MembersAccordionMenu';
 
-interface Props {
-  treeData?: FamilyTreeData;
-}
-
-const Header: React.FC<Props> = ({ treeData }) => {
+const Header: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const { user, logout } = useAuth();
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
+
+  // NOU — arborele nu mai vine ca prop de la pagina părinte, ci direct din
+  // cache-ul React Query. Cum toate paginile cer aceeași cheie de query,
+  // Header-ul primește instant aceleași date, fără niciun request în plus.
+  const { data: treeData } = useTreeQuery();
 
   const [userMenuOpen, setUserMenuOpen] = useState(false);
   const [membersMenuOpen, setMembersMenuOpen] = useState(false);
@@ -138,9 +139,7 @@ const Header: React.FC<Props> = ({ treeData }) => {
           `backdrop-blur-sm` (backdrop-filter), iar backdrop-filter creează un
           "containing block" nou pentru orice descendent `position: fixed`.
           Fără portal, `fixed inset-0` s-ar raporta la cutia header-ului
-          (înaltă doar cât bara de sus), nu la tot ecranul — exact bug-ul
-          apărut inițial, unde overlay-ul se comprima și lăsa să se vadă
-          conținutul paginii din spate. */}
+          (înaltă doar cât bara de sus), nu la tot ecranul. */}
       {membersMenuOpen && isMobile && createPortal(
         <div className="fixed inset-0 z-50 bg-white flex flex-col">
           <div className="flex items-center justify-between px-4 py-3 border-b border-earbore-border flex-shrink-0">
