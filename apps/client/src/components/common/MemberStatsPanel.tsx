@@ -1,5 +1,6 @@
 import React, { useId, useMemo } from 'react';
 import { Box, Typography, Divider, useMediaQuery, useTheme } from '@mui/material';
+import { useTranslation } from 'react-i18next';
 import AccountTreeIcon from '@mui/icons-material/AccountTree';
 import FamilyRestroomIcon from '@mui/icons-material/FamilyRestroom';
 import Diversity3Icon from '@mui/icons-material/Diversity3';
@@ -62,8 +63,6 @@ const StatCard: React.FC<StatConfig> = ({ icon, label, value, colorVar }) => (
   </Box>
 );
 
-// NOU — card pentru un "fapt" evidențiat (text + context, nu doar un număr),
-// folosit pentru span-ul arborelui și recordul de longevitate.
 interface HighlightFactCardProps {
   icon: React.ReactNode;
   overline: string;
@@ -117,10 +116,6 @@ const HighlightFactCard: React.FC<HighlightFactCardProps> = ({ icon, overline, h
   </Box>
 );
 
-// ─────────────────────────────────────────────────────────────
-// DONUT CHART — cercuri concentrice cu stroke-dasharray. Fiecare
-// segment primește o felie proporțională cu valoarea lui din total.
-// ─────────────────────────────────────────────────────────────
 interface DonutSegment {
   label: string;
   value: number;
@@ -199,7 +194,8 @@ const DonutLegend: React.FC<{ segments: DonutSegment[] }> = ({ segments }) => {
   const visible = segments.filter((s) => s.value > 0);
 
   if (visible.length === 0) {
-    return <Typography variant="body2" color="text.secondary">Încă nu sunt suficiente date.</Typography>;
+    const { t } = useTranslation();
+    return <Typography variant="body2" color="text.secondary">{t('stats.generationAgeEmpty')}</Typography>;
   }
 
   return (
@@ -248,11 +244,6 @@ function lerpColor(hexA: string, hexB: string, t: number): string {
   return `#${((1 << 24) + (rr << 16) + (rg << 8) + rb).toString(16).slice(1)}`;
 }
 
-// ─────────────────────────────────────────────────────────────
-// NOU — CRONOLOGIA FAMILIEI (bare orizontale de viață, tip Gantt)
-// Construit din HTML/CSS (nu SVG), ca poziționarea barelor pe procente
-// să rămână fluidă la orice lățime de ecran, fără cod de resize.
-// ─────────────────────────────────────────────────────────────
 interface TimelineEntry {
   id: string;
   name: string;
@@ -291,10 +282,12 @@ const LegendDot: React.FC<{ color: string; label: string; hollow?: boolean }> = 
 );
 
 const LifespanTimelineChart: React.FC<{ entries: TimelineEntry[]; isMobile: boolean }> = ({ entries, isMobile }) => {
+  const { t } = useTranslation();
+
   if (entries.length === 0) {
     return (
       <Typography variant="body2" color="text.secondary">
-        Adaugă date de naștere membrilor apropiați ca să vezi cronologia familiei.
+        {t('stats.timelineEmpty')}
       </Typography>
     );
   }
@@ -336,11 +329,12 @@ const LifespanTimelineChart: React.FC<{ entries: TimelineEntry[]; isMobile: bool
           const left = percentForYear(entry.startYear);
           const right = percentForYear(entry.endYear);
           const barColor = entry.deceased ? 'var(--color-earbore-gray)' : getGenderAccent(entry.gender);
+          const endLabel = entry.deceased ? String(entry.endYear) : t('stats.present');
 
           return (
             <Box
               key={entry.id}
-              title={`${entry.name} · ${entry.startYear}–${entry.deceased ? entry.endYear : 'prezent'} (${entry.ageYears} ani)`}
+              title={t('stats.personTooltip', { name: entry.name, start: entry.startYear, end: endLabel, age: entry.ageYears })}
               sx={{
                 display: 'flex',
                 alignItems: 'center',
@@ -398,7 +392,7 @@ const LifespanTimelineChart: React.FC<{ entries: TimelineEntry[]; isMobile: bool
 
               {!isMobile && (
                 <Typography variant="caption" sx={{ width: yearColWidth, textAlign: 'right', flexShrink: 0, color: 'text.secondary', fontSize: 11 }}>
-                  {entry.startYear}–{entry.deceased ? entry.endYear : 'prezent'}
+                  {entry.startYear}–{entry.deceased ? entry.endYear : t('stats.present')}
                 </Typography>
               )}
             </Box>
@@ -407,18 +401,15 @@ const LifespanTimelineChart: React.FC<{ entries: TimelineEntry[]; isMobile: bool
       </Box>
 
       <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 2, mt: 2, pt: 1.5, borderTop: '1px solid var(--color-earbore-border)' }}>
-        <LegendDot color="var(--color-earbore-info)" label="Masculin" />
-        <LegendDot color="var(--color-earbore-danger)" label="Feminin" />
-        <LegendDot color="var(--color-earbore-gray)" label="Decedat" />
-        <LegendDot color="var(--color-earbore-gray)" label="Cerc gol = în viață" hollow />
+        <LegendDot color="var(--color-earbore-info)" label={t('stats.legendMale')} />
+        <LegendDot color="var(--color-earbore-danger)" label={t('stats.legendFemale')} />
+        <LegendDot color="var(--color-earbore-gray)" label={t('stats.legendDeceased')} />
+        <LegendDot color="var(--color-earbore-gray)" label={t('stats.legendAlive')} hollow />
       </Box>
     </Box>
   );
 };
 
-// ─────────────────────────────────────────────────────────────
-// NOU — VÂRSTA MEDIE PE GENERAȚIE (linie + arie, cu puncte)
-// ─────────────────────────────────────────────────────────────
 interface GenerationAgePoint {
   generation: number;
   averageAge: number | null;
@@ -447,6 +438,7 @@ function smoothAreaPath(points: { x: number; y: number }[], baselineY: number): 
 }
 
 const GenerationAgeChart: React.FC<{ points: GenerationAgePoint[]; currentGeneration: number }> = ({ points, currentGeneration }) => {
+  const { t } = useTranslation();
   const gradientId = useId();
   const validPoints = points.filter(
     (p): p is GenerationAgePoint & { averageAge: number } => p.sampleSize > 0 && p.averageAge !== null,
@@ -455,7 +447,7 @@ const GenerationAgeChart: React.FC<{ points: GenerationAgePoint[]; currentGenera
   if (validPoints.length < 2) {
     return (
       <Typography variant="body2" color="text.secondary">
-        Nu sunt încă suficiente date despre vârste pe mai multe generații.
+        {t('stats.generationAgeEmpty')}
       </Typography>
     );
   }
@@ -508,7 +500,7 @@ const GenerationAgeChart: React.FC<{ points: GenerationAgePoint[]; currentGenera
                 stroke="var(--color-earbore-600)"
                 strokeWidth={isCurrent ? 0 : 2}
               >
-                <title>{`Generația ${p.generation + 1}: ${p.averageAge} ani (${p.sampleSize} ${p.sampleSize === 1 ? 'persoană' : 'persoane'})`}</title>
+                <title>{`${t('stats.generationLabel', { n: p.generation + 1 })}: ${p.averageAge} ${t('common.years')} (${p.sampleSize})`}</title>
               </circle>
               <text x={x} y={y - 14} textAnchor="middle" fontSize={12} fontWeight={isCurrent ? 800 : 600} fill={isCurrent ? 'var(--color-earbore-700)' : 'var(--color-earbore-gray)'}>
                 {p.averageAge}
@@ -524,19 +516,17 @@ const GenerationAgeChart: React.FC<{ points: GenerationAgePoint[]; currentGenera
   );
 };
 
-// ─────────────────────────────────────────────────────────────
-// NOU — DISTRIBUȚIA LUNILOR DE NAȘTERE
-// ─────────────────────────────────────────────────────────────
-const MONTH_LABELS_RO = ['Ian', 'Feb', 'Mar', 'Apr', 'Mai', 'Iun', 'Iul', 'Aug', 'Sep', 'Oct', 'Noi', 'Dec'];
 const BIRTH_MONTH_TRACK_HEIGHT = 84;
 
 const BirthMonthChart: React.FC<{ counts: number[]; currentMonth: number | null }> = ({ counts, currentMonth }) => {
+  const { t } = useTranslation();
+  const monthLabels = t('stats.months', { returnObjects: true }) as string[];
   const totalWithData = counts.reduce((a, b) => a + b, 0);
 
   if (totalWithData === 0) {
     return (
       <Typography variant="body2" color="text.secondary">
-        Adaugă date de naștere ca să vezi în ce luni s-au născut cei din familia ta.
+        {t('stats.birthMonthEmpty')}
       </Typography>
     );
   }
@@ -580,7 +570,7 @@ const BirthMonthChart: React.FC<{ counts: number[]; currentMonth: number | null 
         })}
       </Box>
       <Box sx={{ display: 'flex', gap: { xs: 0.5, sm: 1 }, mt: 0.75 }}>
-        {MONTH_LABELS_RO.map((label, i) => (
+        {monthLabels.map((label, i) => (
           <Typography
             key={label}
             variant="caption"
@@ -601,6 +591,7 @@ const BirthMonthChart: React.FC<{ counts: number[]; currentMonth: number | null 
 };
 
 const MemberStatsPanel: React.FC<Props> = ({ memberId, treeData }) => {
+  const { t } = useTranslation();
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
 
@@ -668,9 +659,6 @@ const MemberStatsPanel: React.FC<Props> = ({ memberId, treeData }) => {
     const rankOf = new Map<string, number>();
     members.forEach((m) => rankOf.set(m.id, 0));
 
-    // Relaxare iterativă: un copil trebuie să fie cu cel puțin 1 generație
-    // sub părinte, iar partenerii trebuie să fie pe aceeași generație.
-    // Ranks cresc monoton, deci converge într-un număr finit de pași.
     let changed = true;
     for (let iter = 0; iter < members.length + 5 && changed; iter++) {
       changed = false;
@@ -719,7 +707,6 @@ const MemberStatsPanel: React.FC<Props> = ({ memberId, treeData }) => {
       generationCounts[rankOf.get(m.id) ?? 0]++;
     });
 
-    // ── NOU — cronologia (bare de viață) pentru rudele apropiate ──
     const currentYear = new Date().getFullYear();
     const lineageIds = new Set<string>([memberId, ...ancestors, ...descendants, ...siblings, ...partners]);
 
@@ -752,7 +739,6 @@ const MemberStatsPanel: React.FC<Props> = ({ memberId, treeData }) => {
     }
     timelineEntries.sort((a, b) => a.startYear - b.startYear || a.generation - b.generation);
 
-    // ── NOU — vârsta medie pe generație (medie descriptivă, nu speranță de viață clinică) ──
     const ageSumByRank = new Array(maxRank + 1).fill(0);
     const ageCountByRank = new Array(maxRank + 1).fill(0);
     members.forEach((m) => {
@@ -768,7 +754,6 @@ const MemberStatsPanel: React.FC<Props> = ({ memberId, treeData }) => {
       sampleSize: ageCountByRank[i],
     }));
 
-    // ── NOU — distribuția lunilor de naștere în toată familia ──
     const birthMonthCounts = new Array(12).fill(0);
     members.forEach((m) => {
       if (!m.birthDate) return;
@@ -777,7 +762,6 @@ const MemberStatsPanel: React.FC<Props> = ({ memberId, treeData }) => {
     const selfData = members.find((m) => m.id === memberId);
     const memberBirthMonth = selfData?.birthDate ? new Date(selfData.birthDate).getMonth() : null;
 
-    // ── NOU — span-ul arborelui + recordul de longevitate ──
     let treeSpanStart: number | null = null;
     let treeSpanEnd: number | null = null;
     const longestLife = members.reduce<{ name: string; age: number } | null>((longest, m) => {
@@ -813,37 +797,35 @@ const MemberStatsPanel: React.FC<Props> = ({ memberId, treeData }) => {
     };
   }, [memberId, treeData]);
 
-  // destructurate separat, ca TypeScript să le poată "îngusta" ușor de la
-  // `number | null` la `number` în verificările din JSX de mai jos
   const { treeSpanStart, treeSpanEnd, longestLife, currentYear } = stats;
 
   const compositionSegments: DonutSegment[] = useMemo(() => [
-    { label: 'Persoana', value: 1, color: '#6236ad', description: 'Punctul de plecare al acestei statistici.' },
-    { label: 'Strămoși', value: stats.ancestorsCount, color: '#2f6fed', description: 'Părinți, bunici și înaintașii lor, pe linia ascendentă.' },
-    { label: 'Descendenți', value: stats.descendantsCount, color: '#2f9e6a', description: 'Copii, nepoți și urmașii lor, pe linia descendentă.' },
-    { label: 'Frați / surori', value: stats.siblingsCount, color: '#d99a3d', description: 'Persoane cu cel puțin un părinte comun.' },
-    { label: 'Parteneri', value: stats.partnersCount, color: '#d3324a', description: 'Persoane legate direct printr-un parteneriat.' },
-    { label: 'Alte rude', value: stats.othersCount, color: '#9a94a8', description: 'Restul membrilor din arbore, fără o legătură directă (ex. cuscri, rude ale partenerilor).' },
-  ], [stats]);
+    { label: t('stats.personLabel'), value: 1, color: '#6236ad', description: t('stats.personDesc') },
+    { label: t('stats.ancestors'), value: stats.ancestorsCount, color: '#2f6fed', description: t('stats.ancestorsDesc') },
+    { label: t('stats.descendants'), value: stats.descendantsCount, color: '#2f9e6a', description: t('stats.descendantsDesc') },
+    { label: t('stats.siblings'), value: stats.siblingsCount, color: '#d99a3d', description: t('stats.siblingsDesc') },
+    { label: t('stats.partners'), value: stats.partnersCount, color: '#d3324a', description: t('stats.partnersDesc') },
+    { label: t('stats.othersLabel'), value: stats.othersCount, color: '#9a94a8', description: t('stats.othersDesc') },
+  ], [stats, t]);
 
   const generationSegments: DonutSegment[] = useMemo(() => {
     const count = stats.generationCounts.length;
     return stats.generationCounts.map((value, i) => {
       const isCurrent = i === stats.generation;
-      const t = count > 1 ? i / (count - 1) : 0;
+      const segT = count > 1 ? i / (count - 1) : 0;
       return {
-        label: `Generația ${i + 1}`,
+        label: t('stats.generationLabel', { n: i + 1 }),
         value,
-        color: isCurrent ? '#4f2a8c' : lerpColor('#ece0fa', '#9b72e0', t),
+        color: isCurrent ? '#4f2a8c' : lerpColor('#ece0fa', '#9b72e0', segT),
         isCurrent,
         description: isCurrent
-          ? 'Generația în care se află această persoană.'
+          ? t('stats.generationCurrentDesc')
           : i < stats.generation
-            ? 'O generație mai veche.'
-            : 'O generație mai tânără.',
+            ? t('stats.generationOlderDesc')
+            : t('stats.generationYoungerDesc'),
       };
     });
-  }, [stats]);
+  }, [stats, t]);
 
   const chartSize = isMobile ? 138 : 156;
   const strokeWidth = isMobile ? 18 : 22;
@@ -884,7 +866,6 @@ const MemberStatsPanel: React.FC<Props> = ({ memberId, treeData }) => {
     </Box>
   );
 
-  // NOU — header reutilizat pentru cele trei secțiuni noi de grafice
   const renderSectionHeader = (icon: React.ReactNode, title: string, explanation: string) => (
     <Box sx={{ mb: 2 }}>
       <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 0.5 }}>
@@ -901,16 +882,16 @@ const MemberStatsPanel: React.FC<Props> = ({ memberId, treeData }) => {
     <div className="bg-white rounded-2xl shadow-sm border border-earbore-border p-4 sm:p-6 lg:p-8">
       <div className="flex items-center justify-between mb-5 flex-wrap gap-2">
         <h2 className="text-xs font-semibold text-earbore-500 uppercase tracking-wider">
-          Statistici din arbore
+          {t('stats.panelTitle')}
         </h2>
-        <span className="text-xs text-earbore-gray">{stats.totalMembers} membri în total</span>
+        <span className="text-xs text-earbore-gray">{t('stats.totalMembers', { count: stats.totalMembers })}</span>
       </div>
 
       <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr 1fr', sm: 'repeat(4, 1fr)' }, gap: { xs: 1.25, sm: 2 } }}>
-        <StatCard icon={<AccountTreeIcon fontSize="small" />} label="Strămoși" value={stats.ancestorsCount} colorVar="--color-earbore-info" />
-        <StatCard icon={<FamilyRestroomIcon fontSize="small" />} label="Descendenți" value={stats.descendantsCount} colorVar="--color-earbore-success" />
-        <StatCard icon={<Diversity3Icon fontSize="small" />} label="Frați / surori" value={stats.siblingsCount} colorVar="--color-earbore-warning" />
-        <StatCard icon={<FavoriteIcon fontSize="small" />} label="Parteneri" value={stats.partnersCount} colorVar="--color-earbore-danger" />
+        <StatCard icon={<AccountTreeIcon fontSize="small" />} label={t('stats.ancestors')} value={stats.ancestorsCount} colorVar="--color-earbore-info" />
+        <StatCard icon={<FamilyRestroomIcon fontSize="small" />} label={t('stats.descendants')} value={stats.descendantsCount} colorVar="--color-earbore-success" />
+        <StatCard icon={<Diversity3Icon fontSize="small" />} label={t('stats.siblings')} value={stats.siblingsCount} colorVar="--color-earbore-warning" />
+        <StatCard icon={<FavoriteIcon fontSize="small" />} label={t('stats.partners')} value={stats.partnersCount} colorVar="--color-earbore-danger" />
       </Box>
 
       <Divider sx={{ my: { xs: 2.5, sm: 3.5 } }} />
@@ -918,23 +899,22 @@ const MemberStatsPanel: React.FC<Props> = ({ memberId, treeData }) => {
       <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', lg: '1fr 1fr' }, gap: { xs: 3.5, lg: 5 } }}>
         {renderDonutBlock(
           <DonutLargeIcon sx={{ fontSize: 18, color: 'var(--color-earbore-600)' }} />,
-          'Cum se raportează la ceilalți membri',
-          'Fiecare felie arată câți membri din arbore se află în fiecare tip de relație.',
+          t('stats.compositionTitle'),
+          t('stats.compositionDesc'),
           compositionSegments,
           stats.totalMembers,
-          'membri în arbore',
+          t('stats.compositionCenterLabel'),
         )}
         {renderDonutBlock(
           <LayersIcon sx={{ fontSize: 18, color: 'var(--color-earbore-600)' }} />,
-          'Generația în arbore',
-          'Fiecare felie e o generație — G1 e cea mai veche cunoscută. Felia mov intens, marcată „*", e generația curentă.',
+          t('stats.generationTitle'),
+          t('stats.generationDesc'),
           generationSegments,
           `G${stats.generation + 1}`,
-          'generația',
+          t('stats.generationCenterLabel'),
         )}
       </Box>
 
-      {/* NOU — fapte evidențiate: span-ul arborelui + recordul de longevitate */}
       {(treeSpanStart !== null || longestLife) && (
         <>
           <Divider sx={{ my: { xs: 2.5, sm: 3.5 } }} />
@@ -942,18 +922,18 @@ const MemberStatsPanel: React.FC<Props> = ({ memberId, treeData }) => {
             {treeSpanStart !== null && treeSpanEnd !== null && (
               <HighlightFactCard
                 icon={<DateRangeIcon fontSize="small" />}
-                overline="Perioada acoperită"
-                headline={`${treeSpanEnd - treeSpanStart} ani`}
-                detail={`din ${treeSpanStart} până în ${treeSpanEnd === currentYear ? 'prezent' : treeSpanEnd}`}
+                overline={t('stats.treeSpanOverline')}
+                headline={t('stats.treeSpanHeadline', { years: treeSpanEnd - treeSpanStart })}
+                detail={t('stats.treeSpanDetail', { start: treeSpanStart, end: treeSpanEnd === currentYear ? t('stats.present') : treeSpanEnd })}
                 colorVar="--color-earbore-500"
               />
             )}
             {longestLife && (
               <HighlightFactCard
                 icon={<EmojiEventsIcon fontSize="small" />}
-                overline="Longevitate"
+                overline={t('stats.longevityOverline')}
                 headline={longestLife.name}
-                detail={`${longestLife.age} ani — cea mai lungă viață înregistrată până acum în arbore`}
+                detail={t('stats.longevityDetail', { age: longestLife.age })}
                 colorVar="--color-earbore-warning"
               />
             )}
@@ -961,33 +941,31 @@ const MemberStatsPanel: React.FC<Props> = ({ memberId, treeData }) => {
         </>
       )}
 
-      {/* NOU — cronologia familiei (bare de viață) */}
       <Divider sx={{ my: { xs: 2.5, sm: 3.5 } }} />
       <Box>
         {renderSectionHeader(
           <TimelineIcon sx={{ fontSize: 18, color: 'var(--color-earbore-600)' }} />,
-          'Cronologia familiei',
-          'Fiecare bară arată perioada de viață a unei rude apropiate. Chenarul mov marchează această persoană, iar cercul gol de la capătul barei arată că e încă în viață.',
+          t('stats.timelineTitle'),
+          t('stats.timelineDesc'),
         )}
         <LifespanTimelineChart entries={stats.timelineEntries} isMobile={isMobile} />
       </Box>
 
-      {/* NOU — tendințe: vârsta medie pe generație + luna nașterii */}
       <Divider sx={{ my: { xs: 2.5, sm: 3.5 } }} />
       <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', lg: '1fr 1fr' }, gap: { xs: 3.5, lg: 5 } }}>
         <Box>
           {renderSectionHeader(
             <TrendingUpIcon sx={{ fontSize: 18, color: 'var(--color-earbore-600)' }} />,
-            'Vârsta medie pe generație',
-            'Media de vârstă (la deces, sau vârsta actuală pentru cei în viață) pentru fiecare generație din arbore.',
+            t('stats.generationAgeTitle'),
+            t('stats.generationAgeDesc'),
           )}
           <GenerationAgeChart points={stats.generationAgeSeries} currentGeneration={stats.generation} />
         </Box>
         <Box>
           {renderSectionHeader(
             <CakeIcon sx={{ fontSize: 18, color: 'var(--color-earbore-600)' }} />,
-            'Lunile de naștere din familie',
-            'Câți membri din arbore s-au născut în fiecare lună a anului. Bara evidențiată arată luna de naștere a acestei persoane.',
+            t('stats.birthMonthTitle'),
+            t('stats.birthMonthDesc'),
           )}
           <BirthMonthChart counts={stats.birthMonthCounts} currentMonth={stats.memberBirthMonth} />
         </Box>

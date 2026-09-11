@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQueryClient } from '@tanstack/react-query';
+import { useTranslation } from 'react-i18next';
 import {
   Box, Paper, Table, TableBody, TableCell, TableContainer, TableHead, TableRow,
   TableSortLabel, TextField, IconButton, Avatar, Chip, Button, InputAdornment,
@@ -19,8 +20,8 @@ import PhotoCameraIcon from '@mui/icons-material/PhotoCamera';
 import MoreVertIcon from '@mui/icons-material/MoreVert';
 import ViewColumnIcon from '@mui/icons-material/ViewColumn';
 import FilterListIcon from '@mui/icons-material/FilterList';
-import { format } from 'date-fns';
-import { ro } from 'date-fns/locale';
+import { format, type Locale } from 'date-fns';
+import { ro, enUS, hu } from 'date-fns/locale';
 import { familyMembersService } from '../api/familyMembersService';
 import type { FamilyMember, BloodType } from '../types/family';
 import { BLOOD_TYPE_LABELS } from '../types/family';
@@ -31,20 +32,14 @@ import AddMemberModal from '../components/tree/AddMemberModal';
 import { useMembersQuery, useTreeQuery } from '../hooks/queries/useFamilyQueries';
 import { useUpdateMember, useUploadPhoto, useRemoveMember, invalidateFamilyData } from '../hooks/queries/useFamilyMutations';
 
-const GENDER_LABELS: Record<string, string> = { MALE: 'Masculin', FEMALE: 'Feminin', OTHER: 'Altul' };
+const DATE_LOCALES: Record<string, Locale> = { ro, en: enUS, hu };
 
 type SortField = 'name' | 'gender' | 'birthDate' | 'age' | 'occupation' | 'bloodType';
 type ColumnKey = 'gender' | 'birthDate' | 'age' | 'occupation' | 'bloodType';
 type StatusFilter = 'all' | 'alive' | 'deceased';
 type GenderFilter = 'ALL' | 'MALE' | 'FEMALE' | 'OTHER';
 
-const OPTIONAL_COLUMNS: { key: ColumnKey; label: string }[] = [
-  { key: 'gender', label: 'Gen' },
-  { key: 'birthDate', label: 'Data nașterii' },
-  { key: 'age', label: 'Vârstă' },
-  { key: 'occupation', label: 'Ocupație' },
-  { key: 'bloodType', label: 'Grupă sanguină' },
-];
+const OPTIONAL_COLUMN_KEYS: ColumnKey[] = ['gender', 'birthDate', 'age', 'occupation', 'bloodType'];
 
 const COLUMNS_STORAGE_KEY = 'earbore-members-visible-columns-v1';
 
@@ -120,12 +115,13 @@ const MobileMemberList: React.FC<MobileListProps> = ({
   members, editingId, editForm, isSavingRow,
   onStartEdit, onCancelEdit, onSaveEdit, onFieldChange, onSelectFieldChange, onPhotoChange, onView, onDeleteRequest,
 }) => {
+  const { t } = useTranslation();
   const [menuFor, setMenuFor] = useState<{ anchor: HTMLElement; member: FamilyMember } | null>(null);
 
   if (members.length === 0) {
     return (
       <Box sx={{ py: 6, textAlign: 'center', color: 'text.secondary' }}>
-        <Typography variant="body2">Niciun membru găsit.</Typography>
+        <Typography variant="body2">{t('membersList.noMembersFound')}</Typography>
       </Box>
     );
   }
@@ -175,11 +171,11 @@ const MobileMemberList: React.FC<MobileListProps> = ({
                     <Box sx={{ display: 'flex', gap: 1 }}>
                       <TextField
                         size="small" autoComplete="given-name" value={editForm.firstName ?? ''}
-                        onChange={onFieldChange('firstName')} placeholder="Prenume" fullWidth
+                        onChange={onFieldChange('firstName')} placeholder={t('memberDetail.firstName')} fullWidth
                       />
                       <TextField
                         size="small" autoComplete="family-name" value={editForm.lastName ?? ''}
-                        onChange={onFieldChange('lastName')} placeholder="Nume" fullWidth
+                        onChange={onFieldChange('lastName')} placeholder={t('memberDetail.lastName')} fullWidth
                       />
                     </Box>
                   ) : (
@@ -198,11 +194,15 @@ const MobileMemberList: React.FC<MobileListProps> = ({
                       <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
                         <Box sx={{ width: 6, height: 6, borderRadius: '50%', bgcolor: deceased ? 'var(--color-earbore-gray)' : 'var(--color-earbore-success)' }} />
                         <Typography variant="caption" sx={{ color: deceased ? 'text.secondary' : 'var(--color-earbore-success)', fontWeight: 600 }}>
-                          {deceased ? 'Decedat' : 'În viață'}
+                          {deceased ? t('membersList.deceasedStatus') : t('membersList.aliveStatus')}
                         </Typography>
                       </Box>
-                      {age !== null && <Typography variant="caption" color="text.secondary">• {age} ani</Typography>}
-                      {m.gender && <Typography variant="caption" color="text.secondary">• {GENDER_LABELS[m.gender]}</Typography>}
+                      {age !== null && <Typography variant="caption" color="text.secondary">• {age} {t('common.years')}</Typography>}
+                      {m.gender && (
+                        <Typography variant="caption" color="text.secondary">
+                          • {t(`common.genders.${m.gender.toLowerCase()}`)}
+                        </Typography>
+                      )}
                       {m.bloodType && (
                         <Typography variant="caption" color="text.secondary">
                           • {BLOOD_TYPE_LABELS[m.bloodType as BloodType]}
@@ -229,16 +229,16 @@ const MobileMemberList: React.FC<MobileListProps> = ({
                 <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.25, mt: 1.5 }}>
                   <Box sx={{ display: 'flex', gap: 1 }}>
                     <FormControl size="small" fullWidth>
-                      <InputLabel>Gen</InputLabel>
+                      <InputLabel>{t('membersList.columnGender')}</InputLabel>
                       <Select
-                        label="Gen"
+                        label={t('membersList.columnGender')}
                         value={editForm.gender ?? ''}
                         onChange={(e) => onSelectFieldChange('gender', e.target.value)}
                       >
-                        <MenuItem value="">Nespecificat</MenuItem>
-                        <MenuItem value="MALE">Masculin</MenuItem>
-                        <MenuItem value="FEMALE">Feminin</MenuItem>
-                        <MenuItem value="OTHER">Altul</MenuItem>
+                        <MenuItem value="">{t('common.unspecified')}</MenuItem>
+                        <MenuItem value="MALE">{t('common.genders.male')}</MenuItem>
+                        <MenuItem value="FEMALE">{t('common.genders.female')}</MenuItem>
+                        <MenuItem value="OTHER">{t('common.genders.other')}</MenuItem>
                       </Select>
                     </FormControl>
                     <TextField
@@ -248,13 +248,13 @@ const MobileMemberList: React.FC<MobileListProps> = ({
                     />
                   </Box>
                   <TextField
-                    size="small" autoComplete="organization-title" label="Ocupație"
+                    size="small" autoComplete="organization-title" label={t('membersList.columnOccupation')}
                     value={editForm.occupation ?? ''} onChange={onFieldChange('occupation')} fullWidth
                   />
                   <FormControl size="small" fullWidth>
-                    <InputLabel>Grupă sanguină</InputLabel>
+                    <InputLabel>{t('membersList.columnBloodType')}</InputLabel>
                     <Select
-                      label="Grupă sanguină"
+                      label={t('membersList.columnBloodType')}
                       value={editForm.bloodType ?? ''}
                       onChange={(e) => onSelectFieldChange('bloodType', e.target.value)}
                     >
@@ -267,10 +267,10 @@ const MobileMemberList: React.FC<MobileListProps> = ({
 
                   <Box sx={{ display: 'flex', gap: 1 }}>
                     <Button fullWidth variant="outlined" color="inherit" disabled={isSavingRow} onClick={onCancelEdit}>
-                      Anulează
+                      {t('common.cancel')}
                     </Button>
                     <Button fullWidth variant="contained" disabled={isSavingRow} onClick={() => onSaveEdit(m.id)}>
-                      {isSavingRow ? 'Se salvează...' : 'Salvează'}
+                      {isSavingRow ? t('common.saving') : t('common.save')}
                     </Button>
                   </Box>
                 </Box>
@@ -283,16 +283,16 @@ const MobileMemberList: React.FC<MobileListProps> = ({
       <Menu anchorEl={menuFor?.anchor ?? null} open={!!menuFor} onClose={() => setMenuFor(null)}>
         <MenuItem onClick={() => { if (menuFor) onView(menuFor.member.id); setMenuFor(null); }}>
           <ListItemIcon><VisibilityIcon fontSize="small" /></ListItemIcon>
-          <ListItemText>Vezi profil</ListItemText>
+          <ListItemText>{t('membersList.viewProfile')}</ListItemText>
         </MenuItem>
         <MenuItem onClick={() => { if (menuFor) onStartEdit(menuFor.member); setMenuFor(null); }}>
           <ListItemIcon><EditIcon fontSize="small" /></ListItemIcon>
-          <ListItemText>Editare rapidă</ListItemText>
+          <ListItemText>{t('membersList.quickEdit')}</ListItemText>
         </MenuItem>
         <Divider />
         <MenuItem onClick={() => { if (menuFor) onDeleteRequest(menuFor.member); setMenuFor(null); }} sx={{ color: 'error.main' }}>
           <ListItemIcon><DeleteIcon fontSize="small" color="error" /></ListItemIcon>
-          <ListItemText>Șterge</ListItemText>
+          <ListItemText>{t('common.delete')}</ListItemText>
         </MenuItem>
       </Menu>
     </Box>
@@ -300,13 +300,13 @@ const MobileMemberList: React.FC<MobileListProps> = ({
 };
 
 const MembersListPage: React.FC = () => {
+  const { t, i18n } = useTranslation();
+  const dateLocale = DATE_LOCALES[i18n.language?.slice(0, 2)] ?? ro;
   const navigate = useNavigate();
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
   const queryClient = useQueryClient();
 
-  // NOU — membrii şi arborele vin din cache-ul React Query, partajat cu
-  // celelalte pagini — nu mai cer din nou acelaşi lucru la fiecare navigare.
   const { data: members = [], isLoading } = useMembersQuery();
   const { data: treeData } = useTreeQuery();
 
@@ -343,11 +343,29 @@ const MembersListPage: React.FC = () => {
     } catch {
       /* ignorăm — pornim cu toate coloanele vizibile */
     }
-    return new Set(OPTIONAL_COLUMNS.map((c) => c.key));
+    return new Set(OPTIONAL_COLUMN_KEYS);
   });
   const [columnsMenuAnchor, setColumnsMenuAnchor] = useState<HTMLElement | null>(null);
 
   const [rowMenu, setRowMenu] = useState<{ anchor: HTMLElement; member: FamilyMember } | null>(null);
+
+  const genderLabel = (g?: string | null) => {
+    if (g === 'MALE') return t('common.genders.male');
+    if (g === 'FEMALE') return t('common.genders.female');
+    if (g === 'OTHER') return t('common.genders.other');
+    return '—';
+  };
+
+  const columnLabel = (key: ColumnKey) => {
+    switch (key) {
+      case 'gender': return t('membersList.columnGender');
+      case 'birthDate': return t('membersList.columnBirthDate');
+      case 'age': return t('membersList.columnAge');
+      case 'occupation': return t('membersList.columnOccupation');
+      case 'bloodType': return t('membersList.columnBloodType');
+      default: return key;
+    }
+  };
 
   useEffect(() => {
     try {
@@ -494,9 +512,6 @@ const MembersListPage: React.FC = () => {
     }
   };
 
-  // NOU — la ştergerea în masă facem toate cererile direct (fără să trecem
-  // prin mutaţia individuală), ca să nu invalidăm cache-ul de N ori la
-  // rând — o singură invalidare, după ce toate ştergerile s-au terminat.
   const handleBulkDelete = async () => {
     setIsBulkDeleting(true);
     try {
@@ -534,7 +549,7 @@ const MembersListPage: React.FC = () => {
           }}
         >
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.25, px: { xs: 0.5, sm: 0 } }}>
-            <Typography variant="h5" sx={{ fontWeight: 800 }}>Toți membrii</Typography>
+            <Typography variant="h5" sx={{ fontWeight: 800 }}>{t('membersList.title')}</Typography>
             <Chip
               label={filtered.length}
               size="small"
@@ -545,7 +560,7 @@ const MembersListPage: React.FC = () => {
           <Box sx={{ display: 'flex', gap: 1.5, flexDirection: { xs: 'column', sm: 'row' } }}>
             <TextField
               size="small"
-              placeholder="Caută după nume, ocupație..."
+              placeholder={t('membersList.searchPlaceholder')}
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               autoComplete="off"
@@ -567,7 +582,7 @@ const MembersListPage: React.FC = () => {
               fullWidth={isMobile}
               sx={{ flexShrink: 0 }}
             >
-              Adaugă membru
+              {t('membersList.addMember')}
             </Button>
           </Box>
         </Box>
@@ -588,28 +603,26 @@ const MembersListPage: React.FC = () => {
               onChange={(_, v) => v && setStatusFilter(v)}
               sx={toggleGroupSx}
             >
-              <ToggleButton value="all">Toți</ToggleButton>
-              <ToggleButton value="alive">În viață</ToggleButton>
-              <ToggleButton value="deceased">Decedați</ToggleButton>
+              <ToggleButton value="all">{t('membersList.all')}</ToggleButton>
+              <ToggleButton value="alive">{t('membersList.alive')}</ToggleButton>
+              <ToggleButton value="deceased">{t('membersList.deceased')}</ToggleButton>
             </ToggleButtonGroup>
 
             <FormControl size="small" sx={{ minWidth: 140 }}>
               <Select value={genderFilter} onChange={(e) => setGenderFilter(e.target.value as GenderFilter)}>
-                <MenuItem value="ALL">Toate genurile</MenuItem>
-                <MenuItem value="MALE">Masculin</MenuItem>
-                <MenuItem value="FEMALE">Feminin</MenuItem>
-                <MenuItem value="OTHER">Altul</MenuItem>
+                <MenuItem value="ALL">{t('membersList.allGenders')}</MenuItem>
+                <MenuItem value="MALE">{t('common.genders.male')}</MenuItem>
+                <MenuItem value="FEMALE">{t('common.genders.female')}</MenuItem>
+                <MenuItem value="OTHER">{t('common.genders.other')}</MenuItem>
               </Select>
             </FormControl>
 
             {hasActiveFilters && (
               <Button size="small" onClick={() => { setStatusFilter('all'); setGenderFilter('ALL'); }}>
-                Resetează filtrele
+                {t('membersList.resetFilters')}
               </Button>
             )}
 
-            {/* NOU — info + acțiuni de selecție, aliniate la dreapta în același rând,
-      în loc de bara lată de deasupra care împingea tabelul în jos */}
             {selected.size > 0 && (
               <Box
                 sx={{
@@ -622,10 +635,10 @@ const MembersListPage: React.FC = () => {
                 }}
               >
                 <Typography variant="body2" sx={{ fontWeight: 600, color: 'var(--color-earbore-700)', whiteSpace: 'nowrap' }}>
-                  {selected.size} {selected.size === 1 ? 'selectat' : 'selectați'}
+                  {t('membersList.selected', { count: selected.size })}
                 </Typography>
                 <Button size="small" variant="text" color="inherit" onClick={clearSelection}>
-                  Anulează
+                  {t('membersList.clearSelection')}
                 </Button>
                 <Button
                   size="small"
@@ -635,7 +648,7 @@ const MembersListPage: React.FC = () => {
                   startIcon={<DeleteIcon fontSize="small" />}
                   onClick={() => setBulkDeleteOpen(true)}
                 >
-                  Șterge
+                  {t('membersList.deleteSelected')}
                 </Button>
               </Box>
             )}
@@ -670,7 +683,7 @@ const MembersListPage: React.FC = () => {
                 rowsPerPage={rowsPerPage}
                 onRowsPerPageChange={(e) => { setRowsPerPage(parseInt(e.target.value, 10)); setPage(0); }}
                 rowsPerPageOptions={[10, 25, 50]}
-                labelRowsPerPage="Pe pagină"
+                labelRowsPerPage={t('membersList.rowsPerPage')}
                 sx={{
                   borderTop: '1px solid var(--color-earbore-border)',
                   '.MuiTablePagination-toolbar': { flexWrap: 'wrap', justifyContent: 'center', rowGap: 1, px: 1 },
@@ -704,14 +717,14 @@ const MembersListPage: React.FC = () => {
                           onClick={() => handleSort('name')}
                           sx={sortLabelSx}
                         >
-                          Membru
+                          {t('membersList.columnMember')}
                         </TableSortLabel>
                       </TableCell>
 
                       {visibleColumns.has('gender') && (
                         <TableCell sx={headerCellSx} sortDirection={sortField === 'gender' ? sortDir : false}>
                           <TableSortLabel active={sortField === 'gender'} direction={sortField === 'gender' ? sortDir : 'asc'} onClick={() => handleSort('gender')} sx={sortLabelSx}>
-                            Gen
+                            {t('membersList.columnGender')}
                           </TableSortLabel>
                         </TableCell>
                       )}
@@ -719,7 +732,7 @@ const MembersListPage: React.FC = () => {
                       {visibleColumns.has('birthDate') && (
                         <TableCell sx={headerCellSx} sortDirection={sortField === 'birthDate' ? sortDir : false}>
                           <TableSortLabel active={sortField === 'birthDate'} direction={sortField === 'birthDate' ? sortDir : 'asc'} onClick={() => handleSort('birthDate')} sx={sortLabelSx}>
-                            Data nașterii
+                            {t('membersList.columnBirthDate')}
                           </TableSortLabel>
                         </TableCell>
                       )}
@@ -727,7 +740,7 @@ const MembersListPage: React.FC = () => {
                       {visibleColumns.has('age') && (
                         <TableCell sx={headerCellSx} sortDirection={sortField === 'age' ? sortDir : false}>
                           <TableSortLabel active={sortField === 'age'} direction={sortField === 'age' ? sortDir : 'asc'} onClick={() => handleSort('age')} sx={sortLabelSx}>
-                            Vârstă
+                            {t('membersList.columnAge')}
                           </TableSortLabel>
                         </TableCell>
                       )}
@@ -735,7 +748,7 @@ const MembersListPage: React.FC = () => {
                       {visibleColumns.has('occupation') && (
                         <TableCell sx={headerCellSx} sortDirection={sortField === 'occupation' ? sortDir : false}>
                           <TableSortLabel active={sortField === 'occupation'} direction={sortField === 'occupation' ? sortDir : 'asc'} onClick={() => handleSort('occupation')} sx={sortLabelSx}>
-                            Ocupație
+                            {t('membersList.columnOccupation')}
                           </TableSortLabel>
                         </TableCell>
                       )}
@@ -743,15 +756,15 @@ const MembersListPage: React.FC = () => {
                       {visibleColumns.has('bloodType') && (
                         <TableCell sx={headerCellSx} sortDirection={sortField === 'bloodType' ? sortDir : false}>
                           <TableSortLabel active={sortField === 'bloodType'} direction={sortField === 'bloodType' ? sortDir : 'asc'} onClick={() => handleSort('bloodType')} sx={sortLabelSx}>
-                            Grupă sanguină
+                            {t('membersList.columnBloodType')}
                           </TableSortLabel>
                         </TableCell>
                       )}
 
-                      <TableCell sx={headerCellSx}>Stare</TableCell>
+                      <TableCell sx={headerCellSx}>{t('membersList.columnStatus')}</TableCell>
 
                       <TableCell sx={{ ...headerCellSx, borderRight: 'none' }} align="right">
-                        <Tooltip title="Coloane vizibile">
+                        <Tooltip title={t('membersList.visibleColumns')}>
                           <IconButton size="small" onClick={(e) => setColumnsMenuAnchor(e.currentTarget)}>
                             <ViewColumnIcon fontSize="small" sx={{ color: 'var(--color-earbore-gray)' }} />
                           </IconButton>
@@ -811,8 +824,8 @@ const MembersListPage: React.FC = () => {
 
                               {editing ? (
                                 <Box sx={{ display: 'flex', gap: 1 }}>
-                                  <TextField size="small" autoComplete="given-name" value={editForm.firstName ?? ''} onChange={handleEditTextChange('firstName')} placeholder="Prenume" sx={{ width: 100 }} />
-                                  <TextField size="small" autoComplete="family-name" value={editForm.lastName ?? ''} onChange={handleEditTextChange('lastName')} placeholder="Nume" sx={{ width: 100 }} />
+                                  <TextField size="small" autoComplete="given-name" value={editForm.firstName ?? ''} onChange={handleEditTextChange('firstName')} placeholder={t('memberDetail.firstName')} sx={{ width: 100 }} />
+                                  <TextField size="small" autoComplete="family-name" value={editForm.lastName ?? ''} onChange={handleEditTextChange('lastName')} placeholder={t('memberDetail.lastName')} sx={{ width: 100 }} />
                                 </Box>
                               ) : (
                                 <Box sx={{ minWidth: 0 }}>
@@ -839,14 +852,14 @@ const MembersListPage: React.FC = () => {
                               {editing ? (
                                 <FormControl size="small" sx={{ minWidth: 110 }}>
                                   <Select value={editForm.gender ?? ''} onChange={(e) => handleEditSelectChange('gender', e.target.value)} displayEmpty>
-                                    <MenuItem value="">Nespecificat</MenuItem>
-                                    <MenuItem value="MALE">Masculin</MenuItem>
-                                    <MenuItem value="FEMALE">Feminin</MenuItem>
-                                    <MenuItem value="OTHER">Altul</MenuItem>
+                                    <MenuItem value="">{t('common.unspecified')}</MenuItem>
+                                    <MenuItem value="MALE">{t('common.genders.male')}</MenuItem>
+                                    <MenuItem value="FEMALE">{t('common.genders.female')}</MenuItem>
+                                    <MenuItem value="OTHER">{t('common.genders.other')}</MenuItem>
                                   </Select>
                                 </FormControl>
                               ) : (
-                                (m.gender && GENDER_LABELS[m.gender]) ?? '—'
+                                genderLabel(m.gender)
                               )}
                             </TableCell>
                           )}
@@ -859,13 +872,13 @@ const MembersListPage: React.FC = () => {
                                   onChange={handleEditTextChange('birthDate')} sx={{ width: 150 }}
                                 />
                               ) : (
-                                m.birthDate ? format(new Date(m.birthDate), 'd MMM yyyy', { locale: ro }) : '—'
+                                m.birthDate ? format(new Date(m.birthDate), 'd MMM yyyy', { locale: dateLocale }) : '—'
                               )}
                             </TableCell>
                           )}
 
                           {visibleColumns.has('age') && (
-                            <TableCell>{age !== null ? `${age} ani` : '—'}</TableCell>
+                            <TableCell>{age !== null ? `${age} ${t('common.years')}` : '—'}</TableCell>
                           )}
 
                           {visibleColumns.has('occupation') && (
@@ -899,7 +912,7 @@ const MembersListPage: React.FC = () => {
                             <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75 }}>
                               <Box sx={{ width: 8, height: 8, borderRadius: '50%', flexShrink: 0, bgcolor: deceased ? 'var(--color-earbore-gray)' : 'var(--color-earbore-success)' }} />
                               <Typography variant="caption" sx={{ fontWeight: 600, color: deceased ? 'text.secondary' : 'var(--color-earbore-success)' }}>
-                                {deceased ? 'Decedat' : 'În viață'}
+                                {deceased ? t('membersList.deceasedStatus') : t('membersList.aliveStatus')}
                               </Typography>
                             </Box>
                           </TableCell>
@@ -907,14 +920,14 @@ const MembersListPage: React.FC = () => {
                           <TableCell align="right">
                             {editing ? (
                               <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 0.5 }}>
-                                <Tooltip title="Salvează">
+                                <Tooltip title={t('common.save')}>
                                   <span>
                                     <IconButton size="small" color="primary" disabled={isSavingRow} onClick={() => saveEdit(m.id)}>
                                       <CheckIcon fontSize="small" />
                                     </IconButton>
                                   </span>
                                 </Tooltip>
-                                <Tooltip title="Anulează">
+                                <Tooltip title={t('common.cancel')}>
                                   <span>
                                     <IconButton size="small" disabled={isSavingRow} onClick={cancelEdit}>
                                       <CloseIcon fontSize="small" />
@@ -935,7 +948,7 @@ const MembersListPage: React.FC = () => {
                     {paginated.length === 0 && (
                       <TableRow>
                         <TableCell colSpan={9} align="center" sx={{ py: 6, color: 'text.secondary' }}>
-                          Niciun membru găsit.
+                          {t('membersList.noMembersFound')}
                         </TableCell>
                       </TableRow>
                     )}
@@ -951,8 +964,8 @@ const MembersListPage: React.FC = () => {
                 rowsPerPage={rowsPerPage}
                 onRowsPerPageChange={(e) => { setRowsPerPage(parseInt(e.target.value, 10)); setPage(0); }}
                 rowsPerPageOptions={[10, 25, 50, 100]}
-                labelRowsPerPage="Rânduri pe pagină"
-                labelDisplayedRows={({ from, to, count }) => `${from}–${to} din ${count}`}
+                labelRowsPerPage={t('membersList.rowsPerPageFull')}
+                labelDisplayedRows={({ from, to, count }) => t('membersList.displayedRows', { from, to, count })}
                 sx={{
                   borderTop: '1px solid var(--color-earbore-border)',
                   '.MuiTablePagination-toolbar': { minHeight: 44, px: 2 },
@@ -966,12 +979,12 @@ const MembersListPage: React.FC = () => {
 
       <Menu anchorEl={columnsMenuAnchor} open={!!columnsMenuAnchor} onClose={() => setColumnsMenuAnchor(null)}>
         <Typography variant="caption" sx={{ px: 2, py: 1, display: 'block', color: 'text.secondary', fontWeight: 700 }}>
-          COLOANE VIZIBILE
+          {t('membersList.visibleColumns')}
         </Typography>
-        {OPTIONAL_COLUMNS.map((col) => (
-          <MenuItem key={col.key} dense onClick={() => toggleColumn(col.key)}>
-            <Checkbox size="small" checked={visibleColumns.has(col.key)} sx={{ p: 0, mr: 1.5 }} />
-            <ListItemText primary={col.label} />
+        {OPTIONAL_COLUMN_KEYS.map((key) => (
+          <MenuItem key={key} dense onClick={() => toggleColumn(key)}>
+            <Checkbox size="small" checked={visibleColumns.has(key)} sx={{ p: 0, mr: 1.5 }} />
+            <ListItemText primary={columnLabel(key)} />
           </MenuItem>
         ))}
       </Menu>
@@ -979,23 +992,23 @@ const MembersListPage: React.FC = () => {
       <Menu anchorEl={rowMenu?.anchor ?? null} open={!!rowMenu} onClose={closeRowMenu}>
         <MenuItem onClick={() => { if (rowMenu) navigate(`/members/${rowMenu.member.id}`); closeRowMenu(); }}>
           <ListItemIcon><VisibilityIcon fontSize="small" /></ListItemIcon>
-          <ListItemText>Vezi profil</ListItemText>
+          <ListItemText>{t('membersList.viewProfile')}</ListItemText>
         </MenuItem>
         <MenuItem onClick={() => { if (rowMenu) startEdit(rowMenu.member); closeRowMenu(); }}>
           <ListItemIcon><EditIcon fontSize="small" /></ListItemIcon>
-          <ListItemText>Editare rapidă</ListItemText>
+          <ListItemText>{t('membersList.quickEdit')}</ListItemText>
         </MenuItem>
         <Divider />
         <MenuItem onClick={() => { if (rowMenu) setDeleteTarget(rowMenu.member); closeRowMenu(); }} sx={{ color: 'error.main' }}>
           <ListItemIcon><DeleteIcon fontSize="small" color="error" /></ListItemIcon>
-          <ListItemText>Șterge</ListItemText>
+          <ListItemText>{t('common.delete')}</ListItemText>
         </MenuItem>
       </Menu>
 
       <ConfirmDialog
         open={!!deleteTarget}
-        title="Ștergi acest membru?"
-        description={deleteTarget ? `${deleteTarget.firstName} ${deleteTarget.lastName} va fi eliminat definitiv, împreună cu toate relațiile asociate.` : undefined}
+        title={t('membersList.deleteConfirmTitle')}
+        description={deleteTarget ? t('membersList.deleteConfirmDesc', { name: `${deleteTarget.firstName} ${deleteTarget.lastName}` }) : undefined}
         isLoading={isDeleting}
         destructive
         icon="warning"
@@ -1005,8 +1018,8 @@ const MembersListPage: React.FC = () => {
 
       <ConfirmDialog
         open={bulkDeleteOpen}
-        title={`Ștergi ${selected.size} ${selected.size === 1 ? 'membru' : 'membri'}?`}
-        description="Toți membrii selectați vor fi eliminați definitiv, împreună cu toate relațiile asociate."
+        title={t('membersList.bulkDeleteConfirmTitle', { count: selected.size })}
+        description={t('membersList.bulkDeleteConfirmDesc')}
         isLoading={isBulkDeleting}
         destructive
         icon="warning"
