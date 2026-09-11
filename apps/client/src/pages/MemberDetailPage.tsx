@@ -1,11 +1,12 @@
 import React, { useEffect, useMemo, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useParams, useNavigate } from 'react-router-dom';
 import type { FamilyMember, BloodType } from '../types/family';
 import { BLOOD_TYPE_LABELS } from '../types/family';
 import { calculateAge, isDeceased } from '../utils/age';
 import Header from '../components/layout/Header';
-import { format } from 'date-fns';
-import { ro } from 'date-fns/locale';
+import { format, type Locale } from 'date-fns';
+import { ro, enUS, hu } from 'date-fns/locale';
 import Button from '@mui/material/Button';
 import IconButton from '@mui/material/IconButton';
 import PhotoCameraIcon from '@mui/icons-material/PhotoCamera';
@@ -20,13 +21,7 @@ import {
   useMarkAsMe, useUnmarkAsMe,
 } from '../hooks/queries/useFamilyMutations';
 
-const GENDER_LABELS: Record<string, string> = { MALE: 'Masculin', FEMALE: 'Feminin', OTHER: 'Altul' };
-const STATUS_LABELS: Record<string, string> = {
-  MARRIED: 'Căsătoriți',
-  PARTNER: 'Parteneri',
-  DIVORCED: 'Divorțați',
-  WIDOWED: 'Văduv/ă',
-};
+const DATE_LOCALES: Record<string, Locale> = { ro, en: enUS, hu };
 
 const estimateReadTime = (text?: string | null) => {
   if (!text) return 0;
@@ -35,14 +30,11 @@ const estimateReadTime = (text?: string | null) => {
 };
 
 const MemberDetailPage: React.FC = () => {
+  const { t, i18n } = useTranslation();
+  const dateLocale = DATE_LOCALES[i18n.language?.slice(0, 2)] ?? ro;
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
 
-  // NOU — datele vin din React Query. `member` e cerut pe cheia lui de
-  // detaliu (invalidată punctual la orice schimbare care-l atinge),
-  // `allMembers`/`treeData` sunt aceleași query-uri partajate cu restul
-  // aplicației — deja calde din cache dacă ai trecut prin Dashboard sau
-  // prin tabelul de membri înainte de a ajunge aici.
   const { data: member, isLoading } = useMemberQuery(id);
   const { data: allMembersRaw = [] } = useMembersQuery();
   const { data: treeData } = useTreeQuery();
@@ -72,10 +64,6 @@ const MemberDetailPage: React.FC = () => {
   const removeMemberMutation = useRemoveMember();
   const linkPartnerMutation = useLinkPartners();
   const unlinkPartnerMutation = useUnlinkPartners();
-  // NOU — instanțe separate pentru "adaugă părinte" şi "adaugă copil", deşi
-  // folosesc acelaşi endpoint dedesubt: fiecare are propria stare de
-  // isPending, ca butoanele din cele două secţiuni să nu se blocheze una
-  // pe alta când se dă click simultan-ish pe ambele.
   const linkParentMutation = useLinkParentChild();
   const linkChildMutation = useLinkParentChild();
   const unlinkRelationMutation = useUnlinkParentChild();
@@ -89,8 +77,6 @@ const MemberDetailPage: React.FC = () => {
   const isDeleting = removeMemberMutation.isPending;
   const isTogglingSelf = markAsMeMutation.isPending || unmarkAsMeMutation.isPending;
 
-  // formularul de editare se resincronizează din datele proaspete ale
-  // membrului de fiecare dată când acestea se schimbă
   useEffect(() => {
     if (member) {
       const { parents, children, partnersA, partnersB, ...editableFields } = member;
@@ -194,7 +180,6 @@ const MemberDetailPage: React.FC = () => {
     }
   };
 
-  // ── logică "marchează ca fiind tu" ──
   const isSelf = !!id && treeData?.selfMemberId === id;
   const currentSelfMember = treeData?.selfMemberId
     ? allMembers.find((m) => m.id === treeData.selfMemberId)
@@ -258,6 +243,22 @@ const MemberDetailPage: React.FC = () => {
   const selectedChild = childOptions.find((m) => m.id === selectedChildId) ?? null;
   const selectedPartner = partnerOptions.find((m) => m.id === selectedPartnerId) ?? null;
 
+  const genderLabel = (g?: string | null) => {
+    if (g === 'MALE') return t('common.genders.male');
+    if (g === 'FEMALE') return t('common.genders.female');
+    if (g === 'OTHER') return t('common.genders.other');
+    return '—';
+  };
+  const statusLabel = (s: string) => {
+    switch (s) {
+      case 'MARRIED': return t('common.partnerStatus.married');
+      case 'PARTNER': return t('common.partnerStatus.partner');
+      case 'DIVORCED': return t('common.partnerStatus.divorced');
+      case 'WIDOWED': return t('common.partnerStatus.widowed');
+      default: return s;
+    }
+  };
+
   return (
     <div className="min-h-screen bg-earbore-grayLight">
       <Header />
@@ -282,7 +283,7 @@ const MemberDetailPage: React.FC = () => {
                 <div className="text-white max-w-3xl">
                   {isSelf && (
                     <span className="inline-block text-xs font-semibold uppercase tracking-wider bg-earbore-500/90 backdrop-blur-sm px-3 py-1 rounded-full mb-3 mr-2">
-                      Tu
+                      {t('dashboard.youBadge')}
                     </span>
                   )}
                   {member.occupation && (
@@ -296,12 +297,12 @@ const MemberDetailPage: React.FC = () => {
                   <p className="text-white/85 text-xs sm:text-sm md:text-base mt-2 flex items-center gap-2 flex-wrap">
                     {member.birthDate && (
                       <span>
-                        {format(new Date(member.birthDate), 'd MMMM yyyy', { locale: ro })}
-                        {member.deathDate && ` – ${format(new Date(member.deathDate), 'd MMMM yyyy', { locale: ro })}`}
+                        {format(new Date(member.birthDate), 'd MMMM yyyy', { locale: dateLocale })}
+                        {member.deathDate && ` – ${format(new Date(member.deathDate), 'd MMMM yyyy', { locale: dateLocale })}`}
                       </span>
                     )}
-                    {age !== null && <span>• {age} ani</span>}
-                    {member.bio && <span>• {estimateReadTime(member.bio)} min citire</span>}
+                    {age !== null && <span>• {age} {t('common.years')}</span>}
+                    {member.bio && <span>• {t('memberDetail.readTime', { count: estimateReadTime(member.bio) })}</span>}
                   </p>
                 </div>
               </div>
@@ -310,13 +311,13 @@ const MemberDetailPage: React.FC = () => {
         )}
 
         <button onClick={() => navigate('/dashboard')} className="text-sm text-earbore-gray hover:text-earbore-700 mb-5 cursor-pointer inline-block">
-          ← Înapoi la arbore
+          {t('memberDetail.backToTree')}
         </button>
 
         <ConfirmDialog
           open={confirmOpen}
-          title="Ștergi acest membru?"
-          description={`${member.firstName} ${member.lastName} va fi eliminat definitiv din arbore, împreună cu toate relațiile asociate.`}
+          title={t('memberDetail.deleteConfirmTitle')}
+          description={t('memberDetail.deleteConfirmDesc', { name: `${member.firstName} ${member.lastName}` })}
           isLoading={isDeleting}
           destructive
           icon="warning"
@@ -326,13 +327,16 @@ const MemberDetailPage: React.FC = () => {
 
         <ConfirmDialog
           open={confirmSelfSwapOpen}
-          title="Schimbi cine ești tu în arbore?"
+          title={t('memberDetail.selfSwapConfirmTitle')}
           description={
             currentSelfMember
-              ? `Ești deja marcat ca fiind ${currentSelfMember.firstName} ${currentSelfMember.lastName}. Dacă continui, acea asociere va fi eliminată și ${member.firstName} ${member.lastName} va deveni noul tău profil.`
-              : `Ești deja asociat cu un alt membru. Dacă continui, acea asociere va fi eliminată și ${member.firstName} ${member.lastName} va deveni noul tău profil.`
+              ? t('memberDetail.selfSwapConfirmDescNamed', {
+                name: `${currentSelfMember.firstName} ${currentSelfMember.lastName}`,
+                newName: `${member.firstName} ${member.lastName}`,
+              })
+              : t('memberDetail.selfSwapConfirmDescUnnamed', { newName: `${member.firstName} ${member.lastName}` })
           }
-          confirmLabel="Da, schimbă"
+          confirmLabel={t('memberDetail.selfSwapConfirmButton')}
           isLoading={isTogglingSelf}
           destructive={false}
           icon="none"
@@ -388,11 +392,11 @@ const MemberDetailPage: React.FC = () => {
 
               <div className="flex items-center gap-2 mt-2 flex-wrap">
                 {age !== null && (
-                  <span className="text-xs bg-earbore-50 text-earbore-700 px-2 py-1 rounded-full font-medium">{age} ani</span>
+                  <span className="text-xs bg-earbore-50 text-earbore-700 px-2 py-1 rounded-full font-medium">{age} {t('common.years')}</span>
                 )}
                 {deceased && (
                   <span className="text-xs bg-earbore-ink/5 text-earbore-gray px-2 py-1 rounded-full border border-earbore-border">
-                    ✝ decedat
+                    {t('dashboard.deceasedChip')}
                   </span>
                 )}
               </div>
@@ -403,12 +407,12 @@ const MemberDetailPage: React.FC = () => {
 
               {!isEditing && (
                 <div className="mt-5 pt-5 border-t border-earbore-border space-y-3">
-                  <SidebarFact label="Data nașterii" value={member.birthDate ? format(new Date(member.birthDate), 'd MMMM yyyy', { locale: ro }) : '—'} />
-                  <SidebarFact label="Data decesului" value={member.deathDate ? format(new Date(member.deathDate), 'd MMMM yyyy', { locale: ro }) : '—'} />
-                  <SidebarFact label="Gen" value={member.gender ? GENDER_LABELS[member.gender] : '—'} />
-                  <SidebarFact label="Studii" value={member.education || '—'} />
-                  <SidebarFact label="Grupă sanguină" value={member.bloodType ? BLOOD_TYPE_LABELS[member.bloodType as BloodType] : '—'} />
-                  <SidebarFact label="Înălțime" value={member.heightCm ? `${member.heightCm} cm` : '—'} />
+                  <SidebarFact label={t('memberDetail.birthDate')} value={member.birthDate ? format(new Date(member.birthDate), 'd MMMM yyyy', { locale: dateLocale }) : '—'} />
+                  <SidebarFact label={t('memberDetail.deathDate')} value={member.deathDate ? format(new Date(member.deathDate), 'd MMMM yyyy', { locale: dateLocale }) : '—'} />
+                  <SidebarFact label={t('memberDetail.gender')} value={genderLabel(member.gender)} />
+                  <SidebarFact label={t('memberDetail.education')} value={member.education || '—'} />
+                  <SidebarFact label={t('memberDetail.bloodType')} value={member.bloodType ? BLOOD_TYPE_LABELS[member.bloodType as BloodType] : '—'} />
+                  <SidebarFact label={t('memberDetail.height')} value={member.heightCm ? `${member.heightCm} cm` : '—'} />
                 </div>
               )}
 
@@ -419,7 +423,7 @@ const MemberDetailPage: React.FC = () => {
                     disabled={isSaving}
                     className="btn-outline text-sm py-2.5"
                   >
-                    Anulează
+                    {t('common.cancel')}
                   </button>
                 )}
                 <button
@@ -427,7 +431,7 @@ const MemberDetailPage: React.FC = () => {
                   disabled={isSaving}
                   className="btn-primary text-sm py-2.5"
                 >
-                  {isEditing ? (isSaving ? 'Se salvează...' : 'Salvează') : 'Editează profilul'}
+                  {isEditing ? (isSaving ? t('common.saving') : t('common.save')) : t('memberDetail.editProfile')}
                 </button>
 
                 {!isEditing && (
@@ -440,10 +444,10 @@ const MemberDetailPage: React.FC = () => {
                     sx={{ borderRadius: 1.5, textTransform: 'none', py: 1.1 }}
                   >
                     {isTogglingSelf
-                      ? 'Se salvează...'
+                      ? t('common.saving')
                       : isSelf
-                        ? '✓ Acesta ești tu'
-                        : 'Marchează ca fiind tu'}
+                        ? t('memberDetail.isSelfConfirmed')
+                        : t('memberDetail.markAsSelf')}
                   </Button>
                 )}
 
@@ -454,7 +458,7 @@ const MemberDetailPage: React.FC = () => {
                   onClick={() => setConfirmOpen(true)}
                   sx={{ borderRadius: 1.5, textTransform: 'none', py: 1.1 }}
                 >
-                  Șterge membru
+                  {t('memberDetail.deleteMember')}
                 </Button>
               </div>
             </div>
@@ -465,7 +469,7 @@ const MemberDetailPage: React.FC = () => {
             {!isEditing && member.bio && (
               <article className="bg-white rounded-2xl shadow-sm border border-earbore-border p-5 sm:p-8 md:p-10">
                 <h2 className="text-xs font-semibold text-earbore-500 uppercase tracking-wider mb-5">
-                  Povestea vieții
+                  {t('memberDetail.lifeStory')}
                 </h2>
                 <div className="max-w-[68ch] mx-auto">
                   {member.bio.split(/\n{2,}|\n/).filter((p) => p.trim().length > 0).map((paragraph, i) => (
@@ -492,60 +496,60 @@ const MemberDetailPage: React.FC = () => {
             {!isEditing && !member.bio && (
               <div className="bg-white rounded-2xl shadow-sm border border-dashed border-earbore-border p-6 sm:p-8 text-center">
                 <p className="text-earbore-gray text-sm mb-3">
-                  {member.firstName} nu are încă o poveste scrisă. Fiecare viață merită o istorie păstrată.
+                  {t('memberDetail.noBioText', { firstName: member.firstName })}
                 </p>
                 <button onClick={handleStartEditing} className="btn-outline text-sm py-2 px-4">
-                  Scrie povestea lui {member.firstName}
+                  {t('memberDetail.writeBio', { firstName: member.firstName })}
                 </button>
               </div>
             )}
 
             {isEditing && (
               <div className="bg-white rounded-2xl shadow-sm border border-earbore-border p-5 sm:p-8">
-                <h2 className="text-xs font-semibold text-earbore-gray uppercase tracking-wider mb-4">Editează detalii</h2>
+                <h2 className="text-xs font-semibold text-earbore-gray uppercase tracking-wider mb-4">{t('memberDetail.editDetails')}</h2>
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                  <Field label="Prenume">
+                  <Field label={t('memberDetail.firstName')}>
                     <input name="firstName" autoComplete="given-name" value={form.firstName || ''} onChange={handleChange} className="input-base" />
                   </Field>
-                  <Field label="Nume">
+                  <Field label={t('memberDetail.lastName')}>
                     <input name="lastName" autoComplete="family-name" value={form.lastName || ''} onChange={handleChange} className="input-base" />
                   </Field>
-                  <Field label="Nume anterior">
+                  <Field label={t('memberDetail.maidenName')}>
                     <input name="maidenName" autoComplete="off" value={form.maidenName || ''} onChange={handleChange} className="input-base" />
                   </Field>
-                  <Field label="Gen">
+                  <Field label={t('memberDetail.gender')}>
                     <select name="gender" autoComplete="off" value={form.gender || ''} onChange={handleChange} className="input-base">
-                      <option value="">Nespecificat</option>
-                      <option value="MALE">Masculin</option>
-                      <option value="FEMALE">Feminin</option>
-                      <option value="OTHER">Altul</option>
+                      <option value="">{t('common.unspecified')}</option>
+                      <option value="MALE">{t('common.genders.male')}</option>
+                      <option value="FEMALE">{t('common.genders.female')}</option>
+                      <option value="OTHER">{t('common.genders.other')}</option>
                     </select>
                   </Field>
-                  <Field label="Data nașterii">
+                  <Field label={t('memberDetail.birthDate')}>
                     <input type="date" name="birthDate" autoComplete="bday" value={form.birthDate?.slice(0, 10) || ''} onChange={handleChange} className="input-base" />
                   </Field>
-                  <Field label="Data decesului">
+                  <Field label={t('memberDetail.deathDate')}>
                     <input type="date" name="deathDate" autoComplete="off" value={form.deathDate?.slice(0, 10) || ''} onChange={handleChange} className="input-base" />
                   </Field>
-                  <Field label="Studii">
+                  <Field label={t('memberDetail.education')}>
                     <input name="education" autoComplete="off" value={form.education || ''} onChange={handleChange} className="input-base" />
                   </Field>
-                  <Field label="Ocupație">
+                  <Field label={t('memberDetail.occupation')}>
                     <input name="occupation" autoComplete="organization-title" value={form.occupation || ''} onChange={handleChange} className="input-base" />
                   </Field>
-                  <Field label="Grupă sanguină">
+                  <Field label={t('memberDetail.bloodType')}>
                     <select name="bloodType" autoComplete="off" value={form.bloodType || ''} onChange={handleChange} className="input-base">
-                      <option value="">Nespecificat</option>
+                      <option value="">{t('common.unspecified')}</option>
                       {Object.entries(BLOOD_TYPE_LABELS).map(([key, label]) => (
                         <option key={key} value={key}>{label}</option>
                       ))}
                     </select>
                   </Field>
-                  <Field label="Înălțime (cm)">
+                  <Field label={t('memberDetail.heightCm')}>
                     <input type="number" name="heightCm" autoComplete="off" value={form.heightCm ?? ''} onChange={handleChange} className="input-base" />
                   </Field>
                   <div className="sm:col-span-2 lg:col-span-3">
-                    <Field label="Despre">
+                    <Field label={t('memberDetail.about')}>
                       <textarea name="bio" autoComplete="off" value={form.bio || ''} onChange={handleChange} className="input-base" rows={4} />
                     </Field>
                   </div>
@@ -556,7 +560,7 @@ const MemberDetailPage: React.FC = () => {
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4 sm:gap-6 items-start">
 
               <div className="bg-white rounded-2xl shadow-sm border border-earbore-border p-5 sm:p-6 flex flex-col gap-4">
-                <h2 className="text-base font-bold text-earbore-ink">Părinți</h2>
+                <h2 className="text-base font-bold text-earbore-ink">{t('memberDetail.parents')}</h2>
 
                 {currentParents.length > 0 ? (
                   <ul className="flex flex-col gap-2">
@@ -567,13 +571,13 @@ const MemberDetailPage: React.FC = () => {
                           onClick={() => handleUnlinkParent(p.id)}
                           className="text-xs text-earbore-danger hover:underline cursor-pointer flex-shrink-0 ml-2"
                         >
-                          Dezleagă
+                          {t('memberDetail.unlink')}
                         </button>
                       </li>
                     ))}
                   </ul>
                 ) : (
-                  <p className="text-sm text-earbore-gray">Niciun părinte adăugat încă.</p>
+                  <p className="text-sm text-earbore-gray">{t('memberDetail.noParents')}</p>
                 )}
 
                 {parentOptions.length > 0 && (
@@ -586,7 +590,7 @@ const MemberDetailPage: React.FC = () => {
                       onChange={(_, val) => setSelectedParentId(val?.id ?? '')}
                       isOptionEqualToValue={(a, b) => a.id === b.id}
                       renderInput={(params) => (
-                        <TextField {...params} size="small" label="Adaugă părinte" placeholder="Caută..." autoComplete="off" />
+                        <TextField {...params} size="small" label={t('memberDetail.addParent')} placeholder={t('memberDetail.searchPlaceholder')} autoComplete="off" />
                       )}
                     />
                     <button
@@ -594,14 +598,14 @@ const MemberDetailPage: React.FC = () => {
                       disabled={!selectedParentId || isLinkingParent}
                       className="btn-primary text-sm py-2.5 disabled:opacity-50"
                     >
-                      {isLinkingParent ? 'Se leagă...' : 'Adaugă'}
+                      {isLinkingParent ? t('memberDetail.linking') : t('common.add')}
                     </button>
                   </div>
                 )}
               </div>
 
               <div className="bg-white rounded-2xl shadow-sm border border-earbore-border p-5 sm:p-6 flex flex-col gap-4">
-                <h2 className="text-base font-bold text-earbore-ink">Copii</h2>
+                <h2 className="text-base font-bold text-earbore-ink">{t('memberDetail.children')}</h2>
 
                 {currentChildren.length > 0 ? (
                   <ul className="flex flex-col gap-2">
@@ -612,13 +616,13 @@ const MemberDetailPage: React.FC = () => {
                           onClick={() => handleUnlinkChild(c.id)}
                           className="text-xs text-earbore-danger hover:underline cursor-pointer flex-shrink-0 ml-2"
                         >
-                          Dezleagă
+                          {t('memberDetail.unlink')}
                         </button>
                       </li>
                     ))}
                   </ul>
                 ) : (
-                  <p className="text-sm text-earbore-gray">Niciun copil adăugat încă.</p>
+                  <p className="text-sm text-earbore-gray">{t('memberDetail.noChildren')}</p>
                 )}
 
                 {childOptions.length > 0 && (
@@ -631,7 +635,7 @@ const MemberDetailPage: React.FC = () => {
                       onChange={(_, val) => setSelectedChildId(val?.id ?? '')}
                       isOptionEqualToValue={(a, b) => a.id === b.id}
                       renderInput={(params) => (
-                        <TextField {...params} size="small" label="Adaugă copil" placeholder="Caută..." autoComplete="off" />
+                        <TextField {...params} size="small" label={t('memberDetail.addChild')} placeholder={t('memberDetail.searchPlaceholder')} autoComplete="off" />
                       )}
                     />
                     <button
@@ -639,14 +643,14 @@ const MemberDetailPage: React.FC = () => {
                       disabled={!selectedChildId || isLinkingChild}
                       className="btn-primary text-sm py-2.5 disabled:opacity-50"
                     >
-                      {isLinkingChild ? 'Se leagă...' : 'Adaugă'}
+                      {isLinkingChild ? t('memberDetail.linking') : t('common.add')}
                     </button>
                   </div>
                 )}
               </div>
 
               <div className="bg-white rounded-2xl shadow-sm border border-earbore-border p-5 sm:p-6 flex flex-col gap-4">
-                <h2 className="text-base font-bold text-earbore-ink">Parteneri</h2>
+                <h2 className="text-base font-bold text-earbore-ink">{t('memberDetail.partners')}</h2>
 
                 {partners.length > 0 ? (
                   <ul className="flex flex-col gap-2">
@@ -654,19 +658,19 @@ const MemberDetailPage: React.FC = () => {
                       <li key={p.linkId} className="flex items-center justify-between bg-earbore-grayLight rounded-xl px-3 py-2">
                         <span className="text-sm text-earbore-ink truncate">
                           {p.person.firstName} {p.person.lastName}{' '}
-                          <span className="text-earbore-gray">({STATUS_LABELS[p.status] ?? p.status})</span>
+                          <span className="text-earbore-gray">({statusLabel(p.status)})</span>
                         </span>
                         <button
                           onClick={() => handleUnlinkPartner(p.person.id)}
                           className="text-xs text-earbore-danger hover:underline cursor-pointer flex-shrink-0 ml-2"
                         >
-                          Dezleagă
+                          {t('memberDetail.unlink')}
                         </button>
                       </li>
                     ))}
                   </ul>
                 ) : (
-                  <p className="text-sm text-earbore-gray">Niciun partener adăugat încă.</p>
+                  <p className="text-sm text-earbore-gray">{t('memberDetail.noPartners')}</p>
                 )}
 
                 {partnerOptions.length > 0 && (
@@ -679,21 +683,21 @@ const MemberDetailPage: React.FC = () => {
                       onChange={(_, val) => setSelectedPartnerId(val?.id ?? '')}
                       isOptionEqualToValue={(a, b) => a.id === b.id}
                       renderInput={(params) => (
-                        <TextField {...params} size="small" label="Adaugă partener" placeholder="Caută..." autoComplete="off" />
+                        <TextField {...params} size="small" label={t('memberDetail.addPartner')} placeholder={t('memberDetail.searchPlaceholder')} autoComplete="off" />
                       )}
                     />
                     <select value={partnerStatus} onChange={(e) => setPartnerStatus(e.target.value)} className="input-base">
-                      <option value="MARRIED">Căsătoriți</option>
-                      <option value="PARTNER">Parteneri</option>
-                      <option value="DIVORCED">Divorțați</option>
-                      <option value="WIDOWED">Văduv/ă</option>
+                      <option value="MARRIED">{t('common.partnerStatus.married')}</option>
+                      <option value="PARTNER">{t('common.partnerStatus.partner')}</option>
+                      <option value="DIVORCED">{t('common.partnerStatus.divorced')}</option>
+                      <option value="WIDOWED">{t('common.partnerStatus.widowed')}</option>
                     </select>
                     <button
                       onClick={handleLinkPartner}
                       disabled={!selectedPartnerId || isLinkingPartner}
                       className="btn-primary text-sm py-2.5 disabled:opacity-50"
                     >
-                      {isLinkingPartner ? 'Se leagă...' : 'Adaugă'}
+                      {isLinkingPartner ? t('memberDetail.linking') : t('common.add')}
                     </button>
                   </div>
                 )}

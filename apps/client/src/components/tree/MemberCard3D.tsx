@@ -5,6 +5,7 @@ import { useFrame } from '@react-three/fiber';
 import { Billboard, Text } from '@react-three/drei';
 import type { FamilyMember } from '../../types/family';
 import { calculateAge, isDeceased } from '../../utils/age';
+import { useTranslation } from 'react-i18next';
 
 interface Props {
   member: FamilyMember;
@@ -136,6 +137,7 @@ function usePortraitTexture(member: FamilyMember, deceased: boolean): THREE.Text
 }
 
 const MemberCard3D: React.FC<Props> = ({ member, position, onOpen }) => {
+  const { t } = useTranslation();
   const deceased = isDeceased(member.deathDate);
   const age = calculateAge(member.birthDate, member.deathDate);
   const texture = usePortraitTexture(member, deceased);
@@ -249,7 +251,7 @@ const MemberCard3D: React.FC<Props> = ({ member, position, onOpen }) => {
             outlineWidth={0.003}
             outlineColor="#f3f1ea"
           >
-            {age !== null ? `${age} ani` : ''}
+            {age !== null ? `${age} ${t('common.years')}` : ''}
             {deceased ? ' ✝' : ''}
           </Text>
         )}

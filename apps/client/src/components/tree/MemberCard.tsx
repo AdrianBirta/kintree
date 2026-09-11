@@ -6,6 +6,7 @@ import StarIcon from '@mui/icons-material/Star';
 import type { FamilyMember } from '../../types/family';
 import { calculateAge, isDeceased } from '../../utils/age';
 import { LAYOUT } from '../../lib/treeLayout';
+import { useTranslation } from 'react-i18next';
 
 interface Props {
   member: FamilyMember;
@@ -46,6 +47,7 @@ function MemberCard({
   member, x, y, unitId, onClick, onDragStart, onDragMove, onDragEnd, isDragging, onMouseEnter, onMouseLeave, style,
   onAddTop, onAddBottom, topLabel = 'Adaugă', bottomLabel = 'Adaugă', canDrag = true, isSelf = false,
 }: Props) {
+  const { t } = useTranslation();
   const deceased = isDeceased(member.deathDate);
   const age = calculateAge(member.birthDate, member.deathDate);
 
@@ -145,7 +147,7 @@ function MemberCard({
     >
       {/* NOU — badge "Tu" pentru membrul marcat ca "eu" */}
       {isSelf && (
-        <Tooltip title="Acesta ești tu" placement="top">
+        <Tooltip title={t('dashboard.youTooltip')} placement="top">
           <Box
             sx={{
               position: 'absolute',
@@ -201,7 +203,7 @@ function MemberCard({
       {/* Handle de mutare — DOAR pentru membri singuri. Pentru cei dintr-un
           cuplu căsătorit, mutarea se face din chenarul mare (FamilyTreeCanvas). */}
       {canDrag && (
-        <Tooltip title="Mută cardul" placement="left">
+        <Tooltip title={t('dashboard.moveCard')} placement="left">
           <IconButton
             size="small"
             onPointerDown={handleMovePointerDown}
@@ -328,8 +330,8 @@ function MemberCard({
           </Typography>
         )}
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75, mt: 0.25 }}>
-          {age !== null && <Typography variant="caption" color="text.secondary">{age} ani</Typography>}
-          {deceased && <Chip label="✝ decedat" size="small" variant="outlined" sx={{ height: 20, fontSize: 11 }} />}
+          {age !== null && <Typography variant="caption" color="text.secondary">{age} {t('common.years')}</Typography>}
+          {deceased && <Chip label={t('dashboard.deceasedChip')} size="small" variant="outlined" sx={{ height: 20, fontSize: 11 }} />}
         </Box>
       </Box>
 

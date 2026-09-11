@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
+import { useTranslation, Trans } from 'react-i18next';
 import {
   Dialog, DialogTitle, DialogContent, DialogActions, Button, TextField, MenuItem,
   Select, InputLabel, FormControl, Avatar, IconButton, Divider, Typography, Alert,
@@ -28,6 +29,7 @@ interface Props {
 }
 
 const AddMemberModal: React.FC<Props> = ({ members, onClose, onCreated, initialRelation, currentSelfId }) => {
+  const { t } = useTranslation();
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
   const queryClient = useQueryClient();
@@ -111,8 +113,6 @@ const AddMemberModal: React.FC<Props> = ({ members, onClose, onCreated, initialR
         await familyMembersService.markAsMe(newMember.id);
       }
 
-      // NOU — o singură invalidare, la finalul întregii secvenţe (creare +
-      // legături + poză + eventual markAsMe), nu una după fiecare pas.
       const touchedIds = [
         newMember.id,
         father?.id,
@@ -124,7 +124,7 @@ const AddMemberModal: React.FC<Props> = ({ members, onClose, onCreated, initialR
 
       onCreated();
     } catch (err: any) {
-      setError(err.response?.data?.message || 'A apărut o eroare.');
+      setError(err.response?.data?.message || t('addMember.genericError'));
     } finally {
       setIsSaving(false);
     }
@@ -143,7 +143,7 @@ const AddMemberModal: React.FC<Props> = ({ members, onClose, onCreated, initialR
       slotProps={{ paper: { sx: { borderRadius: isMobile ? 0 : 2, width: { md: 760 } } } }}
     >
       <DialogTitle sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontWeight: 700, borderBottom: '1px solid', borderColor: 'divider' }}>
-        Adaugă membru
+        {t('addMember.title')}
         <IconButton onClick={onClose} disabled={isSaving} size="small"><CloseIcon /></IconButton>
       </DialogTitle>
 
@@ -173,7 +173,7 @@ const AddMemberModal: React.FC<Props> = ({ members, onClose, onCreated, initialR
               </IconButton>
             </Box>
             <Typography variant="caption" color="text.secondary" sx={{ textAlign: 'center' }}>
-              Poză de profil (opțional)
+              {t('addMember.photoOptional')}
             </Typography>
 
             {relationTarget && (
@@ -183,8 +183,8 @@ const AddMemberModal: React.FC<Props> = ({ members, onClose, onCreated, initialR
                 variant="outlined"
                 label={
                   initialRelation?.kind === 'child'
-                    ? `Copil pentru ${memberLabel(relationTarget)}`
-                    : `Părinte pentru ${memberLabel(relationTarget)}`
+                    ? t('addMember.childFor', { name: memberLabel(relationTarget) })
+                    : t('addMember.parentFor', { name: memberLabel(relationTarget) })
                 }
                 sx={{ mt: 1 }}
               />
@@ -192,29 +192,29 @@ const AddMemberModal: React.FC<Props> = ({ members, onClose, onCreated, initialR
           </Box>
 
           <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2.5 }}>
-            <Typography variant="overline" color="text.secondary">Identitate</Typography>
+            <Typography variant="overline" color="text.secondary">{t('addMember.identity')}</Typography>
             <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr' }, gap: 2 }}>
               <TextField
-                size="small" label="Prenume" name="firstName" autoComplete="given-name"
+                size="small" label={t('addMember.firstName')} name="firstName" autoComplete="given-name"
                 value={form.firstName} onChange={handleChange} required fullWidth disabled={isSaving}
               />
               <TextField
-                size="small" label="Nume" name="lastName" autoComplete="family-name"
+                size="small" label={t('addMember.lastName')} name="lastName" autoComplete="family-name"
                 value={form.lastName} onChange={handleChange} required fullWidth disabled={isSaving}
               />
             </Box>
             <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr' }, gap: 2 }}>
               <FormControl size="small" fullWidth disabled={isSaving}>
-                <InputLabel>Gen</InputLabel>
-                <Select label="Gen" value={form.gender} onChange={handleSelectChange('gender')}>
-                  <MenuItem value="">Nespecificat</MenuItem>
-                  <MenuItem value="MALE">Masculin</MenuItem>
-                  <MenuItem value="FEMALE">Feminin</MenuItem>
-                  <MenuItem value="OTHER">Altul</MenuItem>
+                <InputLabel>{t('addMember.gender')}</InputLabel>
+                <Select label={t('addMember.gender')} value={form.gender} onChange={handleSelectChange('gender')}>
+                  <MenuItem value="">{t('common.unspecified')}</MenuItem>
+                  <MenuItem value="MALE">{t('common.genders.male')}</MenuItem>
+                  <MenuItem value="FEMALE">{t('common.genders.female')}</MenuItem>
+                  <MenuItem value="OTHER">{t('common.genders.other')}</MenuItem>
                 </Select>
               </FormControl>
               <TextField
-                size="small" label="Data nașterii" type="date" name="birthDate" autoComplete="bday"
+                size="small" label={t('addMember.birthDate')} type="date" name="birthDate" autoComplete="bday"
                 value={form.birthDate} onChange={handleChange}
                 fullWidth disabled={isSaving} slotProps={{ inputLabel: { shrink: true } }}
               />
@@ -232,12 +232,15 @@ const AddMemberModal: React.FC<Props> = ({ members, onClose, onCreated, initialR
                     checkedIcon={<StarIcon color="primary" />}
                   />
                 }
-                label="Acesta sunt eu"
+                label={t('addMember.isMe')}
               />
               {markAsMe && currentSelfMember && (
                 <Alert severity="warning" sx={{ mt: 1 }}>
-                  Ești deja marcat ca fiind <strong>{memberLabel(currentSelfMember)}</strong>. Dacă continui,
-                  acea asociere va fi eliminată și acest membru nou va deveni profilul tău.
+                  <Trans
+                    i18nKey="addMember.alreadyMarkedWarning"
+                    values={{ name: memberLabel(currentSelfMember) }}
+                    components={{ strong: <strong /> }}
+                  />
                 </Alert>
               )}
             </Box>
@@ -245,7 +248,7 @@ const AddMemberModal: React.FC<Props> = ({ members, onClose, onCreated, initialR
             {uniqueMembers.length > 0 && (
               <>
                 <Divider sx={{ mt: 1 }} />
-                <Typography variant="overline" color="text.secondary">Relații</Typography>
+                <Typography variant="overline" color="text.secondary">{t('addMember.relations')}</Typography>
 
                 <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr' }, gap: 2 }}>
                   <Autocomplete
@@ -259,7 +262,7 @@ const AddMemberModal: React.FC<Props> = ({ members, onClose, onCreated, initialR
                     onChange={(_, val) => setFather(val)}
                     disabled={isSaving}
                     isOptionEqualToValue={(a, b) => a.id === b.id}
-                    renderInput={(params) => <TextField {...params} size="small" label="Tată" placeholder="Caută..." autoComplete="off" />}
+                    renderInput={(params) => <TextField {...params} size="small" label={t('addMember.father')} placeholder={t('addMember.searchPlaceholder')} autoComplete="off" />}
                   />
                   <Autocomplete
                     size="small"
@@ -272,7 +275,7 @@ const AddMemberModal: React.FC<Props> = ({ members, onClose, onCreated, initialR
                     onChange={(_, val) => setMother(val)}
                     disabled={isSaving}
                     isOptionEqualToValue={(a, b) => a.id === b.id}
-                    renderInput={(params) => <TextField {...params} size="small" label="Mamă" placeholder="Caută..." autoComplete="off" />}
+                    renderInput={(params) => <TextField {...params} size="small" label={t('addMember.mother')} placeholder={t('addMember.searchPlaceholder')} autoComplete="off" />}
                   />
                 </Box>
 
@@ -288,15 +291,15 @@ const AddMemberModal: React.FC<Props> = ({ members, onClose, onCreated, initialR
                     onChange={(_, val) => setPartner(val)}
                     disabled={isSaving}
                     isOptionEqualToValue={(a, b) => a.id === b.id}
-                    renderInput={(params) => <TextField {...params} size="small" label="Partener" placeholder="Caută..." autoComplete="off" />}
+                    renderInput={(params) => <TextField {...params} size="small" label={t('addMember.partner')} placeholder={t('addMember.searchPlaceholder')} autoComplete="off" />}
                   />
                   <FormControl size="small" fullWidth disabled={isSaving}>
-                    <InputLabel>Status</InputLabel>
-                    <Select label="Status" value={form.partnerStatus} onChange={handleSelectChange('partnerStatus')}>
-                      <MenuItem value="MARRIED">Căsătoriți</MenuItem>
-                      <MenuItem value="PARTNER">Parteneri</MenuItem>
-                      <MenuItem value="DIVORCED">Divorțați</MenuItem>
-                      <MenuItem value="WIDOWED">Văduv/ă</MenuItem>
+                    <InputLabel>{t('addMember.status')}</InputLabel>
+                    <Select label={t('addMember.status')} value={form.partnerStatus} onChange={handleSelectChange('partnerStatus')}>
+                      <MenuItem value="MARRIED">{t('common.partnerStatus.married')}</MenuItem>
+                      <MenuItem value="PARTNER">{t('common.partnerStatus.partner')}</MenuItem>
+                      <MenuItem value="DIVORCED">{t('common.partnerStatus.divorced')}</MenuItem>
+                      <MenuItem value="WIDOWED">{t('common.partnerStatus.widowed')}</MenuItem>
                     </Select>
                   </FormControl>
                 </Box>
@@ -314,11 +317,11 @@ const AddMemberModal: React.FC<Props> = ({ members, onClose, onCreated, initialR
                   disabled={isSaving}
                   isOptionEqualToValue={(a, b) => a.id === b.id}
                   renderInput={(params) => (
-                    <TextField {...params} size="small" label="Copii" placeholder="Caută și adaugă..." autoComplete="off" />
+                    <TextField {...params} size="small" label={t('addMember.children')} placeholder={t('addMember.childrenPlaceholder')} autoComplete="off" />
                   )}
                 />
                 <Typography variant="caption" color="text.secondary" sx={{ mt: -1.5 }}>
-                  Noul membru va deveni părintele copiilor selectați.
+                  {t('addMember.childrenHint')}
                 </Typography>
               </>
             )}
@@ -328,12 +331,12 @@ const AddMemberModal: React.FC<Props> = ({ members, onClose, onCreated, initialR
         </DialogContent>
 
         <DialogActions sx={{ p: 2.5, borderTop: '1px solid', borderColor: 'divider' }}>
-          <Button onClick={onClose} disabled={isSaving} variant="outlined" color="inherit" sx={{ borderRadius: 1.5 }}>Anulează</Button>
+          <Button onClick={onClose} disabled={isSaving} variant="outlined" color="inherit" sx={{ borderRadius: 1.5 }}>{t('common.cancel')}</Button>
           <Button
             type="submit" disabled={isSaving} variant="contained" sx={{ borderRadius: 1.5 }}
             startIcon={isSaving ? <CircularProgress size={16} color="inherit" /> : undefined}
           >
-            {isSaving ? 'Se salvează...' : 'Salvează'}
+            {isSaving ? t('common.saving') : t('common.save')}
           </Button>
         </DialogActions>
       </form>

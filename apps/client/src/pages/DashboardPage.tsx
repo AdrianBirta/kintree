@@ -16,8 +16,10 @@ import FamilyTreeCanvas from '../components/tree/FamilyTreeCanvas';
 import FamilyTree3D from '../components/tree/FamilyTree3D';
 import { useTreeQuery } from '../hooks/queries/useFamilyQueries';
 import { useReorderMembers } from '../hooks/queries/useFamilyMutations';
+import { useTranslation } from 'react-i18next';
 
 const DashboardPage: React.FC = () => {
+  const { t } = useTranslation();
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
 
@@ -64,12 +66,12 @@ const DashboardPage: React.FC = () => {
           </Box>
         ) : treeData && treeData.members.length === 0 ? (
           <Box sx={{ height: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', textAlign: 'center', px: 3 }}>
-            <Typography component="h6" variant="h6" sx={{ fontWeight: 700 }} gutterBottom>Arborele tău e gol deocamdată</Typography>
+            <Typography component="h6" variant="h6" sx={{ fontWeight: 700 }} gutterBottom>{t('dashboard.emptyTitle')}</Typography>
             <Typography variant="body2" color="text.secondary" sx={{ mb: 3, maxWidth: 380 }}>
-              Adaugă primul membru al familiei pentru a începe să construiești arborele genealogic.
+              {t('dashboard.emptyDesc')}
             </Typography>
             <Button variant="contained" startIcon={<AddIcon />} onClick={() => setShowAddModal(true)}>
-              Adaugă primul membru
+              {t('dashboard.addFirstMember')}
             </Button>
           </Box>
         ) : (
@@ -112,7 +114,7 @@ const DashboardPage: React.FC = () => {
                 }}
               >
                 {viewMode === '2d' && (
-                  <Tooltip title={direction === 'top-down' ? 'Strămoșii sus, urmașii jos' : 'Strămoșii jos, urmașii sus'}>
+                  <Tooltip title={direction === 'top-down' ? t('dashboard.toggleDirectionTopDown') : t('dashboard.toggleDirectionBottomUp')}>
                     <IconButton onClick={toggleDirection} sx={{ bgcolor: 'background.paper', boxShadow: 1 }}>
                       <SwapVertIcon fontSize={isMobile ? 'small' : 'medium'} />
                     </IconButton>
@@ -137,19 +139,19 @@ const DashboardPage: React.FC = () => {
                 </ToggleButtonGroup>
 
                 {isMobile ? (
-                  <Tooltip title="Leagă parteneri">
+                  <Tooltip title={t('dashboard.linkPartners')}>
                     <IconButton onClick={() => setShowPartnerModal(true)} sx={{ bgcolor: 'background.paper', boxShadow: 1 }}>
                       <FavoriteIcon fontSize="small" color="primary" />
                     </IconButton>
                   </Tooltip>
                 ) : (
                   <Button variant="outlined" startIcon={<FavoriteIcon />} onClick={() => setShowPartnerModal(true)} sx={{ bgcolor: 'background.paper', boxShadow: 1 }}>
-                    Leagă parteneri
+                    {t('dashboard.linkPartners')}
                   </Button>
                 )}
 
                 {isMobile ? (
-                  <Tooltip title="Adaugă membru">
+                  <Tooltip title={t('dashboard.addMember')}>
                     <IconButton
                       onClick={() => setShowAddModal(true)}
                       sx={{ bgcolor: 'primary.main', color: 'white', boxShadow: 1, '&:hover': { bgcolor: 'primary.dark' } }}
@@ -159,7 +161,7 @@ const DashboardPage: React.FC = () => {
                   </Tooltip>
                 ) : (
                   <Button variant="contained" startIcon={<AddIcon />} onClick={() => setShowAddModal(true)} sx={{ boxShadow: 1 }}>
-                    Adaugă membru
+                    {t('dashboard.addMember')}
                   </Button>
                 )}
               </Stack>

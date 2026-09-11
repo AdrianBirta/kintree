@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import apiClient from '../api/apiClient';
+import i18n from '../i18n/config';
 
 export interface AuthUser {
   id: string;
@@ -40,7 +41,7 @@ export const useAuthStore = create<AuthState>((set) => ({
     } catch (err: any) {
       set({
         isLoggingIn: false,
-        error: err.response?.data?.message || 'Autentificare eșuată.',
+        error: err.response?.data?.message || i18n.t('authErrors.loginFailed'),
       });
       throw err;
     }
@@ -56,7 +57,7 @@ export const useAuthStore = create<AuthState>((set) => ({
     } catch (err: any) {
       set({
         isRegistering: false,
-        error: err.response?.data?.message || 'Înregistrare eșuată.',
+        error: err.response?.data?.message || i18n.t('authErrors.registerFailed'),
       });
       throw err;
     }

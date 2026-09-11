@@ -14,6 +14,7 @@ import { useCardDrag } from '../../hooks/useCardDrag';
 import MemberCard from './MemberCard';
 import TreeEdgesLayer from './TreeEdgesLayer';
 import { useHighlightedLineage } from '../../hooks/useHighlightedLineage';
+import { useTranslation } from 'react-i18next';
 
 interface Props {
   treeData?: FamilyTreeData;
@@ -25,6 +26,7 @@ interface Props {
 const ORDER_STEP = 2;
 
 const FamilyTreeCanvas: React.FC<Props> = ({ treeData, direction, onReorder, onQuickAdd }) => {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const { setFocusId, isDimmed } = useHighlightedLineage(treeData);
   const { containerRef, transform, onPointerDown, onPointerMove, stopPan, zoomBy, resetZoom, fitToContent } =
@@ -226,8 +228,8 @@ const FamilyTreeCanvas: React.FC<Props> = ({ treeData, direction, onReorder, onQ
               isSelf={!!treeData?.selfMemberId && treeData.selfMemberId === m.id}
               onAddTop={handleAddTop}
               onAddBottom={handleAddBottom}
-              topLabel={topMeansParent ? 'Adaugă părinte' : 'Adaugă copil'}
-              bottomLabel={topMeansParent ? 'Adaugă copil' : 'Adaugă părinte'}
+              topLabel={topMeansParent ? t('dashboard.addParent') : t('dashboard.addChild')}
+              bottomLabel={topMeansParent ? t('dashboard.addChild') : t('dashboard.addParent')}
               onClick={handleCardClick}
               onDragStart={startDrag}
               onDragMove={updateDrag}
@@ -260,7 +262,7 @@ const FamilyTreeCanvas: React.FC<Props> = ({ treeData, direction, onReorder, onQ
                   zIndex: 56,
                 }}
               >
-                <Tooltip title="Inversează pozițiile partenerilor" placement="top">
+                <Tooltip title={t('dashboard.swapPartners')} placement="top">
                   <IconButton
                     size="small"
                     onPointerDown={(e) => e.stopPropagation()}
@@ -303,7 +305,7 @@ const FamilyTreeCanvas: React.FC<Props> = ({ treeData, direction, onReorder, onQ
                   zIndex: 56,
                 }}
               >
-                <Tooltip title="Mută tot cuplul" placement="right">
+                <Tooltip title={t('dashboard.moveCouple')} placement="right">
                   <IconButton
                     size="small"
                     onPointerDown={handleCoupleMovePointerDown(c.unitId)}
@@ -368,16 +370,16 @@ const FamilyTreeCanvas: React.FC<Props> = ({ treeData, direction, onReorder, onQ
           borderRadius: 3,
         }}
       >
-        <Tooltip title="Mărește" placement="left">
+        <Tooltip title={t('dashboard.zoomIn')} placement="left">
           <IconButton size="small" onClick={() => zoomBy(1.2)}><AddIcon fontSize="small" /></IconButton>
         </Tooltip>
-        <Tooltip title="Micșorează" placement="left">
+        <Tooltip title={t('dashboard.zoomOut')} placement="left">
           <IconButton size="small" onClick={() => zoomBy(1 / 1.2)}><RemoveIcon fontSize="small" /></IconButton>
         </Tooltip>
-        <Tooltip title="Încadrează tot arborele" placement="left">
+        <Tooltip title={t('dashboard.fitToContent')} placement="left">
           <IconButton size="small" onClick={() => fitToContent(layout.contentWidth, layout.contentHeight)}><CropFreeIcon fontSize="small" /></IconButton>
         </Tooltip>
-        <Tooltip title="Resetează zoom-ul" placement="left">
+        <Tooltip title={t('dashboard.resetZoom')} placement="left">
           <IconButton size="small" onClick={() => resetZoom(layout.contentWidth)}><RestartAltIcon fontSize="small" /></IconButton>
         </Tooltip>
       </Paper>

@@ -45,22 +45,6 @@ const ConfirmDialog: React.FC<Props> = ({
         },
       }}
     >
-      <IconButton
-        onClick={onCancel}
-        disabled={isLoading}
-        size="small"
-        sx={{
-          position: 'absolute',
-          top: 20,
-          right: 20,
-          color: 'var(--color-earbore-gray)',
-          bgcolor: 'var(--color-earbore-grayLight)',
-          '&:hover': { bgcolor: 'var(--color-earbore-100)', color: 'var(--color-earbore-ink)' },
-        }}
-      >
-        <CloseRoundedIcon fontSize="small" />
-      </IconButton>
-
       <DialogContent sx={{ p: { xs: 3.5, sm: 4.5 }, pt: { xs: 4, sm: 5 } }}>
         <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', gap: 2 }}>
 

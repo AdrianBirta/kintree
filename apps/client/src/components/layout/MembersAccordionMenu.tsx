@@ -1,4 +1,5 @@
 import React, { useMemo, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import type { FamilyTreeData } from '../../types/family';
 import { buildMemberHierarchy, type HierarchyUnitNode } from '../../lib/memberHierarchy';
 
@@ -9,9 +10,12 @@ interface HierarchyItemProps {
   depth: number;
   onNavigate: (id: string) => void;
   selfMemberId?: string | null;
+  collapseLabel: string;
+  expandLabel: string;
+  t: (key: string) => string;
 }
 
-const HierarchyItem: React.FC<HierarchyItemProps> = ({ node, depth, onNavigate, selfMemberId }) => {
+const HierarchyItem: React.FC<HierarchyItemProps> = ({ node, depth, onNavigate, selfMemberId, collapseLabel, expandLabel, t }) => {
   const [expanded, setExpanded] = useState(depth === 0);
   const hasChildren = node.children.length > 0;
 
@@ -27,7 +31,7 @@ const HierarchyItem: React.FC<HierarchyItemProps> = ({ node, depth, onNavigate, 
           <button
             onClick={() => setExpanded((v) => !v)}
             className="w-5 h-5 flex items-center justify-center text-earbore-gray hover:text-earbore-700 cursor-pointer flex-shrink-0"
-            aria-label={expanded ? 'Restrânge' : 'Extinde'}
+            aria-label={expanded ? collapseLabel : expandLabel}
           >
             <span className={`inline-block transition-transform text-[10px] ${expanded ? 'rotate-90' : ''}`}>▶</span>
           </button>
@@ -46,7 +50,6 @@ const HierarchyItem: React.FC<HierarchyItemProps> = ({ node, depth, onNavigate, 
                   className="flex items-center gap-1.5 text-sm text-earbore-ink hover:text-earbore-700 cursor-pointer"
                   title={`${m.firstName} ${m.lastName}`}
                 >
-                  {/* NOU — poza reală, cu fallback pe inițiale dacă nu există */}
                   <span
                     className={`w-5 h-5 rounded-full overflow-hidden flex items-center justify-center text-[10px] font-bold flex-shrink-0 ${isSelf ? 'ring-2 ring-earbore-500' : ''
                       } ${m.imageUrl ? '' : 'bg-earbore-100 text-earbore-700'}`}
@@ -63,7 +66,7 @@ const HierarchyItem: React.FC<HierarchyItemProps> = ({ node, depth, onNavigate, 
                   </span>
                   <span className="truncate max-w-[140px]">
                     {m.firstName} {m.lastName}
-                    {isSelf && <span className="ml-1 text-[10px] text-earbore-500 font-semibold">(Tu)</span>}
+                    {isSelf && <span className="ml-1 text-[10px] text-earbore-500 font-semibold">({t('dashboard.youBadge')})</span>}
                   </span>
                 </button>
               </React.Fragment>
@@ -81,6 +84,9 @@ const HierarchyItem: React.FC<HierarchyItemProps> = ({ node, depth, onNavigate, 
               depth={depth + 1}
               onNavigate={onNavigate}
               selfMemberId={selfMemberId}
+              collapseLabel={collapseLabel}
+              expandLabel={expandLabel}
+              t={t}
             />
           ))}
         </div>
@@ -95,10 +101,11 @@ interface Props {
 }
 
 const MembersAccordionMenu: React.FC<Props> = ({ treeData, onNavigate }) => {
+  const { t } = useTranslation();
   const roots = useMemo(() => buildMemberHierarchy(treeData), [treeData]);
 
   if (roots.length === 0) {
-    return <p className="px-4 py-3 text-sm text-earbore-gray">Niciun membru încă.</p>;
+    return <p className="px-4 py-3 text-sm text-earbore-gray">{t('membersMenu.noMembers')}</p>;
   }
 
   return (
@@ -110,6 +117,9 @@ const MembersAccordionMenu: React.FC<Props> = ({ treeData, onNavigate }) => {
           depth={0}
           onNavigate={onNavigate}
           selfMemberId={treeData?.selfMemberId}
+          collapseLabel={t('membersMenu.collapse')}
+          expandLabel={t('membersMenu.expand')}
+          t={t}
         />
       ))}
     </div>

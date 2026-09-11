@@ -1,4 +1,5 @@
 import React, { useMemo, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   Dialog, DialogTitle, DialogContent, DialogActions, Button, MenuItem,
   Select, InputLabel, FormControl, Typography, Alert, CircularProgress, IconButton,
@@ -17,6 +18,7 @@ interface Props {
 }
 
 const LinkPartnersModal: React.FC<Props> = ({ members, onClose, onLinked }) => {
+  const { t } = useTranslation();
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
 
@@ -39,11 +41,11 @@ const LinkPartnersModal: React.FC<Props> = ({ members, onClose, onLinked }) => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!partnerAId || !partnerBId) {
-      setError('Alege ambii membri.');
+      setError(t('linkPartners.chooseBoth'));
       return;
     }
     if (partnerAId === partnerBId) {
-      setError('Alege doi membri diferiți.');
+      setError(t('linkPartners.chooseDifferent'));
       return;
     }
     setError('');
@@ -51,7 +53,7 @@ const LinkPartnersModal: React.FC<Props> = ({ members, onClose, onLinked }) => {
       await linkPartnersMutation.mutateAsync({ partnerAId, partnerBId, status });
       onLinked();
     } catch (err: any) {
-      setError(err.response?.data?.message || 'A apărut o eroare.');
+      setError(err.response?.data?.message || t('linkPartners.genericError'));
     }
   };
 
@@ -75,7 +77,7 @@ const LinkPartnersModal: React.FC<Props> = ({ members, onClose, onLinked }) => {
         }}
       >
         <span style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-          <FavoriteIcon color="primary" fontSize="small" /> Leagă parteneri
+          <FavoriteIcon color="primary" fontSize="small" /> {t('linkPartners.title')}
         </span>
         <IconButton onClick={onClose} disabled={isSaving} size="small"><CloseIcon /></IconButton>
       </DialogTitle>
@@ -83,7 +85,7 @@ const LinkPartnersModal: React.FC<Props> = ({ members, onClose, onLinked }) => {
       <form onSubmit={handleSubmit} autoComplete="off">
         <DialogContent sx={{ display: 'flex', flexDirection: 'column', gap: 2.5, py: 3 }}>
           <Typography variant="body2" color="text.secondary">
-            Marchează doi membri ca soț și soție / parteneri.
+            {t('linkPartners.description')}
           </Typography>
 
           <Autocomplete
@@ -95,7 +97,7 @@ const LinkPartnersModal: React.FC<Props> = ({ members, onClose, onLinked }) => {
             disabled={isSaving}
             isOptionEqualToValue={(a, b) => a.id === b.id}
             renderInput={(params) => (
-              <TextField {...params} required label="Primul membru" placeholder="Caută după nume..." autoComplete="off" />
+              <TextField {...params} required label={t('linkPartners.firstMember')} placeholder={t('linkPartners.searchPlaceholder')} autoComplete="off" />
             )}
           />
 
@@ -108,17 +110,17 @@ const LinkPartnersModal: React.FC<Props> = ({ members, onClose, onLinked }) => {
             disabled={isSaving}
             isOptionEqualToValue={(a, b) => a.id === b.id}
             renderInput={(params) => (
-              <TextField {...params} required label="Al doilea membru" placeholder="Caută după nume..." autoComplete="off" />
+              <TextField {...params} required label={t('linkPartners.secondMember')} placeholder={t('linkPartners.searchPlaceholder')} autoComplete="off" />
             )}
           />
 
           <FormControl fullWidth disabled={isSaving}>
-            <InputLabel>Status</InputLabel>
-            <Select label="Status" value={status} onChange={(e) => setStatus(e.target.value)}>
-              <MenuItem value="MARRIED">Căsătoriți</MenuItem>
-              <MenuItem value="PARTNER">Parteneri</MenuItem>
-              <MenuItem value="DIVORCED">Divorțați</MenuItem>
-              <MenuItem value="WIDOWED">Văduv/ă</MenuItem>
+            <InputLabel>{t('addMember.status')}</InputLabel>
+            <Select label={t('addMember.status')} value={status} onChange={(e) => setStatus(e.target.value)}>
+              <MenuItem value="MARRIED">{t('common.partnerStatus.married')}</MenuItem>
+              <MenuItem value="PARTNER">{t('common.partnerStatus.partner')}</MenuItem>
+              <MenuItem value="DIVORCED">{t('common.partnerStatus.divorced')}</MenuItem>
+              <MenuItem value="WIDOWED">{t('common.partnerStatus.widowed')}</MenuItem>
             </Select>
           </FormControl>
 
@@ -127,7 +129,7 @@ const LinkPartnersModal: React.FC<Props> = ({ members, onClose, onLinked }) => {
 
         <DialogActions sx={{ p: 2.5, borderTop: '1px solid', borderColor: 'divider' }}>
           <Button onClick={onClose} disabled={isSaving} variant="outlined" color="inherit" sx={{ borderRadius: 1.5 }}>
-            Anulează
+            {t('common.cancel')}
           </Button>
           <Button
             type="submit"
@@ -136,7 +138,7 @@ const LinkPartnersModal: React.FC<Props> = ({ members, onClose, onLinked }) => {
             sx={{ borderRadius: 1.5 }}
             startIcon={isSaving ? <CircularProgress size={16} color="inherit" /> : undefined}
           >
-            {isSaving ? 'Se leagă...' : 'Leagă'}
+            {isSaving ? t('linkPartners.linking') : t('linkPartners.link')}
           </Button>
         </DialogActions>
       </form>

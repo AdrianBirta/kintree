@@ -2,13 +2,8 @@ import React from 'react';
 import { Avatar, Box, Typography } from '@mui/material';
 import type { FamilyMember } from '../../types/family';
 import { calculateAge, isDeceased } from '../../utils/age';
+import i18n from '../../i18n/config';
 
-// Elimină intrările duplicate (același id) dintr-o listă de membri.
-// Necesar pentru că sursele de date (tree / listă) pot conține uneori
-// aceeași persoană de mai multe ori (ex. din cauza join-urilor pe relații),
-// iar Autocomplete-ul MUI arăta atunci "dubluri" în listă și, mai grav,
-// eticheta greșită în timpul filtrării — din lipsă de identitate (key)
-// stabilă per opțiune.
 export function dedupeMembers<T extends { id: string }>(members: T[]): T[] {
   const seen = new Set<string>();
   const result: T[] = [];
@@ -28,13 +23,6 @@ export function getGenderAccent(gender?: string | null): string {
   return 'var(--color-earbore-400)';
 }
 
-// renderOption comun pentru toate Autocomplete-urile de membri — arată
-// poza (sau inițiale), numele și un detaliu rapid (vârstă / ocupație /
-// decedat), ca să fie limpede pe cine selectezi când sunt mai multe
-// persoane cu nume asemănătoare. Extragem explicit `key` din props,
-// pentru că MUI v6 nu-l mai aplică automat pe elementul returnat de
-// renderOption — dacă rămâne lipsă, apare exact bug-ul de "labeluri
-// greșite în timpul filtrării" descris mai sus.
 export function renderMemberOption(
   props: React.HTMLAttributes<HTMLLIElement> & { key?: React.Key },
   option: FamilyMember,
@@ -44,9 +32,9 @@ export function renderMemberOption(
   const deceased = isDeceased(option.deathDate);
 
   const detailParts: string[] = [];
-  if (age !== null) detailParts.push(`${age} ani`);
+  if (age !== null) detailParts.push(`${age} ${i18n.t('common.years')}`);
   if (option.occupation) detailParts.push(option.occupation);
-  if (deceased) detailParts.push('decedat');
+  if (deceased) detailParts.push(i18n.t('dashboard.deceasedChip').replace('✝ ', ''));
   const detail = detailParts.join(' • ');
 
   return (
