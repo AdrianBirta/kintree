@@ -6,7 +6,7 @@ const PrivateRoute: React.FC = () => {
   const isLoading = useAuthStore((s) => s.isLoading);
 
   if (isLoading) return null;
-  return user ? <Outlet /> : <Navigate to="/auth" replace />;
+  return user ? <Outlet /> : <Navigate to="/" replace />;
 };
 
 export default PrivateRoute;

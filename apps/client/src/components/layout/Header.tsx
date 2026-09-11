@@ -9,6 +9,7 @@ import GroupsIcon from '@mui/icons-material/Groups';
 import CloseIcon from '@mui/icons-material/Close';
 import { IconButton, useMediaQuery, useTheme } from '@mui/material';
 import MembersAccordionMenu from './MembersAccordionMenu';
+import ConfirmDialog from '../common/ConfirmDialog';
 
 const Header: React.FC = () => {
   const navigate = useNavigate();
@@ -17,15 +18,16 @@ const Header: React.FC = () => {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
 
-  // NOU — arborele nu mai vine ca prop de la pagina părinte, ci direct din
-  // cache-ul React Query. Cum toate paginile cer aceeași cheie de query,
-  // Header-ul primește instant aceleași date, fără niciun request în plus.
   const { data: treeData } = useTreeQuery();
 
   const [userMenuOpen, setUserMenuOpen] = useState(false);
   const [membersMenuOpen, setMembersMenuOpen] = useState(false);
   const userMenuRef = useRef<HTMLDivElement>(null);
   const membersMenuRef = useRef<HTMLDivElement>(null);
+
+  // NOU — confirmare + loader la deconectare
+  const [confirmLogoutOpen, setConfirmLogoutOpen] = useState(false);
+  const [isLoggingOut, setIsLoggingOut] = useState(false);
 
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
@@ -55,6 +57,22 @@ const Header: React.FC = () => {
     navigate(`/members/${id}`);
   };
 
+  // NOU — deschidem dialogul în loc să deconectăm direct
+  const handleLogoutRequest = () => {
+    setUserMenuOpen(false);
+    setConfirmLogoutOpen(true);
+  };
+
+  const handleConfirmLogout = async () => {
+    setIsLoggingOut(true);
+    try {
+      await logout();
+    } finally {
+      setIsLoggingOut(false);
+      setConfirmLogoutOpen(false);
+    }
+  };
+
   const isTreeActive = location.pathname === '/dashboard' || /^\/members\/.+/.test(location.pathname);
   const isTableActive = location.pathname === '/members';
 
@@ -81,7 +99,6 @@ const Header: React.FC = () => {
             <span className="hidden sm:inline">Tabel membri</span>
           </button>
 
-          {/* Dropdown / overlay membri */}
           <div className="relative flex-shrink-0" ref={membersMenuRef}>
             <button
               onClick={() => setMembersMenuOpen((v) => !v)}
@@ -93,7 +110,6 @@ const Header: React.FC = () => {
               <span className={`hidden sm:inline transition-transform ${membersMenuOpen ? 'rotate-180' : ''}`}>▾</span>
             </button>
 
-            {/* Dropdown normal — DOAR pe desktop, rămâne copil al header-ului */}
             {membersMenuOpen && !isMobile && (
               <div className="absolute right-0 mt-2 w-72 sm:w-80 max-w-[85vw] bg-white rounded-xl shadow-lg border border-earbore-border py-2 max-h-96 overflow-y-auto">
                 <MembersAccordionMenu treeData={treeData} onNavigate={handleNavigateToMember} />
@@ -101,7 +117,6 @@ const Header: React.FC = () => {
             )}
           </div>
 
-          {/* Dropdown user — neschimbat */}
           <div className="relative flex-shrink-0" ref={userMenuRef}>
             <button
               onClick={() => setUserMenuOpen((v) => !v)}
@@ -123,7 +138,7 @@ const Header: React.FC = () => {
                   Profilul meu
                 </button>
                 <button
-                  onClick={() => logout()}
+                  onClick={handleLogoutRequest}
                   className="w-full text-left px-4 py-2 text-sm text-earbore-danger hover:bg-red-50 transition-colors cursor-pointer"
                 >
                   Deconectare
@@ -134,12 +149,6 @@ const Header: React.FC = () => {
         </div>
       </div>
 
-      {/* NOU — overlay full-screen pe mobil, randat printr-un PORTAL direct în
-          document.body. E OBLIGATORIU să fie portal aici: header-ul are
-          `backdrop-blur-sm` (backdrop-filter), iar backdrop-filter creează un
-          "containing block" nou pentru orice descendent `position: fixed`.
-          Fără portal, `fixed inset-0` s-ar raporta la cutia header-ului
-          (înaltă doar cât bara de sus), nu la tot ecranul. */}
       {membersMenuOpen && isMobile && createPortal(
         <div className="fixed inset-0 z-50 bg-white flex flex-col">
           <div className="flex items-center justify-between px-4 py-3 border-b border-earbore-border flex-shrink-0">
@@ -154,6 +163,20 @@ const Header: React.FC = () => {
         </div>,
         document.body,
       )}
+
+      {/* NOU — dialog de confirmare + loader la deconectare */}
+      <ConfirmDialog
+        open={confirmLogoutOpen}
+        title="Te deconectezi?"
+        description="Va trebui să te autentifici din nou pentru a accesa contul tău."
+        confirmLabel="Deconectare"
+        cancelLabel="Anulează"
+        isLoading={isLoggingOut}
+        destructive
+        icon="logout"
+        onConfirm={handleConfirmLogout}
+        onCancel={() => setConfirmLogoutOpen(false)}
+      />
     </header>
   );
 };

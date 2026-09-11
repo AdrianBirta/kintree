@@ -27,7 +27,7 @@ const ORDER_STEP = 2;
 const FamilyTreeCanvas: React.FC<Props> = ({ treeData, direction, onReorder, onQuickAdd }) => {
   const navigate = useNavigate();
   const { setFocusId, isDimmed } = useHighlightedLineage(treeData);
-  const { containerRef, transform, onPointerDown, onPointerMove, stopPan, zoomBy, reset, fitToContent } =
+  const { containerRef, transform, onPointerDown, onPointerMove, stopPan, zoomBy, resetZoom, fitToContent } =
     usePanZoom();
 
   const topMeansParent = direction === 'top-down';
@@ -356,6 +356,7 @@ const FamilyTreeCanvas: React.FC<Props> = ({ treeData, direction, onReorder, onQ
 
       <Paper
         elevation={3}
+        onPointerDown={(e) => e.stopPropagation()}
         sx={{
           position: 'absolute',
           bottom: { xs: 8, sm: 16 },
@@ -377,7 +378,7 @@ const FamilyTreeCanvas: React.FC<Props> = ({ treeData, direction, onReorder, onQ
           <IconButton size="small" onClick={() => fitToContent(layout.contentWidth, layout.contentHeight)}><CropFreeIcon fontSize="small" /></IconButton>
         </Tooltip>
         <Tooltip title="Resetează zoom-ul" placement="left">
-          <IconButton size="small" onClick={reset}><RestartAltIcon fontSize="small" /></IconButton>
+          <IconButton size="small" onClick={() => resetZoom(layout.contentWidth)}><RestartAltIcon fontSize="small" /></IconButton>
         </Tooltip>
       </Paper>
     </div>

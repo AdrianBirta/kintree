@@ -307,6 +307,8 @@ const ProfilePage: React.FC = () => {
           description={`Nu vei mai fi asociat cu niciun membru din arbore${selfMember ? ` (în prezent: ${selfMember.firstName} ${selfMember.lastName})` : ''}. Poți reface asocierea oricând, mai târziu.`}
           confirmLabel="Da, elimină"
           isLoading={isRemoving}
+          destructive
+          icon="warning"
           onConfirm={handleConfirmRemove}
           onCancel={() => setConfirmRemoveOpen(false)}
         />

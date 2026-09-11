@@ -87,72 +87,83 @@ const DashboardPage: React.FC = () => {
 
             {/* pe mobil, butoanele devin doar-iconiță (cu tooltip), se
                 înghesuie compact și fac wrap dacă spațiul e insuficient */}
-            <Stack
-              direction="row"
-              spacing={{ xs: 0.75, sm: 1.5 }}
-              useFlexGap
+            <Box
               sx={{
                 position: 'absolute',
                 top: { xs: 8, sm: 16 },
                 right: { xs: 8, sm: 16 },
-                left: { xs: 8, sm: 'auto' },
-                justifyContent: 'flex-end',
-                flexWrap: 'wrap',
-                maxWidth: { xs: 'calc(100% - 16px)', sm: 'none' },
+                display: 'inline-flex',
+                maxWidth: 'calc(100% - 16px)',
+                p: { xs: 0.75, sm: 0 },
+                borderRadius: 4,
+                backgroundColor: { xs: 'rgba(255,255,255,0.55)', sm: 'transparent' },
+                backdropFilter: { xs: 'blur(10px)', sm: 'none' },
+                WebkitBackdropFilter: { xs: 'blur(10px)', sm: 'none' },
+                boxShadow: { xs: '0 2px 10px rgba(20,10,40,0.08)', sm: 'none' },
               }}
             >
-              {viewMode === '2d' && (
-                <Tooltip title={direction === 'top-down' ? 'Strămoșii sus, urmașii jos' : 'Strămoșii jos, urmașii sus'}>
-                  <IconButton onClick={toggleDirection} sx={{ bgcolor: 'background.paper', boxShadow: 1 }}>
-                    <SwapVertIcon fontSize={isMobile ? 'small' : 'medium'} />
-                  </IconButton>
-                </Tooltip>
-              )}
-
-              <ToggleButtonGroup
-                value={viewMode}
-                exclusive
-                size="small"
-                onChange={(_, val) => val && setViewMode(val)}
-                sx={{ bgcolor: 'background.paper', boxShadow: 1, borderRadius: 3 }}
+              <Stack
+                direction="row"
+                spacing={{ xs: 0.75, sm: 1.5 }}
+                useFlexGap
+                sx={{
+                  justifyContent: 'flex-end',
+                  flexWrap: 'wrap',
+                }}
               >
-                <ToggleButton value="2d" sx={{ borderRadius: 3, px: { xs: 1, sm: 1.5 } }}>
-                  <ViewAgendaIcon fontSize="small" sx={{ mr: { xs: 0, sm: 0.5 } }} />
-                  {!isMobile && '2D'}
-                </ToggleButton>
-                <ToggleButton value="3d" sx={{ borderRadius: 3, px: { xs: 1, sm: 1.5 } }}>
-                  <ViewInArIcon fontSize="small" sx={{ mr: { xs: 0, sm: 0.5 } }} />
-                  {!isMobile && '3D'}
-                </ToggleButton>
-              </ToggleButtonGroup>
+                {viewMode === '2d' && (
+                  <Tooltip title={direction === 'top-down' ? 'Strămoșii sus, urmașii jos' : 'Strămoșii jos, urmașii sus'}>
+                    <IconButton onClick={toggleDirection} sx={{ bgcolor: 'background.paper', boxShadow: 1 }}>
+                      <SwapVertIcon fontSize={isMobile ? 'small' : 'medium'} />
+                    </IconButton>
+                  </Tooltip>
+                )}
 
-              {isMobile ? (
-                <Tooltip title="Leagă parteneri">
-                  <IconButton onClick={() => setShowPartnerModal(true)} sx={{ bgcolor: 'background.paper', boxShadow: 1 }}>
-                    <FavoriteIcon fontSize="small" color="primary" />
-                  </IconButton>
-                </Tooltip>
-              ) : (
-                <Button variant="outlined" startIcon={<FavoriteIcon />} onClick={() => setShowPartnerModal(true)} sx={{ bgcolor: 'background.paper', boxShadow: 1 }}>
-                  Leagă parteneri
-                </Button>
-              )}
+                <ToggleButtonGroup
+                  value={viewMode}
+                  exclusive
+                  size="small"
+                  onChange={(_, val) => val && setViewMode(val)}
+                  sx={{ bgcolor: 'background.paper', boxShadow: 1, borderRadius: 3 }}
+                >
+                  <ToggleButton value="2d" sx={{ borderRadius: 3, px: { xs: 1, sm: 1.5 } }}>
+                    <ViewAgendaIcon fontSize="small" sx={{ mr: { xs: 0, sm: 0.5 } }} />
+                    {!isMobile && '2D'}
+                  </ToggleButton>
+                  <ToggleButton value="3d" sx={{ borderRadius: 3, px: { xs: 1, sm: 1.5 } }}>
+                    <ViewInArIcon fontSize="small" sx={{ mr: { xs: 0, sm: 0.5 } }} />
+                    {!isMobile && '3D'}
+                  </ToggleButton>
+                </ToggleButtonGroup>
 
-              {isMobile ? (
-                <Tooltip title="Adaugă membru">
-                  <IconButton
-                    onClick={() => setShowAddModal(true)}
-                    sx={{ bgcolor: 'primary.main', color: 'white', boxShadow: 1, '&:hover': { bgcolor: 'primary.dark' } }}
-                  >
-                    <AddIcon fontSize="small" />
-                  </IconButton>
-                </Tooltip>
-              ) : (
-                <Button variant="contained" startIcon={<AddIcon />} onClick={() => setShowAddModal(true)} sx={{ boxShadow: 1 }}>
-                  Adaugă membru
-                </Button>
-              )}
-            </Stack>
+                {isMobile ? (
+                  <Tooltip title="Leagă parteneri">
+                    <IconButton onClick={() => setShowPartnerModal(true)} sx={{ bgcolor: 'background.paper', boxShadow: 1 }}>
+                      <FavoriteIcon fontSize="small" color="primary" />
+                    </IconButton>
+                  </Tooltip>
+                ) : (
+                  <Button variant="outlined" startIcon={<FavoriteIcon />} onClick={() => setShowPartnerModal(true)} sx={{ bgcolor: 'background.paper', boxShadow: 1 }}>
+                    Leagă parteneri
+                  </Button>
+                )}
+
+                {isMobile ? (
+                  <Tooltip title="Adaugă membru">
+                    <IconButton
+                      onClick={() => setShowAddModal(true)}
+                      sx={{ bgcolor: 'primary.main', color: 'white', boxShadow: 1, '&:hover': { bgcolor: 'primary.dark' } }}
+                    >
+                      <AddIcon fontSize="small" />
+                    </IconButton>
+                  </Tooltip>
+                ) : (
+                  <Button variant="contained" startIcon={<AddIcon />} onClick={() => setShowAddModal(true)} sx={{ boxShadow: 1 }}>
+                    Adaugă membru
+                  </Button>
+                )}
+              </Stack>
+            </Box>
           </>
         )}
       </Box>

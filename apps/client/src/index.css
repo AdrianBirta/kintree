@@ -5,6 +5,10 @@
   --font-family-sans: "Inter", sans-serif;
 }
 
+html {
+  scroll-behavior: smooth;
+}
+
 html,
 body {
   overscroll-behavior: none;

@@ -70,7 +70,7 @@ const LandingPage: React.FC = () => {
       </section>
 
       {/* ───────────── VALUE STACK / FUNCȚIONALITĂȚI ───────────── */}
-      <section id="functionalitati" className="py-20">
+      <section id="functionalitati" className="py-20 scroll-mt-24">
         <div className="max-w-6xl mx-auto px-6">
           <div className="text-center mb-14">
             <h2 className="text-3xl font-extrabold text-earbore-ink mb-3">
@@ -115,7 +115,7 @@ const LandingPage: React.FC = () => {
       </section>
 
       {/* ───────────── CUM FUNCȚIONEAZĂ ───────────── */}
-      <section id="cum-functioneaza" className="bg-white border-y border-earbore-border py-20">
+      <section id="cum-functioneaza" className="bg-white border-y border-earbore-border py-20 scroll-mt-24">
         <div className="max-w-4xl mx-auto px-6">
           <h2 className="text-3xl font-extrabold text-earbore-ink text-center mb-14">
             Trei pași. Câteva minute. Gata.
@@ -152,7 +152,7 @@ const LandingPage: React.FC = () => {
       </section>
 
       {/* ───────────── SUSȚINE PROIECTUL (donații) ───────────── */}
-      <section id="sustine" className="py-20 bg-earbore-ink">
+      <section id="sustine" className="py-20 bg-earbore-ink scroll-mt-24">
         <div className="max-w-4xl mx-auto px-6 text-center">
           <span className="inline-block bg-white/10 text-white text-xs font-semibold px-3 py-1.5 rounded-full mb-6 tracking-wide uppercase">
             eArbore rămâne gratuit — mereu
@@ -179,7 +179,7 @@ const LandingPage: React.FC = () => {
       </section>
 
       {/* ───────────── FAQ ───────────── */}
-      <section id="intrebari" className="py-20">
+      <section id="intrebari" className="py-20 scroll-mt-24">
         <div className="max-w-3xl mx-auto px-6">
           <h2 className="text-3xl font-extrabold text-earbore-ink text-center mb-12">Întrebări frecvente</h2>
           <div className="flex flex-col gap-4">

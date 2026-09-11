@@ -142,7 +142,7 @@ const MobileMemberList: React.FC<MobileListProps> = ({
             <Box sx={{ width: 4, flexShrink: 0, bgcolor: deceased ? 'var(--color-earbore-border)' : getGenderAccent(m.gender) }} />
 
             <Box sx={{ flex: 1, p: 1.5, minWidth: 0 }}>
-              <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 1.25 }}>
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.25 }}>
                 <Box sx={{ position: 'relative', width: 42, height: 42, flexShrink: 0 }}>
                   <Avatar src={m.imageUrl ?? undefined} sx={{ width: 42, height: 42 }}>
                     {m.firstName[0]}{m.lastName[0]}
@@ -573,31 +573,6 @@ const MembersListPage: React.FC = () => {
         </Box>
 
         <Paper sx={{ borderRadius: 1, overflow: 'hidden', border: '1px solid', borderColor: 'var(--color-earbore-border)' }}>
-
-          {selected.size > 0 && (
-            <Box
-              sx={{
-                display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                px: 2, py: 1, bgcolor: 'var(--color-earbore-600)', color: 'white', flexWrap: 'wrap', gap: 1,
-              }}
-            >
-              <Typography variant="body2" sx={{ fontWeight: 600 }}>
-                {selected.size} {selected.size === 1 ? 'membru selectat' : 'membri selectați'}
-              </Typography>
-              <Box sx={{ display: 'flex', gap: 1 }}>
-                <Button size="small" variant="text" sx={{ color: 'white' }} onClick={clearSelection}>
-                  Anulează
-                </Button>
-                <Button
-                  size="small" variant="contained" color="error" startIcon={<DeleteIcon fontSize="small" />}
-                  onClick={() => setBulkDeleteOpen(true)}
-                >
-                  Șterge selectații
-                </Button>
-              </Box>
-            </Box>
-          )}
-
           <Box
             sx={{
               display: 'flex', alignItems: 'center', gap: 1.5, px: { xs: 1.5, sm: 2 }, py: 1.25,
@@ -631,6 +606,38 @@ const MembersListPage: React.FC = () => {
               <Button size="small" onClick={() => { setStatusFilter('all'); setGenderFilter('ALL'); }}>
                 Resetează filtrele
               </Button>
+            )}
+
+            {/* NOU — info + acțiuni de selecție, aliniate la dreapta în același rând,
+      în loc de bara lată de deasupra care împingea tabelul în jos */}
+            {selected.size > 0 && (
+              <Box
+                sx={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 1,
+                  ml: 'auto',
+                  pl: 1.5,
+                  borderLeft: { xs: 'none', sm: '1px solid var(--color-earbore-border)' },
+                }}
+              >
+                <Typography variant="body2" sx={{ fontWeight: 600, color: 'var(--color-earbore-700)', whiteSpace: 'nowrap' }}>
+                  {selected.size} {selected.size === 1 ? 'selectat' : 'selectați'}
+                </Typography>
+                <Button size="small" variant="text" color="inherit" onClick={clearSelection}>
+                  Anulează
+                </Button>
+                <Button
+                  size="small"
+                  variant="contained"
+                  color="error"
+                  disableElevation
+                  startIcon={<DeleteIcon fontSize="small" />}
+                  onClick={() => setBulkDeleteOpen(true)}
+                >
+                  Șterge
+                </Button>
+              </Box>
             )}
           </Box>
 
@@ -990,6 +997,8 @@ const MembersListPage: React.FC = () => {
         title="Ștergi acest membru?"
         description={deleteTarget ? `${deleteTarget.firstName} ${deleteTarget.lastName} va fi eliminat definitiv, împreună cu toate relațiile asociate.` : undefined}
         isLoading={isDeleting}
+        destructive
+        icon="warning"
         onConfirm={handleDelete}
         onCancel={() => setDeleteTarget(null)}
       />
@@ -999,6 +1008,8 @@ const MembersListPage: React.FC = () => {
         title={`Ștergi ${selected.size} ${selected.size === 1 ? 'membru' : 'membri'}?`}
         description="Toți membrii selectați vor fi eliminați definitiv, împreună cu toate relațiile asociate."
         isLoading={isBulkDeleting}
+        destructive
+        icon="warning"
         onConfirm={handleBulkDelete}
         onCancel={() => setBulkDeleteOpen(false)}
       />

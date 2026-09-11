@@ -318,6 +318,8 @@ const MemberDetailPage: React.FC = () => {
           title="Ștergi acest membru?"
           description={`${member.firstName} ${member.lastName} va fi eliminat definitiv din arbore, împreună cu toate relațiile asociate.`}
           isLoading={isDeleting}
+          destructive
+          icon="warning"
           onConfirm={handleDelete}
           onCancel={() => setConfirmOpen(false)}
         />
@@ -333,6 +335,7 @@ const MemberDetailPage: React.FC = () => {
           confirmLabel="Da, schimbă"
           isLoading={isTogglingSelf}
           destructive={false}
+          icon="none"
           onConfirm={performMarkAsMe}
           onCancel={() => setConfirmSelfSwapOpen(false)}
         />

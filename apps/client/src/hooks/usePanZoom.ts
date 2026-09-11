@@ -191,7 +191,17 @@ export function usePanZoom() {
     [zoomToward],
   );
 
-  const reset = useCallback(() => setTransform(DEFAULT_TRANSFORM), []);
+  const resetZoom = useCallback((contentWidth: number, padding = 60) => {
+    const el = containerRef.current;
+    if (!el) return;
+    const rect = el.getBoundingClientRect();
+
+    setTransform({
+      x: contentWidth > 0 ? (rect.width - contentWidth) / 2 : DEFAULT_TRANSFORM.x,
+      y: padding,
+      scale: 1,
+    });
+  }, []);
 
   // ── încadrează tot conținutul (contentWidth x contentHeight) în container, centrat
   //    orizontal, lipit sus (rădăcina arborelui rămâne mereu primul lucru vizibil) ──
@@ -219,5 +229,5 @@ export function usePanZoom() {
     return true;
   }, []);
 
-  return { containerRef, transform, onPointerDown, onPointerMove, stopPan, zoomBy, reset, fitToContent };
+  return { containerRef, transform, onPointerDown, onPointerMove, stopPan, zoomBy, resetZoom, fitToContent };
 }
