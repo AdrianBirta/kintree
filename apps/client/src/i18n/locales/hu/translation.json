@@ -368,6 +368,10 @@
     "label": "Nyelv",
     "ro": "Román",
     "en": "Angol",
-    "hu": "Magyar"
+    "hu": "Magyar",
+    "fr": "Francia",
+    "de": "Német",
+    "es": "Spanyol",
+    "it": "Olasz"
   }
 }

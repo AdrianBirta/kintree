@@ -8,6 +8,10 @@ const FLAG_EMOJI: Record<SupportedLanguage, string> = {
   ro: '🇷🇴',
   en: '🇬🇧',
   hu: '🇭🇺',
+  fr: '🇫🇷',
+  de: '🇩🇪',
+  es: '🇪🇸',
+  it: '🇮🇹',
 };
 
 interface Props {

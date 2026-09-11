@@ -368,6 +368,10 @@
     "label": "Language",
     "ro": "Romanian",
     "en": "English",
-    "hu": "Hungarian"
+    "hu": "Hungarian",
+    "fr": "French",
+    "de": "German",
+    "es": "Spanish",
+    "it": "Italian"
   }
 }
