@@ -1,11 +1,10 @@
 import React from 'react';
 import { useTranslation } from 'react-i18next';
 import {
-  Dialog, DialogContent, Button, CircularProgress, Box, Typography, IconButton,
+  Dialog, DialogContent, Button, CircularProgress, Box, Typography,
 } from '@mui/material';
 import WarningAmberRoundedIcon from '@mui/icons-material/WarningAmberRounded';
 import LogoutRoundedIcon from '@mui/icons-material/LogoutRounded';
-import CloseRoundedIcon from '@mui/icons-material/CloseRounded';
 
 interface Props {
   open: boolean;
