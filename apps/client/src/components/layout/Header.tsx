@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { useNavigate, useLocation } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { useAuth } from '../../hooks/useAuth';
 import { useTreeQuery } from '../../hooks/queries/useFamilyQueries';
 import AccountTreeIcon from '@mui/icons-material/AccountTree';
@@ -10,10 +11,12 @@ import CloseIcon from '@mui/icons-material/Close';
 import { IconButton, useMediaQuery, useTheme } from '@mui/material';
 import MembersAccordionMenu from './MembersAccordionMenu';
 import ConfirmDialog from '../common/ConfirmDialog';
+import LanguageSwitcher from '../common/LanguageSwitcher';
 
 const Header: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
+  const { t } = useTranslation();
   const { user, logout } = useAuth();
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
@@ -25,7 +28,6 @@ const Header: React.FC = () => {
   const userMenuRef = useRef<HTMLDivElement>(null);
   const membersMenuRef = useRef<HTMLDivElement>(null);
 
-  // NOU — confirmare + loader la deconectare
   const [confirmLogoutOpen, setConfirmLogoutOpen] = useState(false);
   const [isLoggingOut, setIsLoggingOut] = useState(false);
 
@@ -57,7 +59,6 @@ const Header: React.FC = () => {
     navigate(`/members/${id}`);
   };
 
-  // NOU — deschidem dialogul în loc să deconectăm direct
   const handleLogoutRequest = () => {
     setUserMenuOpen(false);
     setConfirmLogoutOpen(true);
@@ -92,11 +93,11 @@ const Header: React.FC = () => {
         <div className="flex items-center gap-1 sm:gap-2 min-w-0">
           <button onClick={() => navigate('/dashboard')} className={navButtonClass(isTreeActive)}>
             <AccountTreeIcon fontSize="small" />
-            <span className="hidden sm:inline">Arbore</span>
+            <span className="hidden sm:inline">{t('header.tree')}</span>
           </button>
           <button onClick={() => navigate('/members')} className={navButtonClass(isTableActive)}>
             <TableRowsIcon fontSize="small" />
-            <span className="hidden sm:inline">Tabel membri</span>
+            <span className="hidden sm:inline">{t('header.membersTable')}</span>
           </button>
 
           <div className="relative flex-shrink-0" ref={membersMenuRef}>
@@ -105,7 +106,7 @@ const Header: React.FC = () => {
               className="flex items-center gap-1.5 text-sm font-medium text-earbore-gray hover:text-earbore-700 px-2.5 sm:px-3 py-2 rounded-lg hover:bg-earbore-50 transition-colors cursor-pointer"
             >
               <GroupsIcon fontSize="small" className="sm:hidden" />
-              <span className="hidden sm:inline">Membri ({memberCount})</span>
+              <span className="hidden sm:inline">{t('header.members', { count: memberCount })}</span>
               <span className="sm:hidden text-xs font-semibold">{memberCount}</span>
               <span className={`hidden sm:inline transition-transform ${membersMenuOpen ? 'rotate-180' : ''}`}>▾</span>
             </button>
@@ -116,6 +117,8 @@ const Header: React.FC = () => {
               </div>
             )}
           </div>
+
+          <LanguageSwitcher variant="icon" />
 
           <div className="relative flex-shrink-0" ref={userMenuRef}>
             <button
@@ -135,13 +138,13 @@ const Header: React.FC = () => {
                   onClick={() => { setUserMenuOpen(false); navigate('/profile'); }}
                   className="w-full text-left px-4 py-2 text-sm text-earbore-ink hover:bg-earbore-50 transition-colors cursor-pointer"
                 >
-                  Profilul meu
+                  {t('header.myProfile')}
                 </button>
                 <button
                   onClick={handleLogoutRequest}
                   className="w-full text-left px-4 py-2 text-sm text-earbore-danger hover:bg-red-50 transition-colors cursor-pointer"
                 >
-                  Deconectare
+                  {t('header.logout')}
                 </button>
               </div>
             )}
@@ -152,7 +155,7 @@ const Header: React.FC = () => {
       {membersMenuOpen && isMobile && createPortal(
         <div className="fixed inset-0 z-50 bg-white flex flex-col">
           <div className="flex items-center justify-between px-4 py-3 border-b border-earbore-border flex-shrink-0">
-            <h2 className="text-base font-bold text-earbore-ink">Membri ({memberCount})</h2>
+            <h2 className="text-base font-bold text-earbore-ink">{t('header.members', { count: memberCount })}</h2>
             <IconButton onClick={() => setMembersMenuOpen(false)} size="small">
               <CloseIcon />
             </IconButton>
@@ -164,13 +167,11 @@ const Header: React.FC = () => {
         document.body,
       )}
 
-      {/* NOU — dialog de confirmare + loader la deconectare */}
       <ConfirmDialog
         open={confirmLogoutOpen}
-        title="Te deconectezi?"
-        description="Va trebui să te autentifici din nou pentru a accesa contul tău."
-        confirmLabel="Deconectare"
-        cancelLabel="Anulează"
+        title={t('header.logoutConfirmTitle')}
+        description={t('header.logoutConfirmDesc')}
+        confirmLabel={t('header.logoutConfirmButton')}
         isLoading={isLoggingOut}
         destructive
         icon="logout"

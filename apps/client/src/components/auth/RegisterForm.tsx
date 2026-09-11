@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useAuth } from '../../hooks/useAuth';
 import { IconButton } from '@mui/material';
 import VisibilityIcon from '@mui/icons-material/Visibility';
@@ -9,6 +10,7 @@ interface Props {
 }
 
 const RegisterForm: React.FC<Props> = ({ onGoLogin }) => {
+  const { t } = useTranslation();
   const [formData, setFormData] = useState({ firstName: '', lastName: '', email: '', password: '' });
   const [showPassword, setShowPassword] = useState(false);
   const { register, isRegistering, loginError } = useAuth();
@@ -28,13 +30,13 @@ const RegisterForm: React.FC<Props> = ({ onGoLogin }) => {
 
   return (
     <div className="w-full">
-      <h2 className="text-2xl sm:text-3xl font-bold text-earbore-ink mb-1">Creează-ți contul</h2>
-      <p className="text-earbore-gray text-sm mb-8">Începe-ți arborele genealogic în câteva secunde.</p>
+      <h2 className="text-2xl sm:text-3xl font-bold text-earbore-ink mb-1">{t('auth.registerTitle')}</h2>
+      <p className="text-earbore-gray text-sm mb-8">{t('auth.registerSubtitle')}</p>
 
       <form onSubmit={handleSubmit} className="space-y-4">
         <div className="grid grid-cols-2 gap-3">
           <div>
-            <label className="block text-xs font-semibold text-earbore-gray uppercase tracking-wider mb-1.5">Prenume</label>
+            <label className="block text-xs font-semibold text-earbore-gray uppercase tracking-wider mb-1.5">{t('auth.firstName')}</label>
             <input
               type="text"
               name="firstName"
@@ -47,7 +49,7 @@ const RegisterForm: React.FC<Props> = ({ onGoLogin }) => {
             />
           </div>
           <div>
-            <label className="block text-xs font-semibold text-earbore-gray uppercase tracking-wider mb-1.5">Nume</label>
+            <label className="block text-xs font-semibold text-earbore-gray uppercase tracking-wider mb-1.5">{t('auth.lastName')}</label>
             <input
               type="text"
               name="lastName"
@@ -62,7 +64,7 @@ const RegisterForm: React.FC<Props> = ({ onGoLogin }) => {
         </div>
 
         <div>
-          <label className="block text-xs font-semibold text-earbore-gray uppercase tracking-wider mb-1.5">Email</label>
+          <label className="block text-xs font-semibold text-earbore-gray uppercase tracking-wider mb-1.5">{t('auth.email')}</label>
           <input
             type="email"
             name="email"
@@ -71,13 +73,13 @@ const RegisterForm: React.FC<Props> = ({ onGoLogin }) => {
             className="input-base"
             required
             disabled={isRegistering}
-            placeholder="nume@email.ro"
+            placeholder={t('auth.emailPlaceholder')}
             autoComplete="email"
           />
         </div>
 
         <div>
-          <label className="block text-xs font-semibold text-earbore-gray uppercase tracking-wider mb-1.5">Parolă</label>
+          <label className="block text-xs font-semibold text-earbore-gray uppercase tracking-wider mb-1.5">{t('auth.password')}</label>
           <div className="relative">
             <input
               type={showPassword ? 'text' : 'password'}
@@ -88,20 +90,17 @@ const RegisterForm: React.FC<Props> = ({ onGoLogin }) => {
               required
               minLength={8}
               disabled={isRegistering}
-              placeholder="Minim 8 caractere"
+              placeholder={t('auth.passwordMinPlaceholder')}
               autoComplete="new-password"
             />
             <IconButton
               type="button"
               size="small"
               onClick={() => setShowPassword((v) => !v)}
-              // FIX — la fel ca în LoginForm: preventDefault pe mousedown ca
-              // input-ul de parolă să nu-și piardă focusul (și implicit
-              // tastatura de pe mobil să nu se închidă) când apeși pe ochi.
               onMouseDown={(e) => e.preventDefault()}
               disabled={isRegistering}
               tabIndex={-1}
-              aria-label={showPassword ? 'Ascunde parola' : 'Arată parola'}
+              aria-label={showPassword ? t('auth.hidePassword') : t('auth.showPassword')}
               sx={{
                 position: 'absolute',
                 right: 4,
@@ -122,14 +121,14 @@ const RegisterForm: React.FC<Props> = ({ onGoLogin }) => {
         )}
 
         <button type="submit" disabled={isRegistering} className="btn-primary w-full disabled:opacity-50">
-          {isRegistering ? 'Se creează contul...' : 'Creează cont →'}
+          {isRegistering ? t('auth.registering') : t('auth.registerButton')}
         </button>
       </form>
 
       <p className="mt-6 text-center text-sm text-earbore-gray">
-        Ai deja cont?{' '}
+        {t('auth.haveAccount')}{' '}
         <button onClick={onGoLogin} className="font-semibold text-earbore-600 hover:text-earbore-700 cursor-pointer">
-          Autentifică-te
+          {t('auth.login')}
         </button>
       </p>
     </div>

@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useAuth } from '../../hooks/useAuth';
 import { IconButton } from '@mui/material';
 import VisibilityIcon from '@mui/icons-material/Visibility';
@@ -9,6 +10,7 @@ interface Props {
 }
 
 const LoginForm: React.FC<Props> = ({ onGoRegister }) => {
+  const { t } = useTranslation();
   const [credentials, setCredentials] = useState({ email: '', password: '' });
   const [showPassword, setShowPassword] = useState(false);
   const { login, isLoggingIn, loginError } = useAuth();
@@ -28,13 +30,13 @@ const LoginForm: React.FC<Props> = ({ onGoRegister }) => {
 
   return (
     <div className="w-full">
-      <h2 className="text-2xl sm:text-3xl font-bold text-earbore-ink mb-1">Bun venit înapoi!</h2>
-      <p className="text-earbore-gray text-sm mb-8">Autentifică-te pentru a-ți continua arborele.</p>
+      <h2 className="text-2xl sm:text-3xl font-bold text-earbore-ink mb-1">{t('auth.loginTitle')}</h2>
+      <p className="text-earbore-gray text-sm mb-8">{t('auth.loginSubtitle')}</p>
 
       <form onSubmit={handleSubmit} className="space-y-4">
         <div>
           <label htmlFor="email" className="block text-xs font-semibold text-earbore-gray uppercase tracking-wider mb-1.5">
-            Email
+            {t('auth.email')}
           </label>
           <input
             type="email"
@@ -45,14 +47,14 @@ const LoginForm: React.FC<Props> = ({ onGoRegister }) => {
             className="input-base"
             required
             disabled={isLoggingIn}
-            placeholder="nume@email.ro"
+            placeholder={t('auth.emailPlaceholder')}
             autoComplete="username"
           />
         </div>
 
         <div>
           <label htmlFor="password" className="block text-xs font-semibold text-earbore-gray uppercase tracking-wider mb-1.5">
-            Parolă
+            {t('auth.password')}
           </label>
           <div className="relative">
             <input
@@ -64,22 +66,17 @@ const LoginForm: React.FC<Props> = ({ onGoRegister }) => {
               className="input-base pr-11"
               required
               disabled={isLoggingIn}
-              placeholder="Introdu parola"
+              placeholder={t('auth.passwordPlaceholder')}
               autoComplete="current-password"
             />
             <IconButton
               type="button"
               size="small"
               onClick={() => setShowPassword((v) => !v)}
-              // FIX — pe mobil, tap-ul pe buton declanșează un blur pe input
-              // ÎNAINTE de onClick, ceea ce închide tastatura virtuală.
-              // preventDefault() pe mousedown (evenimentul care precede
-              // efectiv blur-ul, inclusiv pe touch) oprește input-ul să-și
-              // piardă focus-ul, deci tastatura rămâne deschisă.
               onMouseDown={(e) => e.preventDefault()}
               disabled={isLoggingIn}
               tabIndex={-1}
-              aria-label={showPassword ? 'Ascunde parola' : 'Arată parola'}
+              aria-label={showPassword ? t('auth.hidePassword') : t('auth.showPassword')}
               sx={{
                 position: 'absolute',
                 right: 4,
@@ -100,14 +97,14 @@ const LoginForm: React.FC<Props> = ({ onGoRegister }) => {
         )}
 
         <button type="submit" disabled={isLoggingIn} className="btn-primary w-full disabled:opacity-50">
-          {isLoggingIn ? 'Se autentifică...' : 'Autentificare →'}
+          {isLoggingIn ? t('auth.loggingIn') : t('auth.loginButton')}
         </button>
       </form>
 
       <p className="mt-6 text-center text-sm text-earbore-gray">
-        Nu ai cont?{' '}
+        {t('auth.noAccount')}{' '}
         <button onClick={onGoRegister} className="font-semibold text-earbore-600 hover:text-earbore-700 cursor-pointer">
-          Creează cont
+          {t('auth.createAccount')}
         </button>
       </p>
     </div>

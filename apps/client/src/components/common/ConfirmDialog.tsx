@@ -1,4 +1,5 @@
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   Dialog, DialogContent, Button, CircularProgress, Box, Typography, IconButton,
 } from '@mui/material';
@@ -14,19 +15,19 @@ interface Props {
   cancelLabel?: string;
   isLoading?: boolean;
   destructive?: boolean;
-  // NOU — permite alegerea iconiței afișate sus (implicit se alege automat
-  // în funcție de `destructive`), util pentru cazuri precum logout, unde
-  // "warning" nu e tonul potrivit.
   icon?: 'warning' | 'logout' | 'none';
   onConfirm: () => void;
   onCancel: () => void;
 }
 
 const ConfirmDialog: React.FC<Props> = ({
-  open, title, description, confirmLabel = 'Confirmă', cancelLabel = 'Anulează',
+  open, title, description, confirmLabel, cancelLabel,
   isLoading = false, destructive = true, icon, onConfirm, onCancel,
 }) => {
+  const { t } = useTranslation();
   const resolvedIcon = icon ?? (destructive ? 'warning' : 'none');
+  const resolvedConfirmLabel = confirmLabel ?? t('common.confirm');
+  const resolvedCancelLabel = cancelLabel ?? t('common.cancel');
 
   return (
     <Dialog
@@ -44,6 +45,22 @@ const ConfirmDialog: React.FC<Props> = ({
         },
       }}
     >
+      <IconButton
+        onClick={onCancel}
+        disabled={isLoading}
+        size="small"
+        sx={{
+          position: 'absolute',
+          top: 20,
+          right: 20,
+          color: 'var(--color-earbore-gray)',
+          bgcolor: 'var(--color-earbore-grayLight)',
+          '&:hover': { bgcolor: 'var(--color-earbore-100)', color: 'var(--color-earbore-ink)' },
+        }}
+      >
+        <CloseRoundedIcon fontSize="small" />
+      </IconButton>
+
       <DialogContent sx={{ p: { xs: 3.5, sm: 4.5 }, pt: { xs: 4, sm: 5 } }}>
         <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', gap: 2 }}>
 
@@ -95,7 +112,7 @@ const ConfirmDialog: React.FC<Props> = ({
                 '&:hover': { bgcolor: 'var(--color-earbore-100)' },
               }}
             >
-              {cancelLabel}
+              {resolvedCancelLabel}
             </Button>
             <Button
               onClick={onConfirm}
@@ -116,7 +133,7 @@ const ConfirmDialog: React.FC<Props> = ({
                 },
               }}
             >
-              {isLoading ? 'Se procesează...' : confirmLabel}
+              {isLoading ? t('common.processing') : resolvedConfirmLabel}
             </Button>
           </Box>
         </Box>

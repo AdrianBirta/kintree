@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import LoginForm from '../components/auth/LoginForm';
 import RegisterForm from '../components/auth/RegisterForm';
+import LanguageSwitcher from '../components/common/LanguageSwitcher';
 import { useAuth } from '../hooks/useAuth';
 
 const AuthPage: React.FC = () => {
@@ -17,7 +18,11 @@ const AuthPage: React.FC = () => {
   }, [user, navigate]);
 
   return (
-    <div className="min-h-screen bg-earbore-grayLight flex items-center justify-center px-6 py-12">
+    <div className="min-h-screen bg-earbore-grayLight flex items-center justify-center px-6 py-12 relative">
+      <div className="absolute top-6 right-6">
+        <LanguageSwitcher variant="full" />
+      </div>
+
       <div className="w-full max-w-md">
         <button
           onClick={() => navigate('/')}
