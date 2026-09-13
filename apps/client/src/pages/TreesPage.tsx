@@ -2,7 +2,7 @@ import React from 'react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
-import { Box, Card, Typography, Chip, Button, CircularProgress, Avatar } from '@mui/material';
+import { Box, Card, Typography, Chip, CircularProgress, Avatar } from '@mui/material';
 import AccountTreeIcon from '@mui/icons-material/AccountTree';
 import VisibilityIcon from '@mui/icons-material/Visibility';
 import EditIcon from '@mui/icons-material/Edit';
