@@ -414,6 +414,8 @@
   "guestShare": {
     "readOnlyBadge": "Csak megtekintési hozzáférés",
     "editBadge": "Adhatsz hozzá tagokat",
+    "remainingMembers": "Még {{remaining}}/{{max}} tagot adhatsz hozzá",
+    "unlimitedMembers": "Korlátlan számú tagot adhatsz hozzá",
     "addMember": "Tag hozzáadása",
     "genericError": "Hiba történt."
   },

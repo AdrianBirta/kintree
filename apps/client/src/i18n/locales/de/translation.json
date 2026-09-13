@@ -414,6 +414,8 @@
   "guestShare": {
     "readOnlyBadge": "Nur Ansichtszugriff",
     "editBadge": "Sie können Mitglieder hinzufügen",
+    "remainingMembers": "Sie können noch {{remaining}}/{{max}} Mitglieder hinzufügen",
+    "unlimitedMembers": "Sie können unbegrenzt viele Mitglieder hinzufügen",
     "addMember": "Mitglied hinzufügen",
     "genericError": "Ein Fehler ist aufgetreten."
   },

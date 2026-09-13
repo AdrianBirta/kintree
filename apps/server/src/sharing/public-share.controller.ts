@@ -26,6 +26,14 @@ export class PublicShareController {
     return this.sharingService.joinShareLink(token, existingGuestToken, dto);
   }
 
+  // NOU — status curent al invitatului: nivel de acces + câți membri mai
+  // poate adăuga. Apelat de GuestSharePage la încărcare și după fiecare
+  // membru adăugat, ca să afișeze contorul actualizat.
+  @Get('me')
+  getGuestStatus(@Param('token') token: string, @Headers('x-guest-token') guestToken: string) {
+    return this.sharingService.getGuestStatus(token, guestToken);
+  }
+
   @Get('tree')
   async getTree(@Param('token') token: string, @Headers('x-guest-token') guestToken: string) {
     const link = await this.sharingService.assertGuestAccess(token, guestToken, ShareAccessLevel.READ_ONLY);
@@ -38,7 +46,6 @@ export class PublicShareController {
     @Headers('x-guest-token') guestToken: string,
     @Body() dto: CreateFamilyMemberDto,
   ) {
-    // ÎNLOCUIT — înainte era assertGuestAccess(token, guestToken, ShareAccessLevel.EDIT)
     const link = await this.sharingService.consumeGuestMemberSlot(token, guestToken);
     return this.familyMembersService.create(link.ownerId, dto);
   }

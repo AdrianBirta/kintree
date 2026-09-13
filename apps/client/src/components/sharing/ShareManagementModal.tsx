@@ -28,7 +28,7 @@ const sharingKeys = {
   given: ['sharing', 'accounts', 'given'] as const,
 };
 
-// NOU — preset-urile cerute pentru limita de membri per invitat.
+// preset-urile pentru limita de membri per invitat.
 // 'custom' înseamnă că userul introduce manual o valoare (≥1);
 // 'unlimited' salvează undefined la backend (fără restricție).
 type MemberLimitPreset = '1' | '2' | '3' | 'custom' | 'unlimited';
@@ -55,7 +55,7 @@ const ShareManagementModal: React.FC<Props> = ({ open, onClose }) => {
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [expandedGuestsFor, setExpandedGuestsFor] = useState<string | null>(null);
 
-  // NOU — starea pentru limita de membri per invitat
+  // starea pentru limita de membri per invitat (doar pentru linkuri EDIT)
   const [memberLimitPreset, setMemberLimitPreset] = useState<MemberLimitPreset>('unlimited');
   const [memberLimitCustomValue, setMemberLimitCustomValue] = useState('');
 
@@ -117,7 +117,7 @@ const ShareManagementModal: React.FC<Props> = ({ open, onClose }) => {
     onSuccess: () => queryClient.invalidateQueries({ queryKey: sharingKeys.given }),
   });
 
-  // NOU — traduce preset-ul curent în valoarea numerică (sau undefined) trimisă la backend
+  // traduce preset-ul curent în valoarea numerică (sau undefined) trimisă la backend
   const resolveMaxMembersPerGuest = (): number | undefined => {
     if (memberLimitPreset === 'unlimited') return undefined;
     if (memberLimitPreset === 'custom') {
@@ -131,7 +131,8 @@ const ShareManagementModal: React.FC<Props> = ({ open, onClose }) => {
     createLinkMutation.mutate({
       accessLevel: linkAccessLevel,
       expiresAt: linkExpiresAt || undefined,
-      maxUses: linkAccessLevel === 'EDIT' && linkMaxUses ? Number(linkMaxUses) : undefined,
+      // ÎNLOCUIT — maxUses se trimite acum indiferent de accessLevel
+      maxUses: linkMaxUses ? Number(linkMaxUses) : undefined,
       maxMembersPerGuest: linkAccessLevel === 'EDIT' ? resolveMaxMembersPerGuest() : undefined,
       label: linkLabel || undefined,
     });
@@ -162,7 +163,8 @@ const ShareManagementModal: React.FC<Props> = ({ open, onClose }) => {
   const renderLinkStatus = (link: ShareLink) => {
     if (link.revoked) return <Chip size="small" label={t('sharing.statusRevoked')} color="default" />;
     if (isExpired(link.expiresAt)) return <Chip size="small" label={t('sharing.statusExpired')} color="default" />;
-    if (link.accessLevel === 'EDIT' && link.maxUses != null && link.usesCount >= link.maxUses) {
+    // ÎNLOCUIT — "Full" se afișează acum indiferent de accessLevel
+    if (link.maxUses != null && link.usesCount >= link.maxUses) {
       return <Chip size="small" label={t('sharing.statusFull')} color="default" />;
     }
     return <Chip size="small" label={t('sharing.statusActive')} color="success" />;
@@ -215,58 +217,56 @@ const ShareManagementModal: React.FC<Props> = ({ open, onClose }) => {
                 slotProps={{ inputLabel: { shrink: true } }}
               />
 
+              {/* MUTAT în afara condiției EDIT — se aplică acum și la READ_ONLY */}
+              <TextField
+                size="small"
+                type="number"
+                label={t('sharing.maxUsesOptional')}
+                value={linkMaxUses}
+                onChange={(e) => setLinkMaxUses(e.target.value)}
+                helperText={t('sharing.maxUsesHelper')}
+                slotProps={{ htmlInput: { min: 1 } }}
+              />
+
               {linkAccessLevel === 'EDIT' && (
-                <>
-                  <TextField
+                <Box>
+                  <Typography variant="caption" sx={{ fontWeight: 600, color: 'text.secondary', display: 'block', mb: 0.75 }}>
+                    {t('sharing.maxMembersPerGuestLabel')}
+                  </Typography>
+                  <ToggleButtonGroup
                     size="small"
-                    type="number"
-                    label={t('sharing.maxUsesOptional')}
-                    value={linkMaxUses}
-                    onChange={(e) => setLinkMaxUses(e.target.value)}
-                    helperText={t('sharing.maxUsesHelper')}
-                    slotProps={{ htmlInput: { min: 1 } }}
-                  />
+                    value={memberLimitPreset}
+                    exclusive
+                    onChange={(_, val) => val && setMemberLimitPreset(val)}
+                    sx={{
+                      flexWrap: 'wrap',
+                      '& .MuiToggleButton-root': { textTransform: 'none', px: 1.5, py: 0.5 },
+                    }}
+                  >
+                    <ToggleButton value="1">1</ToggleButton>
+                    <ToggleButton value="2">2</ToggleButton>
+                    <ToggleButton value="3">3</ToggleButton>
+                    <ToggleButton value="custom">{t('sharing.customValue')}</ToggleButton>
+                    <ToggleButton value="unlimited">{t('sharing.unlimited')}</ToggleButton>
+                  </ToggleButtonGroup>
 
-                  {/* NOU — selector pentru câți membri poate adăuga FIECARE invitat */}
-                  <Box>
-                    <Typography variant="caption" sx={{ fontWeight: 600, color: 'text.secondary', display: 'block', mb: 0.75 }}>
-                      {t('sharing.maxMembersPerGuestLabel')}
-                    </Typography>
-                    <ToggleButtonGroup
+                  <Collapse in={memberLimitPreset === 'custom'}>
+                    <TextField
                       size="small"
-                      value={memberLimitPreset}
-                      exclusive
-                      onChange={(_, val) => val && setMemberLimitPreset(val)}
-                      sx={{
-                        flexWrap: 'wrap',
-                        '& .MuiToggleButton-root': { textTransform: 'none', px: 1.5, py: 0.5 },
-                      }}
-                    >
-                      <ToggleButton value="1">1</ToggleButton>
-                      <ToggleButton value="2">2</ToggleButton>
-                      <ToggleButton value="3">3</ToggleButton>
-                      <ToggleButton value="custom">{t('sharing.customValue')}</ToggleButton>
-                      <ToggleButton value="unlimited">{t('sharing.unlimited')}</ToggleButton>
-                    </ToggleButtonGroup>
+                      type="number"
+                      label={t('sharing.customValueLabel')}
+                      value={memberLimitCustomValue}
+                      onChange={(e) => setMemberLimitCustomValue(e.target.value)}
+                      slotProps={{ htmlInput: { min: 1 } }}
+                      sx={{ mt: 1.25 }}
+                      fullWidth
+                    />
+                  </Collapse>
 
-                    <Collapse in={memberLimitPreset === 'custom'}>
-                      <TextField
-                        size="small"
-                        type="number"
-                        label={t('sharing.customValueLabel')}
-                        value={memberLimitCustomValue}
-                        onChange={(e) => setMemberLimitCustomValue(e.target.value)}
-                        slotProps={{ htmlInput: { min: 1 } }}
-                        sx={{ mt: 1.25 }}
-                        fullWidth
-                      />
-                    </Collapse>
-
-                    <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 0.75 }}>
-                      {t('sharing.maxMembersPerGuestHelper')}
-                    </Typography>
-                  </Box>
-                </>
+                  <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 0.75 }}>
+                    {t('sharing.maxMembersPerGuestHelper')}
+                  </Typography>
+                </Box>
               )}
 
               <Button
@@ -305,7 +305,8 @@ const ShareManagementModal: React.FC<Props> = ({ open, onClose }) => {
                             <>
                               {t(link.accessLevel === 'EDIT' ? 'sharing.editAccess' : 'sharing.readOnly')}
                               {link.expiresAt && ` · ${t('sharing.expiresOn', { date: formatDateTime(link.expiresAt) })}`}
-                              {link.accessLevel === 'EDIT' && link.maxUses != null &&
+                              {/* ÎNLOCUIT — usageCount se afișează acum indiferent de accessLevel */}
+                              {link.maxUses != null &&
                                 ` · ${t('sharing.usageCount', { used: link.usesCount, max: link.maxUses })}`}
                               {link.accessLevel === 'EDIT' &&
                                 ` · ${link.maxMembersPerGuest != null
@@ -336,7 +337,7 @@ const ShareManagementModal: React.FC<Props> = ({ open, onClose }) => {
                           </IconButton>
                         </Tooltip>
 
-                        {/* NOU — dacă linkul are invitați, poți vedea câți membri a adăugat fiecare */}
+                        {/* dacă linkul are invitați, poți vedea câți membri a adăugat fiecare */}
                         {link.guests.length > 0 && (
                           <Tooltip title={t('sharing.viewGuests')}>
                             <IconButton
@@ -349,7 +350,7 @@ const ShareManagementModal: React.FC<Props> = ({ open, onClose }) => {
                         )}
                       </Box>
 
-                      {/* NOU — detaliu per invitat: câți membri a adăugat fiecare */}
+                      {/* detaliu per invitat: câți membri a adăugat fiecare */}
                       <Collapse in={expandedGuestsFor === link.id}>
                         <Box sx={{ pl: 1, borderLeft: '2px solid', borderColor: 'divider', ml: 0.5, mt: 0.5 }}>
                           {link.guests.map((guest) => (

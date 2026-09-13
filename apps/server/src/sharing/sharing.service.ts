@@ -27,8 +27,9 @@ export class SharingService {
         token: generateToken(),
         accessLevel: dto.accessLevel,
         expiresAt: dto.expiresAt ? new Date(dto.expiresAt) : undefined,
+        // NOU — maxUses se aplică acum indiferent de accessLevel (READ_ONLY sau EDIT)
         maxUses: dto.maxUses,
-        // NOU — se salvează doar dacă accesul e de tip EDIT; pentru READ_ONLY nu are sens
+        // maxMembersPerGuest rămâne relevant doar pentru linkuri EDIT
         maxMembersPerGuest: dto.accessLevel === ShareAccessLevel.EDIT ? dto.maxMembersPerGuest : undefined,
         label: dto.label,
       },
@@ -75,7 +76,9 @@ export class SharingService {
       }
     }
 
-    if (link.accessLevel === ShareAccessLevel.EDIT && link.maxUses != null && link.usesCount >= link.maxUses) {
+    // ÎNLOCUIT — limita de utilizatori (maxUses) se verifică acum indiferent
+    // de accessLevel, nu doar pentru EDIT
+    if (link.maxUses != null && link.usesCount >= link.maxUses) {
       throw new ForbiddenException('Numărul maxim de persoane care pot folosi acest link a fost atins.');
     }
 
@@ -106,7 +109,25 @@ export class SharingService {
     return link;
   }
 
-  // NOU — folosit STRICT pentru crearea unui membru nou. Verifică accesul de
+  // NOU — returnează statusul curent al invitatului: nivelul de acces al
+  // linkului și, dacă e cazul, câți membri mai poate adăuga față de limita
+  // stabilită de proprietar. Folosit de front-end ca să afișeze contorul.
+  async getGuestStatus(token: string, guestToken: string) {
+    const link = await this.getValidShareLink(token);
+    const guest = guestToken
+      ? await this.prisma.shareLinkGuest.findUnique({ where: { guestToken } })
+      : null;
+    if (!guest || guest.shareLinkId !== link.id) {
+      throw new ForbiddenException('Sesiune de acces invalidă. Redeschide linkul primit.');
+    }
+    return {
+      accessLevel: link.accessLevel,
+      maxMembersPerGuest: link.maxMembersPerGuest,
+      membersAddedCount: guest.membersAddedCount,
+    };
+  }
+
+  // folosit STRICT pentru crearea unui membru nou. Verifică accesul de
   // EDIT (ca assertGuestAccess), plus limita per-invitat de membri, apoi
   // incrementează atomic contorul acelui invitat. Dacă limita e null/undefined
   // pe link, nu există restricție — doar accesul EDIT normal se aplică.

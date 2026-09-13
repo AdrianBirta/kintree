@@ -4,11 +4,21 @@ import { useTranslation } from 'react-i18next';
 import {
   Box, Typography, CircularProgress, Alert, Button, Dialog, DialogTitle, DialogContent,
   DialogActions, TextField, MenuItem, Select, FormControl, InputLabel, Autocomplete,
+  ToggleButtonGroup, ToggleButton, Tooltip,
 } from '@mui/material';
+import ViewInArIcon from '@mui/icons-material/ViewInAr';
+import ViewAgendaIcon from '@mui/icons-material/ViewAgenda';
 import { createPublicShareClient, joinShareLink } from '../api/publicShareClient';
 import FamilyTreeCanvas from '../components/tree/FamilyTreeCanvas';
+import FamilyTree3D from '../components/tree/FamilyTree3D';
 import type { FamilyTreeData, FamilyMember } from '../types/family';
 import { dedupeMembers, memberLabel, renderMemberOption } from '../components/common/memberOptionUtils';
+
+interface GuestStatus {
+  accessLevel: 'READ_ONLY' | 'EDIT';
+  maxMembersPerGuest: number | null;
+  membersAddedCount: number;
+}
 
 const GuestSharePage: React.FC = () => {
   const { token } = useParams<{ token: string }>();
@@ -19,12 +29,23 @@ const GuestSharePage: React.FC = () => {
   const [accessLevel, setAccessLevel] = useState<'READ_ONLY' | 'EDIT'>('READ_ONLY');
   const [treeData, setTreeData] = useState<FamilyTreeData | undefined>();
   const [showAddModal, setShowAddModal] = useState(false);
+  const [viewMode, setViewMode] = useState<'2d' | '3d'>('2d');
+
+  // status invitat: câți membri mai poate adăuga față de limita link-ului
+  const [guestStatus, setGuestStatus] = useState<GuestStatus | null>(null);
 
   const loadTree = async () => {
     if (!token) return;
     const client = createPublicShareClient(token);
     const { data } = await client.get<FamilyTreeData>('/tree');
     setTreeData(data);
+  };
+
+  const loadGuestStatus = async () => {
+    if (!token) return;
+    const client = createPublicShareClient(token);
+    const { data } = await client.get<GuestStatus>('/me');
+    setGuestStatus(data);
   };
 
   useEffect(() => {
@@ -34,6 +55,7 @@ const GuestSharePage: React.FC = () => {
         const link = await joinShareLink(token);
         setAccessLevel(link.accessLevel);
         await loadTree();
+        await loadGuestStatus();
         setStatus('ready');
       } catch (err: any) {
         setErrorMessage(err.response?.data?.message || t('guestShare.genericError'));
@@ -59,27 +81,65 @@ const GuestSharePage: React.FC = () => {
     );
   }
 
+  const remainingMembers = guestStatus?.maxMembersPerGuest != null
+    ? Math.max(0, guestStatus.maxMembersPerGuest - guestStatus.membersAddedCount)
+    : null;
+
   return (
     <Box sx={{ height: '100dvh', display: 'flex', flexDirection: 'column' }}>
-      <Box sx={{ p: 2, borderBottom: '1px solid', borderColor: 'divider', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+      <Box sx={{ p: 2, borderBottom: '1px solid', borderColor: 'divider', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 1 }}>
         <Box>
           <Typography sx={{ fontWeight: 800 }}>eArbore</Typography>
-          <Typography variant="caption" color="text.secondary">
+          <Typography variant="caption" color="text.secondary" sx={{ display: 'block' }}>
             {accessLevel === 'EDIT' ? t('guestShare.editBadge') : t('guestShare.readOnlyBadge')}
           </Typography>
+          {accessLevel === 'EDIT' && (
+            <Typography variant="caption" color="text.secondary" sx={{ display: 'block' }}>
+              {remainingMembers != null
+                ? t('guestShare.remainingMembers', { remaining: remainingMembers, max: guestStatus?.maxMembersPerGuest })
+                : t('guestShare.unlimitedMembers')}
+            </Typography>
+          )}
         </Box>
         {accessLevel === 'EDIT' && (
-          <Button variant="contained" onClick={() => setShowAddModal(true)}>{t('guestShare.addMember')}</Button>
+          <Button
+            variant="contained"
+            onClick={() => setShowAddModal(true)}
+            disabled={remainingMembers === 0}
+          >
+            {t('guestShare.addMember')}
+          </Button>
         )}
       </Box>
 
-      <Box sx={{ flex: 1, minHeight: 0 }}>
-        <FamilyTreeCanvas
-          treeData={treeData}
-          direction="top-down"
-          onReorder={() => { /* invitații nu pot reorganiza arborele */ }}
-          onQuickAdd={() => setShowAddModal(true)}
-        />
+      <Box sx={{ flex: 1, minHeight: 0, position: 'relative' }}>
+        {viewMode === '2d' ? (
+          <FamilyTreeCanvas
+            treeData={treeData}
+            direction="top-down"
+            onReorder={() => { /* invitații nu pot reorganiza arborele */ }}
+            onQuickAdd={() => setShowAddModal(true)}
+          />
+        ) : (
+          <FamilyTree3D treeData={treeData} direction="top-down" />
+        )}
+
+        <Box sx={{ position: 'absolute', top: 12, right: 12, zIndex: 10 }}>
+          <ToggleButtonGroup
+            value={viewMode}
+            exclusive
+            size="small"
+            onChange={(_, val) => val && setViewMode(val)}
+            sx={{ bgcolor: 'background.paper', boxShadow: 1, borderRadius: 3 }}
+          >
+            <ToggleButton value="2d" sx={{ borderRadius: 3 }}>
+              <Tooltip title="2D"><ViewAgendaIcon fontSize="small" /></Tooltip>
+            </ToggleButton>
+            <ToggleButton value="3d" sx={{ borderRadius: 3 }}>
+              <Tooltip title="3D"><ViewInArIcon fontSize="small" /></Tooltip>
+            </ToggleButton>
+          </ToggleButtonGroup>
+        </Box>
       </Box>
 
       {showAddModal && token && (
@@ -90,6 +150,7 @@ const GuestSharePage: React.FC = () => {
           onCreated={async () => {
             setShowAddModal(false);
             await loadTree();
+            await loadGuestStatus();
           }}
         />
       )}

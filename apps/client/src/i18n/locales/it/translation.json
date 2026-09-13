@@ -414,6 +414,8 @@
   "guestShare": {
     "readOnlyBadge": "Accesso in sola visualizzazione",
     "editBadge": "Puoi aggiungere membri",
+    "remainingMembers": "Puoi ancora aggiungere {{remaining}}/{{max}} membri",
+    "unlimitedMembers": "Puoi aggiungere membri illimitati",
     "addMember": "Aggiungi membro",
     "genericError": "Si è verificato un errore."
   },

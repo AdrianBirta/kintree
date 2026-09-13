@@ -414,6 +414,8 @@
   "guestShare": {
     "readOnlyBadge": "Acces doar de vizualizare",
     "editBadge": "Poți adăuga membri",
+    "remainingMembers": "Mai poți adăuga {{remaining}}/{{max}} membri",
+    "unlimitedMembers": "Poți adăuga membri nelimitat",
     "addMember": "Adaugă membru",
     "genericError": "A apărut o eroare."
   },
