@@ -17,15 +17,18 @@ import FamilyTree3D from '../components/tree/FamilyTree3D';
 import { useTreeQuery } from '../hooks/queries/useFamilyQueries';
 import { useReorderMembers } from '../hooks/queries/useFamilyMutations';
 import { useTranslation } from 'react-i18next';
+import { usePermissions } from '../hooks/usePermissions'; // NOU
 
 const DashboardPage: React.FC = () => {
   const { t } = useTranslation();
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
 
-  // NOU — arborele vine din React Query, nu mai din useState + useEffect
-  // local. Dacă altă pagină (sau Header-ul) l-a cerut deja recent, aici se
-  // afișează instant din cache, fără alt request.
+  // NOU — hook-ul TREBUIE apelat aici, la nivelul de sus al componentei,
+  // alături de celelalte hook-uri (useTreeQuery, useState etc.), NICIODATĂ
+  // în interiorul unui callback/handler sau în afara componentei.
+  const { canEdit } = usePermissions();
+
   const { data: treeData, isLoading } = useTreeQuery();
   const reorderMutation = useReorderMembers();
 
@@ -70,25 +73,25 @@ const DashboardPage: React.FC = () => {
             <Typography variant="body2" color="text.secondary" sx={{ mb: 3, maxWidth: 380 }}>
               {t('dashboard.emptyDesc')}
             </Typography>
-            <Button variant="contained" startIcon={<AddIcon />} onClick={() => setShowAddModal(true)}>
-              {t('dashboard.addFirstMember')}
-            </Button>
+            {canEdit && (
+              <Button variant="contained" startIcon={<AddIcon />} onClick={() => setShowAddModal(true)}>
+                {t('dashboard.addFirstMember')}
+              </Button>
+            )}
           </Box>
         ) : (
           <>
             {viewMode === '2d' ? (
               <FamilyTreeCanvas
                 treeData={treeData}
-                onReorder={handleReorder}
+                onReorder={canEdit ? handleReorder : () => { }}
                 direction={direction}
-                onQuickAdd={handleQuickAdd}
+                onQuickAdd={canEdit ? handleQuickAdd : () => { }}
               />
             ) : (
               <FamilyTree3D treeData={treeData} direction={direction} />
             )}
 
-            {/* pe mobil, butoanele devin doar-iconiță (cu tooltip), se
-                înghesuie compact și fac wrap dacă spațiul e insuficient */}
             <Box
               sx={{
                 position: 'absolute',
@@ -138,31 +141,35 @@ const DashboardPage: React.FC = () => {
                   </ToggleButton>
                 </ToggleButtonGroup>
 
-                {isMobile ? (
-                  <Tooltip title={t('dashboard.linkPartners')}>
-                    <IconButton onClick={() => setShowPartnerModal(true)} sx={{ bgcolor: 'background.paper', boxShadow: 1 }}>
-                      <FavoriteIcon fontSize="small" color="primary" />
-                    </IconButton>
-                  </Tooltip>
-                ) : (
-                  <Button variant="outlined" startIcon={<FavoriteIcon />} onClick={() => setShowPartnerModal(true)} sx={{ bgcolor: 'background.paper', boxShadow: 1 }}>
-                    {t('dashboard.linkPartners')}
-                  </Button>
+                {canEdit && (
+                  isMobile ? (
+                    <Tooltip title={t('dashboard.linkPartners')}>
+                      <IconButton onClick={() => setShowPartnerModal(true)} sx={{ bgcolor: 'background.paper', boxShadow: 1 }}>
+                        <FavoriteIcon fontSize="small" color="primary" />
+                      </IconButton>
+                    </Tooltip>
+                  ) : (
+                    <Button variant="outlined" startIcon={<FavoriteIcon />} onClick={() => setShowPartnerModal(true)} sx={{ bgcolor: 'background.paper', boxShadow: 1 }}>
+                      {t('dashboard.linkPartners')}
+                    </Button>
+                  )
                 )}
 
-                {isMobile ? (
-                  <Tooltip title={t('dashboard.addMember')}>
-                    <IconButton
-                      onClick={() => setShowAddModal(true)}
-                      sx={{ bgcolor: 'primary.main', color: 'white', boxShadow: 1, '&:hover': { bgcolor: 'primary.dark' } }}
-                    >
-                      <AddIcon fontSize="small" />
-                    </IconButton>
-                  </Tooltip>
-                ) : (
-                  <Button variant="contained" startIcon={<AddIcon />} onClick={() => setShowAddModal(true)} sx={{ boxShadow: 1 }}>
-                    {t('dashboard.addMember')}
-                  </Button>
+                {canEdit && (
+                  isMobile ? (
+                    <Tooltip title={t('dashboard.addMember')}>
+                      <IconButton
+                        onClick={() => setShowAddModal(true)}
+                        sx={{ bgcolor: 'primary.main', color: 'white', boxShadow: 1, '&:hover': { bgcolor: 'primary.dark' } }}
+                      >
+                        <AddIcon fontSize="small" />
+                      </IconButton>
+                    </Tooltip>
+                  ) : (
+                    <Button variant="contained" startIcon={<AddIcon />} onClick={() => setShowAddModal(true)} sx={{ boxShadow: 1 }}>
+                      {t('dashboard.addMember')}
+                    </Button>
+                  )
                 )}
               </Stack>
             </Box>
@@ -170,7 +177,7 @@ const DashboardPage: React.FC = () => {
         )}
       </Box>
 
-      {showAddModal && (
+      {showAddModal && canEdit && (
         <AddMemberModal
           members={treeData?.members ?? []}
           initialRelation={quickAddRelation}
@@ -180,7 +187,7 @@ const DashboardPage: React.FC = () => {
         />
       )}
 
-      {showPartnerModal && (
+      {showPartnerModal && canEdit && (
         <LinkPartnersModal
           members={treeData?.members ?? []}
           onClose={() => setShowPartnerModal(false)}

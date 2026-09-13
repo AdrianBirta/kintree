@@ -1,11 +1,15 @@
-// Chei de query centralizate pentru toate datele legate de familie (arbore,
-// listă de membri, un membru anume, membrul marcat ca "eu"). Orice hook de
-// query sau de mutație din aplicație folosește DOAR aceste chei — niciodată
-// stringuri scrise de mână — ca invalidarea să rămână corectă peste tot.
+import { getActiveTreeOwnerId } from '../store/activeTreeStore';
+
+// NOU — includem ownerId-ul activ ('own' dacă e arborele propriu) în cheie,
+// ca să nu se amestece cache-ul între arbori diferite când comuți între ele
+function scope() {
+  return getActiveTreeOwnerId() ?? 'own';
+}
+
 export const familyKeys = {
   all: ['family'] as const,
-  tree: () => [...familyKeys.all, 'tree'] as const,
-  members: () => [...familyKeys.all, 'members'] as const,
-  memberDetail: (id: string) => [...familyKeys.all, 'member', id] as const,
-  self: () => [...familyKeys.all, 'self'] as const,
+  tree: () => [...familyKeys.all, scope(), 'tree'] as const,
+  members: () => [...familyKeys.all, scope(), 'members'] as const,
+  memberDetail: (id: string) => [...familyKeys.all, scope(), 'member', id] as const,
+  self: () => [...familyKeys.all, 'self'] as const, // self nu depinde de arborele activ
 };

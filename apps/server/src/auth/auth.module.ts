@@ -6,9 +6,10 @@ import { AuthController } from './auth.controller';
 import { UsersModule } from '../users/users.module';
 import { JwtAccessStrategy } from './strategies/jwt-access.strategy';
 import { JwtRefreshStrategy } from './strategies/jwt-refresh.strategy';
+import { InvitesModule } from 'src/invites/invites.module';
 
 @Module({
-  imports: [UsersModule, PassportModule, JwtModule.register({})],
+  imports: [UsersModule, PassportModule, JwtModule.register({}), InvitesModule],
   controllers: [AuthController],
   providers: [AuthService, JwtAccessStrategy, JwtRefreshStrategy],
 })

@@ -5,6 +5,7 @@ import { UsersService } from '../users/users.service';
 import { RegisterDto } from './dto/register.dto';
 import { LoginDto } from './dto/login.dto';
 import { Role } from '@prisma/client';
+import { InvitesService } from 'src/invites/invites.service';
 
 // convertește un string gen "15m", "7d", "1h" în milisecunde, ca să calculăm expiresAt
 function parseDurationToMs(duration: string): number {
@@ -21,6 +22,7 @@ export class AuthService {
   constructor(
     private usersService: UsersService,
     private jwtService: JwtService,
+    private invitesService: InvitesService,
   ) { }
 
   private async generateTokens(userId: string, email: string, role: Role) {
@@ -65,6 +67,12 @@ export class AuthService {
       lastName: dto.lastName,
       role,
     });
+
+    // NOU — dacă venim dintr-un link de invitație, doar marcăm invitația
+    // ca folosită. Intenționat NU se creează niciun TreeAccess aici.
+    if (dto.inviteToken) {
+      await this.invitesService.consumeInvite(dto.inviteToken, user.id);
+    }
 
     const tokens = await this.generateTokens(user.id, user.email, user.role);
     await this.storeRefreshToken(user.id, tokens.refreshToken);

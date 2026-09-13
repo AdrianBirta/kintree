@@ -18,7 +18,7 @@ interface AuthState {
   error: string | null;
 
   login: (email: string, password: string) => Promise<void>;
-  register: (data: { email: string; password: string; firstName: string; lastName: string }) => Promise<void>;
+  register: (data: { email: string; password: string; firstName: string; lastName: string; inviteToken?: string }) => Promise<void>;
   logout: () => Promise<void>;
   fetchCurrentUser: () => Promise<void>;
   clearError: () => void;

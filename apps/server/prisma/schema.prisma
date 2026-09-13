@@ -31,6 +31,12 @@ model User {
   selfMemberId String?       @unique
   selfMember   FamilyMember? @relation("SelfMember", fields: [selfMemberId], references: [id], onDelete: SetNull)
 
+  ownedShareLinks    ShareLink[]  @relation("OwnedShareLinks")
+  ownedTreeAccess    TreeAccess[] @relation("OwnedTreeAccess")
+  receivedTreeAccess TreeAccess[] @relation("ReceivedTreeAccess")
+  sentInvites        AppInvite[]  @relation("SentInvites")
+  acceptedInvite     AppInvite?   @relation("AcceptedInvites")
+
   @@map("users")
 }
 
@@ -144,4 +150,71 @@ enum PartnershipStatus {
   DIVORCED
   PARTNER
   WIDOWED
+}
+
+enum ShareAccessLevel {
+  READ_ONLY
+  EDIT
+}
+
+model ShareLink {
+  id                 String           @id @default(uuid())
+  token              String           @unique
+  owner              User             @relation("OwnedShareLinks", fields: [ownerId], references: [id], onDelete: Cascade)
+  ownerId            String
+  accessLevel        ShareAccessLevel @default(READ_ONLY)
+  label              String?
+  expiresAt          DateTime?
+  maxUses            Int?
+  usesCount          Int              @default(0)
+  maxMembersPerGuest Int? // NOU — null = nelimitat
+  revoked            Boolean          @default(false)
+  createdAt          DateTime         @default(now())
+  guests             ShareLinkGuest[]
+
+  @@map("share_links")
+}
+
+model ShareLinkGuest {
+  id                String    @id @default(uuid())
+  shareLink         ShareLink @relation(fields: [shareLinkId], references: [id], onDelete: Cascade)
+  shareLinkId       String
+  guestToken        String    @unique
+  displayName       String?
+  membersAddedCount Int       @default(0) // NOU
+  createdAt         DateTime  @default(now())
+  lastUsedAt        DateTime  @default(now())
+
+  @@map("share_link_guests")
+}
+
+model TreeAccess {
+  id          String           @id @default(uuid())
+  owner       User             @relation("OwnedTreeAccess", fields: [ownerId], references: [id], onDelete: Cascade)
+  ownerId     String
+  grantee     User             @relation("ReceivedTreeAccess", fields: [granteeId], references: [id], onDelete: Cascade)
+  granteeId   String
+  accessLevel ShareAccessLevel @default(READ_ONLY)
+  expiresAt   DateTime?
+  revoked     Boolean          @default(false)
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
+
+  @@unique([ownerId, granteeId])
+  @@map("tree_access")
+}
+
+model AppInvite {
+  id           String    @id @default(uuid())
+  token        String    @unique
+  inviter      User      @relation("SentInvites", fields: [inviterId], references: [id], onDelete: Cascade)
+  inviterId    String
+  email        String?
+  expiresAt    DateTime?
+  usedAt       DateTime?
+  usedByUser   User?     @relation("AcceptedInvites", fields: [usedByUserId], references: [id], onDelete: SetNull)
+  usedByUserId String?   @unique
+  createdAt    DateTime  @default(now())
+
+  @@map("app_invites")
 }

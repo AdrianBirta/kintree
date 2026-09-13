@@ -7,9 +7,10 @@ import VisibilityOffIcon from '@mui/icons-material/VisibilityOff';
 
 interface Props {
   onGoLogin: () => void;
+  inviteToken?: string;
 }
 
-const RegisterForm: React.FC<Props> = ({ onGoLogin }) => {
+const RegisterForm: React.FC<Props> = ({ onGoLogin, inviteToken }) => {
   const { t } = useTranslation();
   const [formData, setFormData] = useState({ firstName: '', lastName: '', email: '', password: '' });
   const [showPassword, setShowPassword] = useState(false);
@@ -22,7 +23,7 @@ const RegisterForm: React.FC<Props> = ({ onGoLogin }) => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      await register(formData);
+      await register({ ...formData, inviteToken });
     } catch {
       // eroarea e deja în store
     }
