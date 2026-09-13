@@ -12,6 +12,8 @@ import it from './locales/it/translation.json';
 export const SUPPORTED_LANGUAGES = ['ro', 'en', 'hu', 'fr', 'de', 'es', 'it'] as const;
 export type SupportedLanguage = (typeof SUPPORTED_LANGUAGES)[number];
 
+export const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000').replace(/\/+$/, '');
+
 const STORAGE_KEY = 'earbore-language';
 
 function detectInitialLanguage(): SupportedLanguage {
