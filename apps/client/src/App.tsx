@@ -12,6 +12,7 @@ import PublicRoute from './components/auth/PublicRoute';
 import GuestSharePage from './pages/GuestSharePage';
 import TreesPage from './pages/TreesPage';
 import MessagesPage from './pages/MessagesPage';
+import BrandedLoader from './components/common/BrandedLoader';
 
 function App() {
   const fetchCurrentUser = useAuthStore((s) => s.fetchCurrentUser);
@@ -21,13 +22,7 @@ function App() {
     fetchCurrentUser();
   }, [fetchCurrentUser]);
 
-  if (isLoading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="w-8 h-8 border-4 border-earbore-200 border-t-earbore-600 rounded-full animate-spin" />
-      </div>
-    );
-  }
+  if (isLoading) return <BrandedLoader />;
 
   return (
     <BrowserRouter>

@@ -124,7 +124,10 @@ const Header: React.FC = () => {
       <header className="w-full border-b border-earbore-border bg-white/90 backdrop-blur-sm sticky top-0 z-30">
         <div className="px-3 sm:px-6 py-2.5 sm:py-3 flex items-center justify-between gap-2">
           <button onClick={() => navigate('/dashboard')} className="flex items-center gap-2 cursor-pointer flex-shrink-0">
-            <span className="text-lg sm:text-xl font-extrabold text-earbore-700">eArbore</span>
+            <img src="/assets/favicon.svg" alt="" className="h-7 w-7" />
+            {!isCompactNav && (
+              <span className="text-lg sm:text-xl font-extrabold text-earbore-700">eArbore</span>
+            )}
           </button>
 
           <div className="flex items-center gap-1 sm:gap-2 min-w-0">

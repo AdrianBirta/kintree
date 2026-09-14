@@ -13,6 +13,7 @@ import FamilyTreeCanvas from '../components/tree/FamilyTreeCanvas';
 import FamilyTree3D from '../components/tree/FamilyTree3D';
 import type { FamilyTreeData, FamilyMember } from '../types/family';
 import { dedupeMembers, memberLabel, renderMemberOption } from '../components/common/memberOptionUtils';
+import BrandedLoader from '../components/common/BrandedLoader';
 
 interface GuestStatus {
   accessLevel: 'READ_ONLY' | 'EDIT';
@@ -67,9 +68,7 @@ const GuestSharePage: React.FC = () => {
 
   if (status === 'loading') {
     return (
-      <Box sx={{ height: '100dvh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-        <CircularProgress />
-      </Box>
+      <BrandedLoader fullScreen={false} />
     );
   }
 
@@ -89,7 +88,10 @@ const GuestSharePage: React.FC = () => {
     <Box sx={{ height: '100dvh', display: 'flex', flexDirection: 'column' }}>
       <Box sx={{ p: 2, borderBottom: '1px solid', borderColor: 'divider', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 1 }}>
         <Box>
-          <Typography sx={{ fontWeight: 800 }}>eArbore</Typography>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+            <Box component="img" src="/assets/favicon.svg" alt="" sx={{ width: 22, height: 22 }} />
+            <Typography sx={{ fontWeight: 800 }}>eArbore</Typography>
+          </Box>
           <Typography variant="caption" color="text.secondary" sx={{ display: 'block' }}>
             {accessLevel === 'EDIT' ? t('guestShare.editBadge') : t('guestShare.readOnlyBadge')}
           </Typography>

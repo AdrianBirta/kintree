@@ -266,6 +266,26 @@
     "badge": "100% gratis · sin tarjeta · para siempre",
     "heroTitle1": "Las historias de tu familia no deberían",
     "heroTitleHighlight": "desaparecer",
+    "shareBadge": "Compartir sin fricción",
+    "shareTitle": "No tienes que hacerlo todo solo",
+    "shareBody": "Envías un enlace, y el resto de la familia completa el árbol contigo — sin cuenta, sin contraseña, sin complicaciones. Tú decides exactamente cuánto pueden ver o cambiar.",
+    "shareFeature1Title": "Enlaces, no invitaciones complicadas",
+    "shareFeature1Desc": "Generas un enlace en 10 segundos, lo envías por WhatsApp, y cualquiera que lo abra puede ver el árbol — o añadir miembros, si le das acceso de edición.",
+    "shareFeature2Title": "Control total sobre el acceso",
+    "shareFeature2Desc": "Decides cuántas personas pueden usar el enlace, cuántos miembros puede añadir cada una, y por cuánto tiempo permanece activo. Revoca el acceso cuando quieras, con un clic.",
+    "messagingBadge": "Toda la familia, en un solo lugar",
+    "messagingTitle": "Habla con la familia, directamente desde eArbore",
+    "messagingBody": "Una vez que has compartido el árbol con alguien, puedes escribirle directamente desde la aplicación — sin tener que buscar en 5 grupos de WhatsApp una fecha de nacimiento o una foto antigua.",
+    "messagingFeature1Title": "Conversaciones individuales y grupales",
+    "messagingFeature1Desc": "Escribe directamente a los familiares con los que has compartido el árbol, o crea un grupo para toda la rama familiar que colabora en completarlo.",
+    "messagingFeature2Title": "Ve cuándo se ha leído",
+    "messagingFeature2Desc": "Confirmaciones de lectura simples — sabes cuándo tu familiar ha visto la foto o la pregunta que le enviaste, sin presión innecesaria.",
+    "faq5Q": "¿Puedo invitar a familiares sin que creen una cuenta?",
+    "faq5A": "Sí — generas un enlace para compartir, lo envías, y esa persona puede ver o completar el árbol directamente, sin cuenta ni contraseña. Tú controlas lo que puede hacer.",
+    "faq6Q": "¿Puedo hablar con los familiares directamente desde la aplicación?",
+    "faq6A": "Sí — una vez que has compartido el árbol con un familiar (por enlace o cuenta), puedes enviarle mensajes directamente desde eArbore, en una conversación privada o en grupo.",
+    "finalCtaTitle": "Dentro de 10 años, alguien de tu familia querrá ver exactamente lo que estás construyendo hoy.",
+    "finalCtaSubtitle": "Empezar no cuesta nada. No hacerlo a tiempo lo cuesta todo.",
     "heroSubtitle": "Añade abuelos, padres, hijos — con fotos e historias — y observa cómo toda tu familia cobra vida en un árbol genealógico que puedes construir en minutos.",
     "ctaBuildFree": "Construye tu árbol gratis →",
     "ctaSeeHowItWorks": "Ver cómo funciona",
@@ -316,8 +336,6 @@
     "faq3A": "Sí, puedes marcar a un miembro como fallecido y conservar su historia, fotos y datos — igual que cualquier otro miembro.",
     "faq4Q": "¿Qué tan grande puede llegar a ser el árbol?",
     "faq4A": "No hay un límite artificial — puedes añadir tantas generaciones y parientes como necesites.",
-    "finalCtaTitle": "Empieza hoy. Tu familia merece ser recordada.",
-    "finalCtaSubtitle": "Sin tarjeta. Sin suscripción. Listo en menos de un minuto.",
     "footer": "Todos los derechos reservados."
   },
   "auth": {
@@ -464,5 +482,11 @@
     "de": "Alemán",
     "es": "Español",
     "it": "Italiano"
+  },
+  "landingPreview": {
+    "grandparent": "Abuelo/a",
+    "parent": "Padre/Madre",
+    "you": "Tú",
+    "child": "Hijo/a"
   }
 }

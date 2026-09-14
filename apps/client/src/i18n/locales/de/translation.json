@@ -266,6 +266,26 @@
     "badge": "100% kostenlos · keine Karte nötig · für immer",
     "heroTitle1": "Die Geschichten Ihrer Familie sollten nicht",
     "heroTitleHighlight": "verschwinden",
+    "shareBadge": "Reibungsloses Teilen",
+    "shareTitle": "Du musst das nicht allein machen",
+    "shareBody": "Schick einen Link, und der Rest der Familie füllt den Stammbaum gemeinsam mit dir aus — ohne Konto, ohne Passwort, ohne Aufwand. Du entscheidest genau, wie viel sie sehen oder ändern können.",
+    "shareFeature1Title": "Links statt komplizierter Einladungen",
+    "shareFeature1Desc": "Erstelle einen Link in 10 Sekunden, schick ihn per WhatsApp, und jeder, der ihn öffnet, kann den Stammbaum ansehen — oder Mitglieder hinzufügen, wenn du Bearbeitungsrechte gibst.",
+    "shareFeature2Title": "Volle Kontrolle über den Zugriff",
+    "shareFeature2Desc": "Du legst fest, wie viele Personen den Link nutzen können, wie viele Mitglieder jede hinzufügen darf, und wie lange er aktiv bleibt. Zugriff jederzeit mit einem Klick widerrufbar.",
+    "messagingBadge": "Die ganze Familie an einem Ort",
+    "messagingTitle": "Chatte mit der Familie, direkt in eArbore",
+    "messagingBody": "Sobald du den Stammbaum mit jemandem geteilt hast, kannst du direkt in der App mit ihm oder ihr sprechen — kein Durchsuchen mehr von 5 WhatsApp-Gruppen für ein Geburtsdatum oder ein altes Foto.",
+    "messagingFeature1Title": "Einzel- und Gruppenchats",
+    "messagingFeature1Desc": "Schreibe direkt an Verwandte, mit denen du den Stammbaum geteilt hast, oder erstelle eine Gruppe für den ganzen Familienzweig, der mithilft.",
+    "messagingFeature2Title": "Sieh, wann gelesen wurde",
+    "messagingFeature2Desc": "Einfache Lesebestätigungen — du weißt, wann dein Verwandter das Foto oder die Frage gesehen hat, ohne unnötigen Druck.",
+    "faq5Q": "Kann ich Verwandte einladen, ohne dass sie ein Konto erstellen?",
+    "faq5A": "Ja — du erstellst einen Freigabelink, schickst ihn, und die Person kann den Stammbaum direkt ansehen oder ausfüllen, ohne Konto und Passwort. Du bestimmst, was erlaubt ist.",
+    "faq6Q": "Kann ich direkt aus der App mit Verwandten sprechen?",
+    "faq6A": "Ja — sobald du den Stammbaum mit einem Verwandten geteilt hast (per Link oder Konto), kannst du direkt aus eArbore Nachrichten senden, privat oder in einer Gruppe.",
+    "finalCtaTitle": "In 10 Jahren wird jemand aus deiner Familie genau sehen wollen, was du heute aufbaust.",
+    "finalCtaSubtitle": "Der Anfang kostet nichts. Es nicht rechtzeitig zu tun, kostet alles.",
     "heroSubtitle": "Fügen Sie Großeltern, Eltern, Kinder hinzu — mit Fotos und Geschichten — und sehen Sie, wie Ihre ganze Familie in einem Stammbaum zum Leben erwacht, den Sie in Minuten erstellen können.",
     "ctaBuildFree": "Erstellen Sie Ihren Stammbaum kostenlos →",
     "ctaSeeHowItWorks": "So funktioniert's ansehen",
@@ -316,8 +336,6 @@
     "faq3A": "Ja, Sie können ein Mitglied als verstorben markieren und dessen Geschichte, Fotos und Daten behalten — genau wie bei jedem anderen Mitglied.",
     "faq4Q": "Wie groß kann der Stammbaum werden?",
     "faq4A": "Es gibt keine künstliche Grenze — Sie können so viele Generationen und Verwandte hinzufügen, wie Sie benötigen.",
-    "finalCtaTitle": "Beginnen Sie noch heute. Ihre Familie verdient es, in Erinnerung zu bleiben.",
-    "finalCtaSubtitle": "Keine Karte. Kein Abonnement. In weniger als einer Minute bereit.",
     "footer": "Alle Rechte vorbehalten."
   },
   "auth": {
@@ -464,5 +482,11 @@
     "de": "Deutsch",
     "es": "Spanisch",
     "it": "Italienisch"
+  },
+  "landingPreview": {
+    "grandparent": "Großelternteil",
+    "parent": "Elternteil",
+    "you": "Du",
+    "child": "Kind"
   }
 }

@@ -4,7 +4,7 @@ import { useTranslation } from 'react-i18next';
 import LandingHeader from '../components/layout/LandingHeader';
 import TreePreviewSvg from '../components/landing/TreePreviewSvg';
 
-const DONATE_URL = 'https://buymeacoffee.com/earbore'; // TODO: înlocuiește cu link-ul tău real (Stripe Payment Link / BMC / Ko-fi)
+const DONATE_URL = 'https://buymeacoffee.com/earbore'; // TODO: înlocuiește cu link-ul tău real
 
 const LandingPage: React.FC = () => {
   const navigate = useNavigate();
@@ -46,7 +46,6 @@ const LandingPage: React.FC = () => {
             {t('landing.heroFootnote')}
           </p>
 
-          {/* mockup vizual simplu */}
           <div className="mt-14 max-w-3xl mx-auto rounded-3xl border border-earbore-border bg-white shadow-xl p-3 sm:p-4">
             <div className="rounded-2xl h-64 sm:h-80 overflow-hidden">
               <TreePreviewSvg />
@@ -68,7 +67,7 @@ const LandingPage: React.FC = () => {
       </section>
 
       {/* ───────────── VALUE STACK / FUNCȚIONALITĂȚI ───────────── */}
-      <section id="functionalitati" className="py-20 scroll-mt-24">
+      <section id="functionalitati" className="py-20 scroll-mt-18">
         <div className="max-w-6xl mx-auto px-6">
           <div className="text-center mb-14">
             <h2 className="text-3xl font-extrabold text-earbore-ink mb-3">
@@ -89,7 +88,7 @@ const LandingPage: React.FC = () => {
       </section>
 
       {/* ───────────── CUM FUNCȚIONEAZĂ ───────────── */}
-      <section id="cum-functioneaza" className="bg-white border-y border-earbore-border py-20 scroll-mt-24">
+      <section id="cum-functioneaza" className="bg-white border-y border-earbore-border py-20 scroll-mt-18">
         <div className="max-w-4xl mx-auto px-6">
           <h2 className="text-3xl font-extrabold text-earbore-ink text-center mb-14">
             {t('landing.howTitle')}
@@ -98,6 +97,48 @@ const LandingPage: React.FC = () => {
             <Step number="1" title={t('landing.step1Title')} desc={t('landing.step1Desc')} />
             <Step number="2" title={t('landing.step2Title')} desc={t('landing.step2Desc')} />
             <Step number="3" title={t('landing.step3Title')} desc={t('landing.step3Desc')} />
+          </div>
+        </div>
+      </section>
+
+      {/* ───────────── DISTRIBUIRE — link-uri + conturi ───────────── */}
+      <section className="py-20">
+        <div className="max-w-6xl mx-auto px-6 grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
+          <div>
+            <span className="inline-block bg-earbore-100 text-earbore-700 text-xs font-semibold px-3 py-1.5 rounded-full mb-5 tracking-wide uppercase">
+              {t('landing.shareBadge')}
+            </span>
+            <h2 className="text-3xl font-extrabold text-earbore-ink mb-4">{t('landing.shareTitle')}</h2>
+            <p className="text-earbore-gray text-base leading-relaxed mb-8">{t('landing.shareBody')}</p>
+
+            <div className="flex flex-col gap-5">
+              <ShareFeatureRow emoji="🔗" title={t('landing.shareFeature1Title')} desc={t('landing.shareFeature1Desc')} />
+              <ShareFeatureRow emoji="🎛️" title={t('landing.shareFeature2Title')} desc={t('landing.shareFeature2Desc')} />
+            </div>
+          </div>
+
+          <ShareLinkMockup />
+        </div>
+      </section>
+
+      {/* ───────────── MESAGERIE ───────────── */}
+      <section className="bg-white border-y border-earbore-border py-20">
+        <div className="max-w-6xl mx-auto px-6 grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
+          <div className="order-2 lg:order-1">
+            <ChatMockup />
+          </div>
+
+          <div className="order-1 lg:order-2">
+            <span className="inline-block bg-earbore-100 text-earbore-700 text-xs font-semibold px-3 py-1.5 rounded-full mb-5 tracking-wide uppercase">
+              {t('landing.messagingBadge')}
+            </span>
+            <h2 className="text-3xl font-extrabold text-earbore-ink mb-4">{t('landing.messagingTitle')}</h2>
+            <p className="text-earbore-gray text-base leading-relaxed mb-8">{t('landing.messagingBody')}</p>
+
+            <div className="flex flex-col gap-5">
+              <ShareFeatureRow emoji="💬" title={t('landing.messagingFeature1Title')} desc={t('landing.messagingFeature1Desc')} />
+              <ShareFeatureRow emoji="✓✓" title={t('landing.messagingFeature2Title')} desc={t('landing.messagingFeature2Desc')} />
+            </div>
           </div>
         </div>
       </section>
@@ -117,7 +158,7 @@ const LandingPage: React.FC = () => {
       </section>
 
       {/* ───────────── SUSȚINE PROIECTUL (donații) ───────────── */}
-      <section id="sustine" className="py-20 bg-earbore-ink scroll-mt-24">
+      <section id="sustine" className="py-20 bg-earbore-ink scroll-mt-18">
         <div className="max-w-4xl mx-auto px-6 text-center">
           <span className="inline-block bg-white/10 text-white text-xs font-semibold px-3 py-1.5 rounded-full mb-6 tracking-wide uppercase">
             {t('landing.supportBadge')}
@@ -142,7 +183,7 @@ const LandingPage: React.FC = () => {
       </section>
 
       {/* ───────────── FAQ ───────────── */}
-      <section id="intrebari" className="py-20 scroll-mt-24">
+      <section id="intrebari" className="py-20 scroll-mt-18">
         <div className="max-w-3xl mx-auto px-6">
           <h2 className="text-3xl font-extrabold text-earbore-ink text-center mb-12">{t('landing.faqTitle')}</h2>
           <div className="flex flex-col gap-4">
@@ -150,6 +191,8 @@ const LandingPage: React.FC = () => {
             <FaqItem q={t('landing.faq2Q')} a={t('landing.faq2A')} />
             <FaqItem q={t('landing.faq3Q')} a={t('landing.faq3A')} />
             <FaqItem q={t('landing.faq4Q')} a={t('landing.faq4A')} />
+            <FaqItem q={t('landing.faq5Q')} a={t('landing.faq5A')} />
+            <FaqItem q={t('landing.faq6Q')} a={t('landing.faq6A')} />
           </div>
         </div>
       </section>
@@ -170,7 +213,10 @@ const LandingPage: React.FC = () => {
       </section>
 
       <footer className="border-t border-earbore-border py-6 text-center text-sm text-earbore-gray bg-earbore-grayLight">
-        © {new Date().getFullYear()} eArbore. {t('landing.footer')}
+        <div className="flex items-center justify-center gap-1.5">
+          <img src="/assets/favicon.svg" alt="" className="h-4 w-4 opacity-70" />
+          <span>© {new Date().getFullYear()} eArbore. {t('landing.footer')}</span>
+        </div>
       </footer>
     </div>
   );
@@ -194,6 +240,51 @@ const Step: React.FC<{ number: string; title: string; desc: string }> = ({ numbe
     </div>
     <h3 className="font-bold text-earbore-ink mb-1.5">{title}</h3>
     <p className="text-sm text-earbore-gray leading-relaxed">{desc}</p>
+  </div>
+);
+
+const ShareFeatureRow: React.FC<{ emoji: string; title: string; desc: string }> = ({ emoji, title, desc }) => (
+  <div className="flex items-start gap-3.5">
+    <div className="w-10 h-10 rounded-xl bg-earbore-100 flex items-center justify-center text-lg flex-shrink-0">
+      {emoji}
+    </div>
+    <div>
+      <p className="font-bold text-earbore-ink mb-0.5">{title}</p>
+      <p className="text-sm text-earbore-gray leading-relaxed">{desc}</p>
+    </div>
+  </div>
+);
+
+// mockup vizual — un "card" simplificat al modalului de distribuire, doar decorativ
+const ShareLinkMockup: React.FC = () => (
+  <div className="bg-white rounded-3xl border border-earbore-border shadow-xl p-6 sm:p-8">
+    <div className="flex items-center gap-2 mb-5">
+      <span className="text-lg">🔗</span>
+      <span className="font-bold text-earbore-ink text-sm">earbore.ro/share/8f2a91c...</span>
+    </div>
+    <div className="flex flex-col gap-2.5">
+      <div className="h-9 rounded-lg bg-earbore-grayLight border border-earbore-border" />
+      <div className="h-9 rounded-lg bg-earbore-grayLight border border-earbore-border w-3/4" />
+    </div>
+    <div className="flex items-center justify-between mt-5 pt-5 border-t border-earbore-border">
+      <span className="text-xs font-semibold text-earbore-success bg-earbore-success/10 px-2.5 py-1 rounded-full">Activ</span>
+      <span className="text-xs text-earbore-gray">3/5 persoane</span>
+    </div>
+  </div>
+);
+
+// mockup vizual — bule de chat, doar decorativ
+const ChatMockup: React.FC = () => (
+  <div className="bg-white rounded-3xl border border-earbore-border shadow-xl p-6 sm:p-8 flex flex-col gap-3">
+    <div className="self-start max-w-[75%] bg-earbore-grayLight rounded-2xl rounded-bl-md px-4 py-2.5 text-sm text-earbore-ink">
+      Ai poza cu bunicul la nuntă?
+    </div>
+    <div className="self-end max-w-[75%] rounded-2xl rounded-br-md px-4 py-2.5 text-sm text-white" style={{ background: 'linear-gradient(135deg, var(--color-earbore-600), var(--color-earbore-500))' }}>
+      Da! O adaug acum în arbore ✓✓
+    </div>
+    <div className="self-start max-w-[60%] bg-earbore-grayLight rounded-2xl rounded-bl-md px-4 py-2.5 text-sm text-earbore-ink">
+      Perfect 🙌
+    </div>
   </div>
 );
 

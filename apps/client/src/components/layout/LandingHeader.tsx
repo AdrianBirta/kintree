@@ -66,6 +66,7 @@ const LandingHeader: React.FC = () => {
       autentificare+limbă+buton). */}
           <div className="flex-1 flex items-center">
             <button onClick={() => navigate('/')} className="flex items-center gap-2 cursor-pointer flex-shrink-0">
+              <img src="/assets/favicon.svg" alt="" className="h-7 w-7 sm:h-8 sm:w-8" />
               <span className="text-lg sm:text-xl font-extrabold text-earbore-700">eArbore</span>
             </button>
           </div>

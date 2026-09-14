@@ -18,6 +18,7 @@ import { useTreeQuery } from '../hooks/queries/useFamilyQueries';
 import { useReorderMembers } from '../hooks/queries/useFamilyMutations';
 import { useTranslation } from 'react-i18next';
 import { usePermissions } from '../hooks/usePermissions'; // NOU
+import BrandedLoader from '../components/common/BrandedLoader';
 
 const DashboardPage: React.FC = () => {
   const { t } = useTranslation();
@@ -64,11 +65,10 @@ const DashboardPage: React.FC = () => {
 
       <Box sx={{ flex: 1, position: 'relative', minHeight: 0 }}>
         {isLoading ? (
-          <Box sx={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            <CircularProgress />
-          </Box>
+          <BrandedLoader fullScreen={false} />
         ) : treeData && treeData.members.length === 0 ? (
           <Box sx={{ height: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', textAlign: 'center', px: 3 }}>
+            <img src="/assets/favicon.svg" alt="" style={{ width: 88, height: 88, opacity: 0.35, marginBottom: 16 }} />
             <Typography component="h6" variant="h6" sx={{ fontWeight: 700 }} gutterBottom>{t('dashboard.emptyTitle')}</Typography>
             <Typography variant="body2" color="text.secondary" sx={{ mb: 3, maxWidth: 380 }}>
               {t('dashboard.emptyDesc')}

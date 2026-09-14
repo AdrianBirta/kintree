@@ -1,11 +1,138 @@
 <!doctype html>
-<html lang="en">
+<html lang="ro">
 
 <head>
   <meta charset="UTF-8" />
-  <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>eArbore</title>
+
+  <!-- Favicons -->
+  <link rel="icon" type="image/png" href="/assets/favicon-96x96.png" sizes="96x96" />
+  <link rel="icon" type="image/svg+xml" href="/assets/favicon.svg" />
+  <link rel="shortcut icon" href="/assets/favicon.ico" />
+  <link rel="apple-touch-icon" sizes="180x180" href="/assets/apple-touch-icon.png" />
+  <meta name="apple-mobile-web-app-title" content="eArbore" />
+  <link rel="manifest" href="/assets/site.webmanifest" />
+
+  <!-- ════════════════════════════════
+       SEO CORE
+  ════════════════════════════════ -->
+  <title>eArbore | Arborele Genealogic al Familiei Tale, Gratuit</title>
+
+  <meta name="description"
+    content="Construiește arborele genealogic al familiei în minute, nu în weekenduri. Adaugă părinți, bunici, copii — cu poze și povești. 100% gratuit, pentru totdeauna." />
+
+  <meta name="keywords"
+    content="arbore genealogic, arbore de familie, genealogie, istorie familie, poze de familie, familie online, eArbore" />
+
+  <meta name="author" content="eArbore" />
+  <meta name="robots" content="index, follow" />
+  <link rel="canonical" href="https://earbore.ro/" />
+  <meta name="theme-color" content="#7c4dd4" />
+
+  <!-- ════════════════════════════════
+       OPEN GRAPH — Facebook, WhatsApp, LinkedIn
+  ════════════════════════════════ -->
+  <meta property="og:site_name" content="eArbore" />
+  <meta property="og:title" content="eArbore | Arborele Genealogic al Familiei Tale, Gratuit" />
+  <meta property="og:description"
+    content="Adaugă bunici, părinți, copii — cu poze și povești — și vezi întreaga familie prinzând viață într-un arbore genealogic vizual, în 2D și 3D. Fără card, fără abonament, pentru totdeauna." />
+  <meta property="og:image" content="https://earbore.ro/assets/og-image.png?v=1" />
+  <meta property="og:image:width" content="1200" />
+  <meta property="og:image:height" content="630" />
+  <meta property="og:image:alt" content="eArbore | Arborele genealogic al familiei tale" />
+  <meta property="og:url" content="https://earbore.ro" />
+  <meta property="og:type" content="website" />
+  <meta property="og:locale" content="ro_RO" />
+
+  <!-- ════════════════════════════════
+       TWITTER / X CARD
+  ════════════════════════════════ -->
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:title" content="eArbore | Arborele Genealogic al Familiei Tale, Gratuit" />
+  <meta name="twitter:description"
+    content="Construiește arborele genealogic al familiei în minute. Poze, povești, generații — totul într-un singur loc, gratuit pentru totdeauna." />
+  <meta name="twitter:image" content="https://earbore.ro/assets/og-image.png?v=1" />
+
+  <!-- ════════════════════════════════
+       SCHEMA.ORG — Date structurate (ajută Google să înțeleagă pagina)
+  ════════════════════════════════ -->
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "SoftwareApplication",
+    "name": "eArbore",
+    "url": "https://earbore.ro",
+    "description": "Platformă online gratuită pentru construirea arborelui genealogic al familiei — adaugi membri, poze și povești, vezi generațiile într-un arbore vizual în 2D și 3D.",
+    "applicationCategory": "LifestyleApplication",
+    "operatingSystem": "Web, iOS, Android",
+    "offers": {
+      "@type": "Offer",
+      "price": "0",
+      "priceCurrency": "RON",
+      "description": "Gratuit, pentru totdeauna — fără card la înregistrare, fără funcționalități blocate în spatele unui abonament.",
+      "url": "https://earbore.ro/auth?mode=register"
+    },
+    "featureList": [
+      "Arbore genealogic vizual în 2D și 3D",
+      "Poze și biografii pentru fiecare membru",
+      "Legături de parteneri, părinți și copii",
+      "Distribuire arbore prin link sau cont",
+      "Statistici despre familie (generații, longevitate, cronologie)",
+      "Mesagerie între membri cu acces la arbore",
+      "Acces cloud multidevice"
+    ],
+    "screenshot": "https://earbore.ro/assets/og-image.png",
+    "inLanguage": "ro",
+    "provider": {
+      "@type": "Organization",
+      "name": "eArbore",
+      "url": "https://earbore.ro"
+    }
+  }
+  </script>
+
+  <!-- Schema: FAQPage — poate genera "rich results" în Google cu întrebări expandabile -->
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "FAQPage",
+    "mainEntity": [
+      {
+        "@type": "Question",
+        "name": "Cât costă eArbore?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "eArbore este 100% gratuit, pentru totdeauna. Nu cerem card bancar la înregistrare și nu blocăm funcționalități în spatele unui abonament. Poți susține opțional proiectul cu o donație."
+        }
+      },
+      {
+        "@type": "Question",
+        "name": "Ce pot face cu eArbore?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "Poți adăuga membri ai familiei cu poze, date de naștere și biografii, îi poți lega ca părinți, copii sau parteneri, și poți vedea tot arborele genealogic vizual, în 2D sau 3D."
+        }
+      },
+      {
+        "@type": "Question",
+        "name": "Pot adăuga rude decedate?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "Da — poți marca un membru ca decedat și îi poți păstra povestea, pozele și datele, exact ca pentru orice alt membru al arborelui."
+        }
+      },
+      {
+        "@type": "Question",
+        "name": "Pot folosi eArbore de pe telefon?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "Da — funcționează din browser pe orice dispozitiv, telefon, tabletă sau calculator, fără nimic de instalat."
+        }
+      }
+    ]
+  }
+  </script>
+
 </head>
 
 <body>

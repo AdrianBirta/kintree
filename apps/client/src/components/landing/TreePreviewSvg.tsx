@@ -1,150 +1,65 @@
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 
+// Mockup vizual al unui arbore genealogic — pur decorativ, dar cu etichetele
+// traduse prin i18n, ca să nu mai rămână blocat în română indiferent de limba
+// aleasă de vizitator. Nu afișează nume reale, ci roluri generice
+// (bunic, părinte, tu, copil), exact ca să funcționeze în orice limbă.
 const TreePreviewSvg: React.FC = () => {
-  return (
-    <svg
-      viewBox="0 0 800 380"
-      xmlns="http://www.w3.org/2000/svg"
-      className="w-full h-full"
-      role="img"
-      aria-label="Previzualizare arbore genealogic"
-    >
-      <defs>
-        <linearGradient id="earboreBg" x1="0" y1="0" x2="1" y2="1">
-          <stop offset="0%" stopColor="#f8f4fd" />
-          <stop offset="100%" stopColor="#ece0fa" />
-        </linearGradient>
+  const { t } = useTranslation();
 
-        <linearGradient id="cardShine" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%" stopColor="#ffffff" />
-          <stop offset="100%" stopColor="#fbf9fe" />
-        </linearGradient>
+  const nodes = [
+    { x: 150, y: 50, r: 26, label: t('landingPreview.grandparent'), fill: 'var(--color-earbore-300)' },
+    { x: 230, y: 50, r: 26, label: t('landingPreview.grandparent'), fill: 'var(--color-earbore-300)' },
+    { x: 190, y: 140, r: 28, label: t('landingPreview.parent'), fill: 'var(--color-earbore-400)' },
+    { x: 190, y: 230, r: 32, label: t('landingPreview.you'), fill: 'var(--color-earbore-600)', isSelf: true },
+    { x: 330, y: 230, r: 26, label: t('landingPreview.child'), fill: 'var(--color-earbore-400)' },
+  ];
 
-        <filter id="cardShadow" x="-40%" y="-40%" width="180%" height="180%">
-          <feDropShadow dx="0" dy="3" stdDeviation="5" floodColor="#4f2a8c" floodOpacity="0.14" />
-        </filter>
-
-        <radialGradient id="blue" cx="35%" cy="30%" r="75%">
-          <stop offset="0%" stopColor="#6fa0e8" />
-          <stop offset="100%" stopColor="#3f6fb0" />
-        </radialGradient>
-        <radialGradient id="pink" cx="35%" cy="30%" r="75%">
-          <stop offset="0%" stopColor="#e07d92" />
-          <stop offset="100%" stopColor="#c14a5f" />
-        </radialGradient>
-        <radialGradient id="lilac" cx="35%" cy="30%" r="75%">
-          <stop offset="0%" stopColor="#bda3e0" />
-          <stop offset="100%" stopColor="#9b7fc4" />
-        </radialGradient>
-      </defs>
-
-      <rect x="0" y="0" width="800" height="380" rx="28" fill="url(#earboreBg)" />
-
-      {/* decor discret — cerculețe blânde în fundal */}
-      <circle cx="60" cy="330" r="70" fill="#ffffff" opacity="0.25" />
-      <circle cx="750" cy="55" r="90" fill="#ffffff" opacity="0.2" />
-
-      {/* ══════════ CONECTORI ══════════ */}
-      {/* bunici → părinți (linii punctate, generație → generație) */}
-      <path d="M 195 108 C 195 138, 300 138, 300 168" stroke="#b99cea" strokeWidth="2" fill="none" strokeDasharray="1 7" strokeLinecap="round" opacity="0.8" />
-      <path d="M 405 108 C 405 138, 300 138, 300 168" stroke="#b99cea" strokeWidth="2" fill="none" strokeDasharray="1 7" strokeLinecap="round" opacity="0.8" />
-      <path d="M 600 108 C 600 138, 545 138, 545 168" stroke="#b99cea" strokeWidth="2" fill="none" strokeDasharray="1 7" strokeLinecap="round" opacity="0.8" />
-
-      {/* părinți → copii (linii pline, mov brand) */}
-      <path d="M 300 203 C 300 235, 245 235, 245 265" stroke="#7c4dd4" strokeWidth="2.5" fill="none" strokeLinecap="round" />
-      <path d="M 300 203 C 300 235, 355 235, 355 265" stroke="#7c4dd4" strokeWidth="2.5" fill="none" strokeLinecap="round" />
-      <path d="M 545 203 C 545 235, 545 235, 545 265" stroke="#7c4dd4" strokeWidth="2.5" fill="none" strokeLinecap="round" />
-
-      {/* linii de parteneriat (maro/auriu, cu unire mică) */}
-      <Union x1={155} y1={73} x2={235} y2={73} />
-      <Union x1={365} y1={73} x2={445} y2={73} />
-      <Union x1={265} y1={185} x2={335} y2={185} />
-
-      {/* ══════════ GENERAȚIA 1 — bunici + străbunic ══════════ */}
-      <MemberCard x={120} y={38} label="Bunic" gradient="url(#blue)" />
-      <MemberCard x={200} y={38} label="Bunica" gradient="url(#pink)" />
-
-      <MemberCard x={330} y={38} label="Bunic" gradient="url(#blue)" />
-      <MemberCard x={410} y={38} label="Bunica" gradient="url(#pink)" />
-
-      <MemberCard x={565} y={38} label="Străbunic" gradient="url(#lilac)" small />
-
-      {/* ══════════ GENERAȚIA 2 — părinți + unchi ══════════ */}
-      <MemberCard x={265} y={150} label="Tata" gradient="url(#blue)" />
-      <MemberCard x={345} y={150} label="Mama" gradient="url(#pink)" />
-
-      <MemberCard x={565} y={150} label="Unchi" gradient="url(#blue)" />
-
-      {/* ══════════ GENERAȚIA 3 — copii ══════════ */}
-      <MemberCard x={210} y={262} label="Fiu" gradient="url(#blue)" />
-      <MemberCard x={310} y={262} label="Fiică" gradient="url(#pink)" />
-      <MemberCard x={520} y={262} label="Nepot" gradient="url(#blue)" small />
-
-      {/* etichetă discretă */}
-      <text x="400" y="358" textAnchor="middle" fontFamily="Inter, sans-serif" fontSize="13" fill="#9a8f7a" letterSpacing="0.3">
-        strămoși → generația ta → urmași
-      </text>
-    </svg>
-  );
-};
-
-interface UnionProps {
-  x1: number;
-  y1: number;
-  x2: number;
-  y2: number;
-}
-
-const Union: React.FC<UnionProps> = ({ x1, y1, x2, y2 }) => {
-  const midX = (x1 + x2) / 2;
-  return (
-    <g opacity="0.85">
-      <line x1={x1} y1={y1} x2={x2} y2={y2} stroke="#c2a274" strokeWidth="2" strokeDasharray="1 5" strokeLinecap="round" />
-      <circle cx={midX} cy={y1} r="3.5" fill="#c2a274" />
-    </g>
-  );
-};
-
-interface MemberCardProps {
-  x: number;
-  y: number;
-  label: string;
-  gradient: string;
-  small?: boolean;
-}
-
-const MemberCard: React.FC<MemberCardProps> = ({ x, y, label, gradient, small }) => {
-  const w = small ? 62 : 76;
-  const h = small ? 62 : 76;
-  const r = small ? 18 : 22;
-  const photoR = small ? 13 : 16;
-
-  return (
-    <g filter="url(#cardShadow)">
-      <rect
-        x={x}
-        y={y}
-        width={w}
-        height={h}
-        rx={r}
-        fill="url(#cardShine)"
-        stroke="#e7e1f0"
-        strokeWidth="1.5"
+  const personIcon = (cx: number, cy: number, r: number, fill: string) => (
+    <g>
+      <circle cx={cx} cy={cy} r={r} fill={fill} />
+      <circle cx={cx} cy={cy - r * 0.28} r={r * 0.32} fill="white" opacity={0.9} />
+      <path
+        d={`M ${cx - r * 0.5} ${cy + r * 0.55} Q ${cx} ${cy + r * 0.05} ${cx + r * 0.5} ${cy + r * 0.55}`}
+        stroke="white"
+        strokeWidth={r * 0.28}
+        strokeLinecap="round"
+        fill="none"
+        opacity={0.9}
       />
-      <circle cx={x + w / 2} cy={y + h / 2 - 8} r={photoR} fill={gradient} />
-      <circle cx={x + w / 2} cy={y + h / 2 - 8} r={photoR} fill="none" stroke="#ffffff" strokeWidth="2" />
-      <text
-        x={x + w / 2}
-        y={y + h - 10}
-        textAnchor="middle"
-        fontFamily="Inter, sans-serif"
-        fontSize={small ? 9.5 : 11}
-        fontWeight={600}
-        fill="#4a4358"
-      >
-        {label}
-      </text>
     </g>
+  );
+
+  return (
+    <svg viewBox="0 0 480 300" className="w-full h-full" preserveAspectRatio="xMidYMid meet">
+      <rect x="0" y="0" width="480" height="300" fill="var(--color-earbore-grayLight)" />
+
+      {/* conectori */}
+      <path d="M 150 76 L 190 112" stroke="var(--color-earbore-300)" strokeWidth="3" fill="none" />
+      <path d="M 230 76 L 190 112" stroke="var(--color-earbore-300)" strokeWidth="3" fill="none" />
+      <path d="M 190 168 L 190 198" stroke="var(--color-earbore-400)" strokeWidth="3" fill="none" />
+      <path d="M 190 230 L 330 230" stroke="var(--color-earbore-400)" strokeWidth="3" strokeDasharray="5 5" fill="none" />
+
+      {nodes.map((n, i) => (
+        <g key={i}>
+          {personIcon(n.x, n.y, n.r, n.fill)}
+          {n.isSelf && (
+            <circle cx={n.x} cy={n.y} r={n.r + 5} fill="none" stroke="var(--color-earbore-600)" strokeWidth="2.5" />
+          )}
+          <text
+            x={n.x}
+            y={n.y + n.r + 18}
+            textAnchor="middle"
+            fontSize="13"
+            fontWeight={n.isSelf ? 700 : 500}
+            fill={n.isSelf ? 'var(--color-earbore-700)' : 'var(--color-earbore-gray)'}
+          >
+            {n.label}
+          </text>
+        </g>
+      ))}
+    </svg>
   );
 };
 

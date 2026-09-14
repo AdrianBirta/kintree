@@ -20,6 +20,7 @@ import {
   useLinkParentChild, useUnlinkParentChild, useLinkPartners, useUnlinkPartners,
   useMarkAsMe, useUnmarkAsMe,
 } from '../hooks/queries/useFamilyMutations';
+import BrandedLoader from '../components/common/BrandedLoader';
 
 const DATE_LOCALES: Record<string, Locale> = { ro, en: enUS, hu };
 
@@ -212,11 +213,7 @@ const MemberDetailPage: React.FC = () => {
   };
 
   if (isLoading || !member) {
-    return (
-      <div className="min-h-screen bg-earbore-grayLight flex items-center justify-center">
-        <div className="w-8 h-8 border-4 border-earbore-200 border-t-earbore-600 rounded-full animate-spin" />
-      </div>
-    );
+    return <BrandedLoader />;
   }
 
   const partners = [

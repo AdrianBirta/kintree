@@ -266,6 +266,26 @@
     "badge": "100% ingyenes · bankkártya nélkül · örökre",
     "heroTitle1": "Családod történetei nem szabad, hogy",
     "heroTitleHighlight": "eltűnjenek",
+    "shareBadge": "Zökkenőmentes megosztás",
+    "shareTitle": "Nem kell egyedül csinálnod",
+    "shareBody": "Küldj egy linket, és a család többi tagja veled együtt tölti ki a családfát — fiók nélkül, jelszó nélkül, gond nélkül. Te döntöd el, mennyit láthatnak vagy módosíthatnak.",
+    "shareFeature1Title": "Linkek, nem bonyolult meghívók",
+    "shareFeature1Desc": "10 másodperc alatt generálsz egy linket, elküldöd WhatsApp-on, és aki megnyitja, megnézheti a családfát — vagy hozzáadhat tagokat, ha szerkesztési jogot adsz neki.",
+    "shareFeature2Title": "Teljes kontroll a hozzáférés felett",
+    "shareFeature2Desc": "Beállítod, hány ember használhatja a linket, ki hány tagot adhat hozzá, és mennyi ideig marad aktív. Bármikor visszavonhatod, egy kattintással.",
+    "messagingBadge": "Az egész család, egy helyen",
+    "messagingTitle": "Beszélj a családoddal, közvetlenül az eArbore-ban",
+    "messagingBody": "Ha megosztottad a családfát valakivel, közvetlenül tudsz vele beszélni az alkalmazásból — nem kell 5 WhatsApp csoportot átkutatnod egy születési dátumért vagy egy régi fotóért.",
+    "messagingFeature1Title": "1:1 és csoportos beszélgetések",
+    "messagingFeature1Desc": "Írj közvetlenül azoknak a rokonoknak, akikkel megosztottad a családfát, vagy hozz létre egy csoportot az egész családi ágnak.",
+    "messagingFeature2Title": "Lásd, mikor olvasták el",
+    "messagingFeature2Desc": "Egyszerű olvasási visszaigazolás — tudod, mikor látta a rokonod a fotót vagy kérdést, anélkül, hogy nyomást éreznél.",
+    "faq5Q": "Meghívhatok rokonokat anélkül, hogy fiókot hoznának létre?",
+    "faq5A": "Igen — generálsz egy megosztási linket, elküldöd, és az illető közvetlenül megnézheti vagy kitöltheti a családfát, fiók és jelszó nélkül. Te szabályozod, mit tehet.",
+    "faq6Q": "Beszélhetek a rokonokkal közvetlenül az alkalmazásból?",
+    "faq6A": "Igen — miután megosztottad a családfát egy rokonoddal (linkkel vagy fiókkal), üzenetet küldhetsz neki közvetlenül az eArbore-ból, privát beszélgetésben vagy csoportban.",
+    "finalCtaTitle": "10 év múlva valaki a családodból pontosan azt akarja majd látni, amit most építesz.",
+    "finalCtaSubtitle": "Semmit nem kóstál elkezdeni. Mindent kóstál, ha nem teszed meg időben.",
     "heroSubtitle": "Add hozzá a nagyszülőket, szülőket, gyerekeket — fotókkal és történetekkel —, és nézd, ahogy az egész család életre kel egy családfában, amit percek alatt felépíthetsz, nem hétvégék alatt.",
     "ctaBuildFree": "Építsd fel a családfádat ingyen →",
     "ctaSeeHowItWorks": "Nézd meg, hogyan működik",
@@ -316,8 +336,6 @@
     "faq3A": "Igen, megjelölheted egy tagot elhunytként, és megőrizheted a történetét, fotóit és adatait — pontosan úgy, mint bármelyik másik tagét.",
     "faq4Q": "Milyen nagy lehet a családfa?",
     "faq4A": "Nincs mesterséges korlát — annyi generációt és rokont adhatsz hozzá, amennyire szükséged van.",
-    "finalCtaTitle": "Kezdd el ma. A családod megérdemli, hogy emlékezzenek rá.",
-    "finalCtaSubtitle": "Nincs bankkártya. Nincs előfizetés. Egy percen belül kész.",
     "footer": "Minden jog fenntartva."
   },
   "auth": {
@@ -464,5 +482,11 @@
     "de": "Német",
     "es": "Spanyol",
     "it": "Olasz"
+  },
+  "landingPreview": {
+    "grandparent": "Nagyszülő",
+    "parent": "Szülő",
+    "you": "Te",
+    "child": "Gyermek"
   }
 }

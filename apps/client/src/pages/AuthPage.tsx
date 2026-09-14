@@ -36,8 +36,9 @@ const AuthPage: React.FC = () => {
       <div className="w-full max-w-md">
         <button
           onClick={() => navigate('/')}
-          className="flex items-center gap-2 mb-8 cursor-pointer justify-center w-full"
+          className="flex items-center gap-2.5 mb-8 cursor-pointer justify-center w-full"
         >
+          <img src="/assets/favicon.svg" alt="" className="h-8 w-8" />
           <span className="text-2xl font-extrabold text-earbore-700">eArbore</span>
         </button>
 
