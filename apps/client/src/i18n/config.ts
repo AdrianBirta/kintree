@@ -31,7 +31,7 @@ function detectInitialLanguage(): SupportedLanguage {
     return browserLang as SupportedLanguage;
   }
 
-  return 'ro';
+  return 'en'; // ÎNLOCUIT — 'ro' → 'en', ca fallback universal
 }
 
 i18n.use(initReactI18next).init({
@@ -45,7 +45,7 @@ i18n.use(initReactI18next).init({
     it: { translation: it },
   },
   lng: detectInitialLanguage(),
-  fallbackLng: 'ro',
+  fallbackLng: 'en',
   interpolation: {
     escapeValue: false,
   },

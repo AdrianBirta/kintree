@@ -89,10 +89,17 @@ const ConfirmDialog: React.FC<Props> = ({
               sx={{
                 borderRadius: 3,
                 py: 1.2,
+                fontSize: { xs: 13.5, sm: 14.5 },
                 fontWeight: 600,
+                whiteSpace: 'nowrap',
                 color: 'var(--color-earbore-ink)',
                 bgcolor: 'var(--color-earbore-grayLight)',
                 '&:hover': { bgcolor: 'var(--color-earbore-100)' },
+                '&.Mui-disabled': {
+                  color: 'var(--color-earbore-gray)',
+                  bgcolor: 'var(--color-earbore-grayLight)',
+                  opacity: 0.7,
+                },
               }}
             >
               {resolvedCancelLabel}
@@ -103,16 +110,24 @@ const ConfirmDialog: React.FC<Props> = ({
               fullWidth
               variant="contained"
               disableElevation
-              startIcon={isLoading ? <CircularProgress size={15} color="inherit" /> : undefined}
+              startIcon={isLoading ? <CircularProgress size={14} sx={{ color: 'white' }} /> : undefined}
               sx={{
                 borderRadius: 3,
                 py: 1.2,
+                fontSize: { xs: 13.5, sm: 14.5 },
                 fontWeight: 700,
+                whiteSpace: 'nowrap',
+                color: 'white',
                 bgcolor: destructive ? 'var(--color-earbore-danger)' : 'var(--color-earbore-600)',
                 '&:hover': {
                   bgcolor: destructive
                     ? 'color-mix(in srgb, var(--color-earbore-danger) 85%, black)'
                     : 'var(--color-earbore-700)',
+                },
+                '&.Mui-disabled': {
+                  color: 'white',
+                  opacity: 0.75,
+                  bgcolor: destructive ? 'var(--color-earbore-danger)' : 'var(--color-earbore-600)',
                 },
               }}
             >

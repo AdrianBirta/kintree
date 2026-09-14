@@ -5,7 +5,7 @@ import {
   Dialog, DialogTitle, DialogContent, IconButton, Tabs, Tab, Box, Button, TextField,
   FormControl, InputLabel, Select, MenuItem, Typography, Chip, CircularProgress,
   List, ListItem, ListItemText, Divider, Alert, Tooltip, ToggleButtonGroup, ToggleButton,
-  Collapse,
+  Collapse, useMediaQuery, useTheme,
 } from '@mui/material';
 import CloseIcon from '@mui/icons-material/Close';
 import ContentCopyIcon from '@mui/icons-material/ContentCopy';
@@ -28,9 +28,6 @@ const sharingKeys = {
   given: ['sharing', 'accounts', 'given'] as const,
 };
 
-// preset-urile pentru limita de membri per invitat.
-// 'custom' înseamnă că userul introduce manual o valoare (≥1);
-// 'unlimited' salvează undefined la backend (fără restricție).
 type MemberLimitPreset = '1' | '2' | '3' | 'custom' | 'unlimited';
 
 function formatDateTime(value?: string | null) {
@@ -45,9 +42,10 @@ function isExpired(value?: string | null) {
 const ShareManagementModal: React.FC<Props> = ({ open, onClose }) => {
   const { t } = useTranslation();
   const queryClient = useQueryClient();
+  const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
   const [tab, setTab] = useState<'links' | 'accounts'>('links');
 
-  // ── formular link nou ──
   const [linkAccessLevel, setLinkAccessLevel] = useState<ShareAccessLevel>('READ_ONLY');
   const [linkExpiresAt, setLinkExpiresAt] = useState('');
   const [linkMaxUses, setLinkMaxUses] = useState('');
@@ -55,11 +53,9 @@ const ShareManagementModal: React.FC<Props> = ({ open, onClose }) => {
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [expandedGuestsFor, setExpandedGuestsFor] = useState<string | null>(null);
 
-  // starea pentru limita de membri per invitat (doar pentru linkuri EDIT)
   const [memberLimitPreset, setMemberLimitPreset] = useState<MemberLimitPreset>('unlimited');
   const [memberLimitCustomValue, setMemberLimitCustomValue] = useState('');
 
-  // ── formular acces cont nou ──
   const [grantEmail, setGrantEmail] = useState('');
   const [grantAccessLevel, setGrantAccessLevel] = useState<ShareAccessLevel>('READ_ONLY');
   const [grantExpiresAt, setGrantExpiresAt] = useState('');
@@ -117,7 +113,6 @@ const ShareManagementModal: React.FC<Props> = ({ open, onClose }) => {
     onSuccess: () => queryClient.invalidateQueries({ queryKey: sharingKeys.given }),
   });
 
-  // traduce preset-ul curent în valoarea numerică (sau undefined) trimisă la backend
   const resolveMaxMembersPerGuest = (): number | undefined => {
     if (memberLimitPreset === 'unlimited') return undefined;
     if (memberLimitPreset === 'custom') {
@@ -131,7 +126,6 @@ const ShareManagementModal: React.FC<Props> = ({ open, onClose }) => {
     createLinkMutation.mutate({
       accessLevel: linkAccessLevel,
       expiresAt: linkExpiresAt || undefined,
-      // ÎNLOCUIT — maxUses se trimite acum indiferent de accessLevel
       maxUses: linkMaxUses ? Number(linkMaxUses) : undefined,
       maxMembersPerGuest: linkAccessLevel === 'EDIT' ? resolveMaxMembersPerGuest() : undefined,
       label: linkLabel || undefined,
@@ -163,7 +157,6 @@ const ShareManagementModal: React.FC<Props> = ({ open, onClose }) => {
   const renderLinkStatus = (link: ShareLink) => {
     if (link.revoked) return <Chip size="small" label={t('sharing.statusRevoked')} color="default" />;
     if (isExpired(link.expiresAt)) return <Chip size="small" label={t('sharing.statusExpired')} color="default" />;
-    // ÎNLOCUIT — "Full" se afișează acum indiferent de accessLevel
     if (link.maxUses != null && link.usesCount >= link.maxUses) {
       return <Chip size="small" label={t('sharing.statusFull')} color="default" />;
     }
@@ -171,18 +164,43 @@ const ShareManagementModal: React.FC<Props> = ({ open, onClose }) => {
   };
 
   return (
-    <Dialog open={open} onClose={onClose} maxWidth="sm" fullWidth>
-      <DialogTitle sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontWeight: 700 }}>
+    <Dialog
+      open={open}
+      onClose={onClose}
+      maxWidth="sm"
+      fullWidth
+      fullScreen={isMobile}
+      slotProps={{
+        paper: {
+          sx: isMobile ? { borderRadius: 0, m: 0 } : undefined,
+        },
+      }}
+    >
+      <DialogTitle
+        sx={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          fontWeight: 700,
+          px: { xs: 2, sm: 3 },
+          py: { xs: 1.75, sm: 2 },
+        }}
+      >
         {t('sharing.title')}
         <IconButton onClick={onClose} size="small"><CloseIcon /></IconButton>
       </DialogTitle>
 
-      <Tabs value={tab} onChange={(_, v) => setTab(v)} sx={{ px: 2, borderBottom: '1px solid', borderColor: 'divider' }}>
+      <Tabs
+        value={tab}
+        onChange={(_, v) => setTab(v)}
+        variant={isMobile ? 'fullWidth' : 'standard'}
+        sx={{ px: { xs: 1, sm: 2 }, borderBottom: '1px solid', borderColor: 'divider' }}
+      >
         <Tab value="links" label={t('sharing.tabLinks')} icon={<LinkIcon fontSize="small" />} iconPosition="start" />
         <Tab value="accounts" label={t('sharing.tabAccounts')} />
       </Tabs>
 
-      <DialogContent sx={{ pt: 3 }}>
+      <DialogContent sx={{ pt: 3, px: { xs: 2, sm: 3 }, pb: { xs: 3, sm: 3 } }}>
         {tab === 'links' && (
           <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
             <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
@@ -194,6 +212,7 @@ const ShareManagementModal: React.FC<Props> = ({ open, onClose }) => {
                 value={linkLabel}
                 onChange={(e) => setLinkLabel(e.target.value)}
                 placeholder={t('sharing.labelPlaceholder')}
+                fullWidth
               />
 
               <FormControl size="small" fullWidth>
@@ -215,9 +234,9 @@ const ShareManagementModal: React.FC<Props> = ({ open, onClose }) => {
                 value={linkExpiresAt}
                 onChange={(e) => setLinkExpiresAt(e.target.value)}
                 slotProps={{ inputLabel: { shrink: true } }}
+                fullWidth
               />
 
-              {/* MUTAT în afara condiției EDIT — se aplică acum și la READ_ONLY */}
               <TextField
                 size="small"
                 type="number"
@@ -226,6 +245,7 @@ const ShareManagementModal: React.FC<Props> = ({ open, onClose }) => {
                 onChange={(e) => setLinkMaxUses(e.target.value)}
                 helperText={t('sharing.maxUsesHelper')}
                 slotProps={{ htmlInput: { min: 1 } }}
+                fullWidth
               />
 
               {linkAccessLevel === 'EDIT' && (
@@ -240,7 +260,15 @@ const ShareManagementModal: React.FC<Props> = ({ open, onClose }) => {
                     onChange={(_, val) => val && setMemberLimitPreset(val)}
                     sx={{
                       flexWrap: 'wrap',
-                      '& .MuiToggleButton-root': { textTransform: 'none', px: 1.5, py: 0.5 },
+                      gap: 0.5,
+                      '& .MuiToggleButton-root': {
+                        textTransform: 'none',
+                        px: 1.5,
+                        py: 0.5,
+                        fontSize: { xs: 12.5, sm: 13 },
+                        border: '1px solid var(--color-earbore-border) !important',
+                        borderRadius: '8px !important',
+                      },
                     }}
                   >
                     <ToggleButton value="1">1</ToggleButton>
@@ -272,6 +300,7 @@ const ShareManagementModal: React.FC<Props> = ({ open, onClose }) => {
               <Button
                 variant="contained"
                 onClick={handleCreateLink}
+                fullWidth={isMobile}
                 disabled={
                   createLinkMutation.isPending ||
                   (linkAccessLevel === 'EDIT' && memberLimitPreset === 'custom' && !memberLimitCustomValue)
@@ -296,16 +325,24 @@ const ShareManagementModal: React.FC<Props> = ({ open, onClose }) => {
                     <ListItem
                       key={link.id}
                       divider
-                      sx={{ px: 0, flexDirection: 'column', alignItems: 'stretch', gap: 0.5 }}
+                      sx={{ px: 0, flexDirection: 'column', alignItems: 'stretch', gap: 0.75, py: 1.5 }}
                     >
-                      <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 1 }}>
+                      <Box
+                        sx={{
+                          display: 'flex',
+                          flexDirection: { xs: 'column', sm: 'row' },
+                          alignItems: { xs: 'flex-start', sm: 'center' },
+                          justifyContent: 'space-between',
+                          gap: 0.75,
+                        }}
+                      >
                         <ListItemText
+                          sx={{ m: 0 }}
                           primary={link.label || (link.accessLevel === 'EDIT' ? t('sharing.editAccess') : t('sharing.readOnly'))}
                           secondary={
                             <>
                               {t(link.accessLevel === 'EDIT' ? 'sharing.editAccess' : 'sharing.readOnly')}
                               {link.expiresAt && ` · ${t('sharing.expiresOn', { date: formatDateTime(link.expiresAt) })}`}
-                              {/* ÎNLOCUIT — usageCount se afișează acum indiferent de accessLevel */}
                               {link.maxUses != null &&
                                 ` · ${t('sharing.usageCount', { used: link.usesCount, max: link.maxUses })}`}
                               {link.accessLevel === 'EDIT' &&
@@ -318,7 +355,7 @@ const ShareManagementModal: React.FC<Props> = ({ open, onClose }) => {
                         {renderLinkStatus(link)}
                       </Box>
 
-                      <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
+                      <Box sx={{ display: 'flex', gap: 0.5, alignItems: 'center', flexWrap: 'wrap' }}>
                         <Tooltip title={copiedId === link.id ? t('sharing.copied') : t('sharing.copyLink')}>
                           <IconButton size="small" onClick={() => handleCopy(link)}>
                             <ContentCopyIcon fontSize="small" />
@@ -337,7 +374,6 @@ const ShareManagementModal: React.FC<Props> = ({ open, onClose }) => {
                           </IconButton>
                         </Tooltip>
 
-                        {/* dacă linkul are invitați, poți vedea câți membri a adăugat fiecare */}
                         {link.guests.length > 0 && (
                           <Tooltip title={t('sharing.viewGuests')}>
                             <IconButton
@@ -350,7 +386,6 @@ const ShareManagementModal: React.FC<Props> = ({ open, onClose }) => {
                         )}
                       </Box>
 
-                      {/* detaliu per invitat: câți membri a adăugat fiecare */}
                       <Collapse in={expandedGuestsFor === link.id}>
                         <Box sx={{ pl: 1, borderLeft: '2px solid', borderColor: 'divider', ml: 0.5, mt: 0.5 }}>
                           {link.guests.map((guest) => (
@@ -387,6 +422,7 @@ const ShareManagementModal: React.FC<Props> = ({ open, onClose }) => {
                 value={grantEmail}
                 onChange={(e) => setGrantEmail(e.target.value)}
                 placeholder="nume@email.com"
+                fullWidth
               />
               <FormControl size="small" fullWidth>
                 <InputLabel>{t('sharing.accessLevel')}</InputLabel>
@@ -406,9 +442,15 @@ const ShareManagementModal: React.FC<Props> = ({ open, onClose }) => {
                 value={grantExpiresAt}
                 onChange={(e) => setGrantExpiresAt(e.target.value)}
                 slotProps={{ inputLabel: { shrink: true } }}
+                fullWidth
               />
               {grantError && <Alert severity="error">{grantError}</Alert>}
-              <Button variant="contained" onClick={handleGrantAccess} disabled={grantAccessMutation.isPending}>
+              <Button
+                variant="contained"
+                onClick={handleGrantAccess}
+                fullWidth={isMobile}
+                disabled={grantAccessMutation.isPending}
+              >
                 {grantAccessMutation.isPending ? t('common.saving') : t('sharing.grantAccess')}
               </Button>
             </Box>
@@ -424,8 +466,18 @@ const ShareManagementModal: React.FC<Props> = ({ open, onClose }) => {
               ) : (
                 <List disablePadding>
                   {given.map((grant: TreeAccessGrant) => (
-                    <ListItem key={grant.id} divider sx={{ px: 0 }}>
+                    <ListItem
+                      key={grant.id}
+                      divider
+                      sx={{
+                        px: 0,
+                        flexDirection: { xs: 'column', sm: 'row' },
+                        alignItems: { xs: 'flex-start', sm: 'center' },
+                        gap: 0.75,
+                      }}
+                    >
                       <ListItemText
+                        sx={{ m: 0 }}
                         primary={`${grant.grantee?.firstName} ${grant.grantee?.lastName}`}
                         secondary={
                           <>

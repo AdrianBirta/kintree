@@ -4,6 +4,7 @@ import { Menu, MenuItem, IconButton, Tooltip, ListItemText, ListItemIcon, Box } 
 import TranslateIcon from '@mui/icons-material/Translate';
 import CheckIcon from '@mui/icons-material/Check';
 import { SUPPORTED_LANGUAGES, type SupportedLanguage } from '../../i18n/config';
+import { LANGUAGE_MANUAL_FLAG_KEY } from '../../i18n/detectCountryLanguage';
 
 const FLAG_EMOJI: Record<SupportedLanguage, string> = {
   ro: '🇷🇴',
@@ -32,6 +33,11 @@ const LanguageSwitcher: React.FC<Props> = ({ variant = 'icon' }) => {
 
   const handleSelect = (lang: SupportedLanguage) => {
     i18n.changeLanguage(lang);
+    try {
+      localStorage.setItem(LANGUAGE_MANUAL_FLAG_KEY, 'true');
+    } catch {
+      // ignorăm — localStorage indisponibil
+    }
     handleClose();
   };
 
