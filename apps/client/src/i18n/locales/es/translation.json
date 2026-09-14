@@ -450,7 +450,10 @@
     "selectContacts": "Selecciona personas",
     "groupNameOptional": "Nombre del grupo (opcional)",
     "start": "Iniciar",
-    "unknown": "Desconocido"
+    "unknown": "Desconocido",
+    "you": "Tú",
+    "seen": "Visto",
+    "sent": "Enviado"
   },
   "languageSwitcher": {
     "label": "Idioma",

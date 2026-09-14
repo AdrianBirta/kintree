@@ -8,13 +8,20 @@ import AccountTreeIcon from '@mui/icons-material/AccountTree';
 import TableRowsIcon from '@mui/icons-material/TableRows';
 import GroupsIcon from '@mui/icons-material/Groups';
 import CloseIcon from '@mui/icons-material/Close';
-import { IconButton, useMediaQuery, useTheme } from '@mui/material';
+import MoreHorizIcon from '@mui/icons-material/MoreHoriz';
+import { IconButton, useMediaQuery, useTheme, Menu, MenuItem, ListItemIcon, ListItemText } from '@mui/material';
 import MembersAccordionMenu from './MembersAccordionMenu';
 import ConfirmDialog from '../common/ConfirmDialog';
 import LanguageSwitcher from '../common/LanguageSwitcher';
 import ShareManagementModal from '../sharing/ShareManagementModal';
 import { usePermissions } from '../../hooks/usePermissions';
 import { useActiveTreeStore } from '../../store/activeTreeStore';
+
+const ChatBubbleOutlineIcon: React.FC<{ fontSize?: 'small' }> = () => (
+  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+    <path d="M20 11.5C20 15.6421 16.4183 19 12 19C10.8475 19 9.75782 18.7744 8.7898 18.3692L4 20L5.47422 16.3199C4.54823 15.0011 4 13.3164 4 11.5C4 7.35786 7.58172 4 12 4C16.4183 4 20 7.35786 20 11.5Z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+  </svg>
+);
 
 const Header: React.FC = () => {
   const navigate = useNavigate();
@@ -23,6 +30,10 @@ const Header: React.FC = () => {
   const { user, logout } = useAuth();
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
+  // NOU — sub 400px, navigarea principală (Arbore/Tabel/Mesaje) nu mai
+  // încape lângă restul header-ului (membri, limbă, avatar), deci o
+  // colapsăm într-un singur buton cu meniu dropdown.
+  const isCompactNav = useMediaQuery(theme.breakpoints.down(400));
 
   const { activeOwner, setActiveOwner } = useActiveTreeStore();
   const { viewingOwnerName } = usePermissions();
@@ -35,6 +46,9 @@ const Header: React.FC = () => {
   const [membersMenuOpen, setMembersMenuOpen] = useState(false);
   const userMenuRef = useRef<HTMLDivElement>(null);
   const membersMenuRef = useRef<HTMLDivElement>(null);
+
+  // NOU — anchor pentru meniul de navigare colapsat
+  const [navMenuAnchor, setNavMenuAnchor] = useState<HTMLElement | null>(null);
 
   const [confirmLogoutOpen, setConfirmLogoutOpen] = useState(false);
   const [isLoggingOut, setIsLoggingOut] = useState(false);
@@ -84,12 +98,26 @@ const Header: React.FC = () => {
 
   const isTreeActive = location.pathname === '/dashboard' || /^\/members\/.+/.test(location.pathname);
   const isTableActive = location.pathname === '/members';
+  const isMessagesActive = location.pathname.startsWith('/messages');
 
   const navButtonClass = (active: boolean) =>
     `flex items-center gap-1.5 text-sm font-semibold px-2.5 sm:px-3.5 py-2 rounded-lg transition-colors cursor-pointer flex-shrink-0 ${active
       ? 'bg-earbore-100 text-earbore-700'
       : 'text-earbore-gray hover:text-earbore-700 hover:bg-earbore-50'
     }`;
+
+  // NOU — cele trei destinații de navigare, reutilizate atât pentru
+  // butoanele normale cât și pentru meniul dropdown colapsat
+  const navItems = [
+    { key: 'tree', icon: <AccountTreeIcon fontSize="small" />, label: t('header.tree'), active: isTreeActive, onClick: () => navigate('/dashboard') },
+    { key: 'membersTable', icon: <TableRowsIcon fontSize="small" />, label: t('header.membersTable'), active: isTableActive, onClick: () => navigate('/members') },
+    { key: 'messages', icon: <ChatBubbleOutlineIcon />, label: t('header.messages'), active: isMessagesActive, onClick: () => navigate('/messages') },
+  ];
+
+  const handleNavMenuItemClick = (onClick: () => void) => {
+    setNavMenuAnchor(null);
+    onClick();
+  };
 
   return (
     <>
@@ -100,14 +128,53 @@ const Header: React.FC = () => {
           </button>
 
           <div className="flex items-center gap-1 sm:gap-2 min-w-0">
-            <button onClick={() => navigate('/dashboard')} className={navButtonClass(isTreeActive)}>
-              <AccountTreeIcon fontSize="small" />
-              <span className="hidden sm:inline">{t('header.tree')}</span>
-            </button>
-            <button onClick={() => navigate('/members')} className={navButtonClass(isTableActive)}>
-              <TableRowsIcon fontSize="small" />
-              <span className="hidden sm:inline">{t('header.membersTable')}</span>
-            </button>
+            {isCompactNav ? (
+              // NOU — sub 400px: un singur buton care deschide dropdown-ul
+              // cu cele trei destinații, în loc de trei butoane separate
+              <>
+                <IconButton
+                  onClick={(e) => setNavMenuAnchor(e.currentTarget)}
+                  size="small"
+                  sx={{
+                    color: navItems.some((item) => item.active) ? 'var(--color-earbore-700)' : 'var(--color-earbore-gray)',
+                    bgcolor: navItems.some((item) => item.active) ? 'var(--color-earbore-100)' : 'transparent',
+                  }}
+                >
+                  <MoreHorizIcon fontSize="small" />
+                </IconButton>
+                <Menu
+                  anchorEl={navMenuAnchor}
+                  open={!!navMenuAnchor}
+                  onClose={() => setNavMenuAnchor(null)}
+                  anchorOrigin={{ vertical: 'bottom', horizontal: 'left' }}
+                  transformOrigin={{ vertical: 'top', horizontal: 'left' }}
+                >
+                  {navItems.map((item) => (
+                    <MenuItem
+                      key={item.key}
+                      selected={item.active}
+                      onClick={() => handleNavMenuItemClick(item.onClick)}
+                    >
+                      <ListItemIcon sx={{ color: item.active ? 'var(--color-earbore-700)' : 'inherit' }}>
+                        {item.icon}
+                      </ListItemIcon>
+                      <ListItemText
+                        primary={item.label}
+                        slotProps={{ primary: { sx: { fontWeight: item.active ? 700 : 500 } } }}
+                      />
+                    </MenuItem>
+                  ))}
+                </Menu>
+              </>
+            ) : (
+              // comportamentul normal — trei butoane vizibile
+              navItems.map((item) => (
+                <button key={item.key} onClick={item.onClick} className={navButtonClass(item.active)}>
+                  {item.icon}
+                  <span className="hidden sm:inline">{item.label}</span>
+                </button>
+              ))
+            )}
 
             <div className="relative flex-shrink-0" ref={membersMenuRef}>
               <button

@@ -37,6 +37,9 @@ model User {
   sentInvites        AppInvite[]  @relation("SentInvites")
   acceptedInvite     AppInvite?   @relation("AcceptedInvites")
 
+  conversationParticipants ConversationParticipant[]
+  sentMessages             Message[]
+
   @@map("users")
 }
 
@@ -217,4 +220,38 @@ model AppInvite {
   createdAt    DateTime  @default(now())
 
   @@map("app_invites")
+}
+
+model Conversation {
+  id           String                    @id @default(uuid())
+  isGroup      Boolean                   @default(false)
+  name         String?
+  createdAt    DateTime                  @default(now())
+  participants ConversationParticipant[]
+  messages     Message[]
+}
+
+model ConversationParticipant {
+  id             String       @id @default(uuid())
+  conversation   Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  conversationId String
+  user           User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId         String
+  lastReadAt     DateTime?
+  joinedAt       DateTime     @default(now())
+
+  @@unique([conversationId, userId])
+  @@map("conversation_participants")
+}
+
+model Message {
+  id             String       @id @default(uuid())
+  conversation   Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  conversationId String
+  sender         User         @relation(fields: [senderId], references: [id], onDelete: Cascade)
+  senderId       String
+  content        String
+  createdAt      DateTime     @default(now())
+
+  @@map("messages")
 }

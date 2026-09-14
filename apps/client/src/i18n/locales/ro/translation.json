@@ -450,7 +450,10 @@
     "selectContacts": "Alege persoane",
     "groupNameOptional": "Numele grupului (opțional)",
     "start": "Începe",
-    "unknown": "Necunoscut"
+    "unknown": "Necunoscut",
+    "you": "Tu",
+    "seen": "Văzut",
+    "sent": "Trimis"
   },
   "languageSwitcher": {
     "label": "Limbă",

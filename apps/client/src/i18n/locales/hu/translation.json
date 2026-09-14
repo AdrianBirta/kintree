@@ -450,7 +450,10 @@
     "selectContacts": "Válassz személyeket",
     "groupNameOptional": "Csoport neve (opcionális)",
     "start": "Indítás",
-    "unknown": "Ismeretlen"
+    "unknown": "Ismeretlen",
+    "you": "Te",
+    "seen": "Látta",
+    "sent": "Elküldve"
   },
   "languageSwitcher": {
     "label": "Nyelv",

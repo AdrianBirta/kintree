@@ -11,6 +11,7 @@ import PrivateRoute from './components/auth/PrivateRoute';
 import PublicRoute from './components/auth/PublicRoute';
 import GuestSharePage from './pages/GuestSharePage';
 import TreesPage from './pages/TreesPage';
+import MessagesPage from './pages/MessagesPage';
 
 function App() {
   const fetchCurrentUser = useAuthStore((s) => s.fetchCurrentUser);
@@ -45,6 +46,7 @@ function App() {
           <Route path="/members/:id" element={<MemberDetailPage />} />
           <Route path="/profile" element={<ProfilePage />} /> {/* NOU */}
           <Route path="/trees" element={<TreesPage />} />
+          <Route path="/messages" element={<MessagesPage />} />
         </Route>
       </Routes>
     </BrowserRouter>
