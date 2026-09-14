@@ -2,7 +2,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import {
-  Box, Typography, CircularProgress, Alert, Button, Dialog, DialogTitle, DialogContent,
+  Box, Typography, Alert, Button, Dialog, DialogTitle, DialogContent,
   DialogActions, TextField, MenuItem, Select, FormControl, InputLabel, Autocomplete,
   ToggleButtonGroup, ToggleButton, Tooltip,
 } from '@mui/material';

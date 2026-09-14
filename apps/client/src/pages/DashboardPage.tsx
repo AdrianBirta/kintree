@@ -1,6 +1,6 @@
 import React, { useCallback, useState } from 'react';
 import {
-  Box, Button, ToggleButtonGroup, ToggleButton, Stack, CircularProgress, Typography,
+  Box, Button, ToggleButtonGroup, ToggleButton, Stack, Typography,
   IconButton, Tooltip, useMediaQuery, useTheme,
 } from '@mui/material';
 import ViewInArIcon from '@mui/icons-material/ViewInAr';

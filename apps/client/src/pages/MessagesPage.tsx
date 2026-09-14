@@ -4,7 +4,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
   Box, List, ListItemButton, ListItemAvatar, Avatar, ListItemText, TextField, IconButton,
   Typography, CircularProgress, Dialog, DialogTitle, DialogContent, DialogActions, Button,
-  Autocomplete, Chip, useMediaQuery, useTheme, Badge,
+  Autocomplete, Chip, useMediaQuery, useTheme,
 } from '@mui/material';
 import SendIcon from '@mui/icons-material/Send';
 import AddCommentIcon from '@mui/icons-material/AddComment';
@@ -186,10 +186,7 @@ const MessagesPage: React.FC = () => {
               <List sx={{ overflowY: 'auto', flex: 1, py: 1 }}>
                 {conversations.map((c) => {
                   const isMine = c.lastMessage?.senderId === user?.id;
-                  const isUnread = !isMine && c.lastMessage && (() => {
-                    const me = c.participants; // note: participants excludes self already
-                    return false; // unread tracking per-list simplified below via own lastReadAt not exposed here
-                  })();
+
                   return (
                     <ListItemButton
                       key={c.id}
