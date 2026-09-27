@@ -263,6 +263,7 @@
     "menu": "Menu"
   },
   "landing": {
+    "donateButton": "Support on Buy Me a Coffee",
     "badge": "100% free · no card required · forever",
     "heroTitle1": "Your family's stories shouldn't",
     "heroTitleHighlight": "disappear",

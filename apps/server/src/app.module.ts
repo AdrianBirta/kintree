@@ -8,6 +8,7 @@ import { FamilyMembersModule } from './family-members/family-members.module';
 import { SharingModule } from 'src/sharing/sharing.module';
 import { InvitesModule } from 'src/invites/invites.module';
 import { MessagingModule } from 'src/messaging/messaging.module'; // ADĂUGAT
+import { DonationsModule } from './donations/donations.module';
 
 @Module({
   imports: [
@@ -18,6 +19,7 @@ import { MessagingModule } from 'src/messaging/messaging.module'; // ADĂUGAT
     SharingModule,
     InvitesModule, // ADĂUGAT — deși funcționează și doar via AuthModule (e importat acolo), e mai curat să fie explicit aici
     MessagingModule, // ADĂUGAT — asta rezolvă 404-ul
+    DonationsModule,
   ],
   controllers: [AppController],
   providers: [AppService],

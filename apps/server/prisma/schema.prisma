@@ -255,3 +255,11 @@ model Message {
 
   @@map("messages")
 }
+
+model DonationClick {
+  id        String   @id @default(uuid())
+  tier      String // "coffee" | "supporter" | "hero" | "custom"
+  createdAt DateTime @default(now())
+
+  @@map("donation_clicks")
+}

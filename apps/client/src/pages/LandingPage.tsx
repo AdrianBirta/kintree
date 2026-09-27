@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import LandingHeader from '../components/layout/LandingHeader';
 import TreePreviewSvg from '../components/landing/TreePreviewSvg';
+import { API_BASE_URL } from '../i18n/config';
 
 const DONATE_URL = 'https://buymeacoffee.com/earbore'; // TODO: înlocuiește cu link-ul tău real
 
@@ -170,20 +171,36 @@ const LandingPage: React.FC = () => {
             {t('landing.supportBody')}
           </p>
 
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 max-w-2xl mx-auto mb-8">
-            <DonateTier label={t('landing.donateTier1Label')} amount="10 lei" impact={t('landing.donateTier1Impact')} href={DONATE_URL} />
-            <DonateTier label={t('landing.donateTier2Label')} amount="25 lei" impact={t('landing.donateTier2Impact')} href={DONATE_URL} highlighted />
-            <DonateTier label={t('landing.donateTier3Label')} amount="50 lei" impact={t('landing.donateTier3Impact')} href={DONATE_URL} />
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 max-w-2xl mx-auto mb-10">
+            <DonateTier label={t('landing.donateTier1Label')} impact={t('landing.donateTier1Impact')} icon="☕" />
+            <DonateTier label={t('landing.donateTier2Label')} impact={t('landing.donateTier2Impact')} icon="💜" highlighted />
+            <DonateTier label={t('landing.donateTier3Label')} impact={t('landing.donateTier3Impact')} icon="🦸" />
           </div>
 
-          <a href={DONATE_URL} target="_blank" rel="noopener noreferrer" className="inline-block text-white/60 text-sm underline hover:text-white transition-colors">
-            {t('landing.donateCustom')}
+          {/* NOU — un singur buton clar, real, care duce către pagina de donații.
+    Sumele exacte le alege userul acolo, în moneda pe care o afișează
+    platforma (Buy Me a Coffee procesează în USD). */}
+          <a
+            href={DONATE_URL}
+            target="_blank"
+            rel="noopener noreferrer"
+            onClick={() => {
+              fetch(`${API_BASE_URL}/donations/track-click`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ tier: 'custom' }),
+                keepalive: true,
+              }).catch(() => { });
+            }}
+            className="inline-flex items-center gap-2 bg-white text-earbore-700 font-bold px-6 py-3 rounded-xl hover:bg-earbore-50 transition-colors"
+          >
+            ☕ {t('landing.donateButton')}
           </a>
         </div>
-      </section>
+      </section >
 
       {/* ───────────── FAQ ───────────── */}
-      <section id="intrebari" className="py-20 scroll-mt-18">
+      <section id="intrebari" className="py-20 scroll-mt-18" >
         <div className="max-w-3xl mx-auto px-6">
           <h2 className="text-3xl font-extrabold text-earbore-ink text-center mb-12">{t('landing.faqTitle')}</h2>
           <div className="flex flex-col gap-4">
@@ -195,10 +212,10 @@ const LandingPage: React.FC = () => {
             <FaqItem q={t('landing.faq6Q')} a={t('landing.faq6A')} />
           </div>
         </div>
-      </section>
+      </section >
 
       {/* ───────────── CTA FINAL ───────────── */}
-      <section className="bg-white border-t border-earbore-border py-20">
+      <section className="bg-white border-t border-earbore-border py-20" >
         <div className="max-w-3xl mx-auto px-6 text-center">
           <h2 className="text-3xl sm:text-4xl font-extrabold text-earbore-ink mb-4">
             {t('landing.finalCtaTitle')}
@@ -210,7 +227,7 @@ const LandingPage: React.FC = () => {
             {t('landing.ctaBuildFree')}
           </button>
         </div>
-      </section>
+      </section >
 
       <footer className="border-t border-earbore-border py-6 text-center text-sm text-earbore-gray bg-earbore-grayLight">
         <div className="flex items-center justify-center gap-1.5">
@@ -218,7 +235,7 @@ const LandingPage: React.FC = () => {
           <span>© {new Date().getFullYear()} eArbore. {t('landing.footer')}</span>
         </div>
       </footer>
-    </div>
+    </div >
   );
 };
 
@@ -295,20 +312,17 @@ const Testimonial: React.FC<{ quote: string; name: string }> = ({ quote, name })
   </div>
 );
 
-const DonateTier: React.FC<{ label: string; amount: string; impact: string; href: string; highlighted?: boolean }> = ({
-  label, amount, impact, href, highlighted,
+const DonateTier: React.FC<{ label: string; impact: string; icon: string; highlighted?: boolean }> = ({
+  label, impact, icon, highlighted,
 }) => (
-  <a
-    href={href}
-    target="_blank"
-    rel="noopener noreferrer"
-    className={`rounded-2xl p-5 text-center transition-transform hover:-translate-y-0.5 ${highlighted ? 'bg-earbore-600 text-white' : 'bg-white/5 text-white border border-white/15'
+  <div
+    className={`rounded-2xl p-5 text-center ${highlighted ? 'bg-earbore-600 text-white' : 'bg-white/5 text-white border border-white/15'
       }`}
   >
-    <p className="text-xs uppercase tracking-wider font-semibold opacity-80 mb-1">{label}</p>
-    <p className="text-2xl font-extrabold mb-1">{amount}</p>
+    <p className="text-2xl mb-2">{icon}</p>
+    <p className="text-sm font-bold uppercase tracking-wider opacity-90 mb-1">{label}</p>
     <p className="text-xs opacity-70">{impact}</p>
-  </a>
+  </div>
 );
 
 const FaqItem: React.FC<{ q: string; a: string }> = ({ q, a }) => (
