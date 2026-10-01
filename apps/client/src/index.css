@@ -84,3 +84,49 @@ body {
   scrollbar-width: thin;
   scrollbar-color: color-mix(in srgb, var(--color-earbore-500) 50%, transparent) transparent;
 }
+
+/* ───────── Fundal animat pentru hero (landing) ───────── */
+@keyframes hero-dash-forward {
+  to {
+    stroke-dashoffset: -360;
+  }
+}
+
+@keyframes hero-dash-backward {
+  to {
+    stroke-dashoffset: 360;
+  }
+}
+
+@keyframes hero-float {
+
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+
+  50% {
+    transform: translateY(-10px);
+  }
+}
+
+.hero-dash-fwd {
+  animation: hero-dash-forward 40s linear infinite;
+}
+
+.hero-dash-bwd {
+  animation: hero-dash-backward 55s linear infinite;
+}
+
+.hero-float {
+  animation: hero-float 9s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+
+  .hero-dash-fwd,
+  .hero-dash-bwd,
+  .hero-float {
+    animation: none;
+  }
+}

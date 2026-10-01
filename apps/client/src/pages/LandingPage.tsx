@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import LandingHeader from '../components/layout/LandingHeader';
 import LandingTreeShowcase from '../components/landing/LandingTreeShowcase';
+import HeroBackground from '../components/landing/HeroBackground'; // NOU
 import { API_BASE_URL } from '../i18n/config';
 
 const DONATE_URL = 'https://buymeacoffee.com/earbore'; // TODO: înlocuiește cu link-ul tău real
@@ -17,12 +18,12 @@ const LandingPage: React.FC = () => {
 
       {/* ───────────── HERO ───────────── */}
       <section className="relative overflow-hidden">
-        <div
-          className="absolute inset-0 opacity-[0.06] pointer-events-none"
-          style={{ background: 'radial-gradient(circle at 30% 20%, var(--color-earbore-600), transparent 55%)' }}
-        />
+        {/* ÎNLOCUIT — fundal cu gradient, grilă de puncte, linii dashed și flow chart-uri */}
+        <HeroBackground />
+
         <div className="max-w-5xl mx-auto px-6 pt-16 sm:pt-24 pb-16 text-center relative">
-          <span className="inline-block bg-earbore-100 text-earbore-700 text-xs font-semibold px-3 py-1.5 rounded-full mb-6 tracking-wide uppercase">
+          {/* ÎNLOCUIT — fundal alb translucid + contur, ca să se vadă pe noul fundal */}
+          <span className="inline-block bg-white/70 backdrop-blur-sm border border-earbore-200 text-earbore-700 text-xs font-semibold px-3 py-1.5 rounded-full mb-6 tracking-wide uppercase">
             {t('landing.badge')}
           </span>
 
@@ -38,7 +39,8 @@ const LandingPage: React.FC = () => {
             <button onClick={() => navigate('/auth?mode=register')} className="btn-primary text-base px-7 py-3.5 w-full sm:w-auto">
               {t('landing.ctaBuildFree')}
             </button>
-            <a href="#cum-functioneaza" className="btn-outline text-base px-7 py-3.5 w-full sm:w-auto text-center">
+            {/* ÎNLOCUIT — bg-white/60 pentru contrast pe fundalul lavandă */}
+            <a href="#cum-functioneaza" className="btn-outline bg-white/60 text-base px-7 py-3.5 w-full sm:w-auto text-center">
               {t('landing.ctaSeeHowItWorks')}
             </a>
           </div>
@@ -47,7 +49,7 @@ const LandingPage: React.FC = () => {
             {t('landing.heroFootnote')}
           </p>
 
-          {/* ÎNLOCUIT — vechiul TreePreviewSvg: acum arborele real în 2D + 3D (rotativ) */}
+          {/* arborele real în 2D + 3D (rotativ) */}
           <LandingTreeShowcase />
         </div>
       </section>
