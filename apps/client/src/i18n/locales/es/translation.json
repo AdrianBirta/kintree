@@ -488,6 +488,8 @@
     "grandparent": "Abuelo/a",
     "parent": "Padre/Madre",
     "you": "Tú",
-    "child": "Hijo/a"
+    "child": "Hijo/a",
+    "desc2D": "Árbol clásico, por generaciones",
+    "desc3D": "Árbol 3D en rotación"
   }
 }

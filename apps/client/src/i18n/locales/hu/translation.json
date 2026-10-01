@@ -488,6 +488,8 @@
     "grandparent": "Nagyszülő",
     "parent": "Szülő",
     "you": "Te",
-    "child": "Gyermek"
+    "child": "Gyermek",
+    "desc2D": "Klasszikus családfa, generációk szerint",
+    "desc3D": "3D családfa, lassan forog"
   }
 }

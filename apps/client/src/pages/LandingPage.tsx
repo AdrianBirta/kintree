@@ -2,7 +2,7 @@ import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import LandingHeader from '../components/layout/LandingHeader';
-import TreePreviewSvg from '../components/landing/TreePreviewSvg';
+import LandingTreeShowcase from '../components/landing/LandingTreeShowcase';
 import { API_BASE_URL } from '../i18n/config';
 
 const DONATE_URL = 'https://buymeacoffee.com/earbore'; // TODO: înlocuiește cu link-ul tău real
@@ -47,11 +47,8 @@ const LandingPage: React.FC = () => {
             {t('landing.heroFootnote')}
           </p>
 
-          <div className="mt-14 max-w-3xl mx-auto rounded-3xl border border-earbore-border bg-white shadow-xl p-3 sm:p-4">
-            <div className="rounded-2xl h-64 sm:h-80 overflow-hidden">
-              <TreePreviewSvg />
-            </div>
-          </div>
+          {/* ÎNLOCUIT — vechiul TreePreviewSvg: acum arborele real în 2D + 3D (rotativ) */}
+          <LandingTreeShowcase />
         </div>
       </section>
 
@@ -177,9 +174,9 @@ const LandingPage: React.FC = () => {
             <DonateTier label={t('landing.donateTier3Label')} impact={t('landing.donateTier3Impact')} icon="🦸" />
           </div>
 
-          {/* NOU — un singur buton clar, real, care duce către pagina de donații.
-    Sumele exacte le alege userul acolo, în moneda pe care o afișează
-    platforma (Buy Me a Coffee procesează în USD). */}
+          {/* un singur buton clar, real, care duce către pagina de donații.
+              Sumele exacte le alege userul acolo, în moneda pe care o afișează
+              platforma (Buy Me a Coffee procesează în USD). */}
           <a
             href={DONATE_URL}
             target="_blank"
@@ -197,10 +194,10 @@ const LandingPage: React.FC = () => {
             ☕ {t('landing.donateButton')}
           </a>
         </div>
-      </section >
+      </section>
 
       {/* ───────────── FAQ ───────────── */}
-      <section id="intrebari" className="py-20 scroll-mt-18" >
+      <section id="intrebari" className="py-20 scroll-mt-18">
         <div className="max-w-3xl mx-auto px-6">
           <h2 className="text-3xl font-extrabold text-earbore-ink text-center mb-12">{t('landing.faqTitle')}</h2>
           <div className="flex flex-col gap-4">
@@ -212,10 +209,10 @@ const LandingPage: React.FC = () => {
             <FaqItem q={t('landing.faq6Q')} a={t('landing.faq6A')} />
           </div>
         </div>
-      </section >
+      </section>
 
       {/* ───────────── CTA FINAL ───────────── */}
-      <section className="bg-white border-t border-earbore-border py-20" >
+      <section className="bg-white border-t border-earbore-border py-20">
         <div className="max-w-3xl mx-auto px-6 text-center">
           <h2 className="text-3xl sm:text-4xl font-extrabold text-earbore-ink mb-4">
             {t('landing.finalCtaTitle')}
@@ -227,7 +224,7 @@ const LandingPage: React.FC = () => {
             {t('landing.ctaBuildFree')}
           </button>
         </div>
-      </section >
+      </section>
 
       <footer className="border-t border-earbore-border py-6 text-center text-sm text-earbore-gray bg-earbore-grayLight">
         <div className="flex items-center justify-center gap-1.5">
@@ -235,7 +232,7 @@ const LandingPage: React.FC = () => {
           <span>© {new Date().getFullYear()} eArbore. {t('landing.footer')}</span>
         </div>
       </footer>
-    </div >
+    </div>
   );
 };
 

@@ -11,6 +11,9 @@ interface Props {
   member: FamilyMember;
   position: [number, number, number];
   onOpen: () => void;
+  // NOU — versiune ușoară: material simplu (fără transmission/clearcoat),
+  // geometrie cu mai puține segmente
+  lite?: boolean;
 }
 
 const PHOTO_RADIUS = 0.46;
@@ -31,112 +34,127 @@ function getAccentColor(gender: string | null | undefined, deceased: boolean): s
   return cssVar('--color-earbore-400', '#9b7fc4');
 }
 
+// ── încărcare poză: întâi direct (rapid, merge pentru /assets/...),
+//    apoi prin fetch cu credentials (pentru poze protejate din backend) ──
+function loadImageElement(url: string, crossOrigin?: 'anonymous'): Promise<HTMLImageElement> {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    if (crossOrigin) img.crossOrigin = crossOrigin;
+    img.onload = () => resolve(img);
+    img.onerror = () => reject(new Error(`Image load failed: ${url}`));
+    img.src = url;
+  });
+}
+
+async function loadPortraitImage(url: string): Promise<HTMLImageElement> {
+  try {
+    return await loadImageElement(url, 'anonymous');
+  } catch {
+    // încercăm și varianta cu cookies/credentials
+  }
+  const res = await fetch(url, { credentials: 'include' });
+  if (!res.ok) throw new Error(`HTTP ${res.status} for ${url}`);
+  const blob = await res.blob();
+  const objectUrl = URL.createObjectURL(blob);
+  try {
+    return await loadImageElement(objectUrl);
+  } finally {
+    URL.revokeObjectURL(objectUrl);
+  }
+}
+
+function drawCoverTexture(img: HTMLImageElement, deceased: boolean): THREE.Texture {
+  const canvas = document.createElement('canvas');
+  canvas.width = 256;
+  canvas.height = 256;
+  const ctx = canvas.getContext('2d')!;
+
+  const srcRatio = img.width / img.height;
+  let sx = 0, sy = 0, sw = img.width, sh = img.height;
+  if (srcRatio > 1) {
+    sw = img.height;
+    sx = (img.width - sw) / 2;
+  } else if (srcRatio < 1) {
+    sh = img.width;
+    sy = (img.height - sh) / 2;
+  }
+
+  if (deceased) ctx.filter = 'grayscale(65%) brightness(0.97)';
+  ctx.drawImage(img, sx, sy, sw, sh, 0, 0, 256, 256);
+
+  const tex = new THREE.CanvasTexture(canvas);
+  tex.colorSpace = THREE.SRGBColorSpace;
+  tex.needsUpdate = true;
+  return tex;
+}
+
+function makeInitialsTexture(initials: string, deceased: boolean): THREE.Texture {
+  const canvas = document.createElement('canvas');
+  canvas.width = 256;
+  canvas.height = 256;
+  const ctx = canvas.getContext('2d')!;
+  ctx.fillStyle = deceased ? '#e9e6df' : '#f1e4cf';
+  ctx.fillRect(0, 0, 256, 256);
+  ctx.fillStyle = deceased ? '#948f80' : '#6b4a2f';
+  ctx.font = '600 92px Inter, sans-serif';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText(initials, 128, 136);
+  const tex = new THREE.CanvasTexture(canvas);
+  tex.colorSpace = THREE.SRGBColorSpace;
+  tex.needsUpdate = true;
+  return tex;
+}
+
 function usePortraitTexture(member: FamilyMember, deceased: boolean): THREE.Texture | null {
   const [texture, setTexture] = useState<THREE.Texture | null>(null);
+  const currentRef = useRef<THREE.Texture | null>(null);
+
+  // dispose doar la demontare, nu la fiecare schimbare de dependențe
+  useEffect(() => () => {
+    currentRef.current?.dispose();
+    currentRef.current = null;
+  }, []);
 
   useEffect(() => {
     let cancelled = false;
-    let owned: THREE.Texture | null = null;
-    let objectUrl: string | null = null;
-    const initials = `${member.firstName[0] ?? ''}${member.lastName[0] ?? ''}`.toUpperCase();
     const imageUrl = member.imageUrl;
+    const initials = `${member.firstName[0] ?? ''}${member.lastName[0] ?? ''}`.toUpperCase();
 
-    const makeInitialsTexture = () => {
-      const canvas = document.createElement('canvas');
-      canvas.width = 256;
-      canvas.height = 256;
-      const ctx = canvas.getContext('2d')!;
-      ctx.fillStyle = deceased ? '#e9e6df' : '#f1e4cf';
-      ctx.fillRect(0, 0, 256, 256);
-      ctx.fillStyle = deceased ? '#948f80' : '#6b4a2f';
-      ctx.font = '600 92px Inter, sans-serif';
-      ctx.textAlign = 'center';
-      ctx.textBaseline = 'middle';
-      ctx.fillText(initials, 128, 136);
-      const tex = new THREE.CanvasTexture(canvas);
-      tex.colorSpace = THREE.SRGBColorSpace;
-      return tex;
-    };
-
-    const applyFallback = () => {
-      if (cancelled) return;
-      owned = makeInitialsTexture();
-      setTexture(owned);
-    };
-
-    const drawCover = (img: HTMLImageElement) => {
-      const canvas = document.createElement('canvas');
-      canvas.width = 256;
-      canvas.height = 256;
-      const ctx = canvas.getContext('2d')!;
-
-      const srcRatio = img.width / img.height;
-      let sx = 0, sy = 0, sw = img.width, sh = img.height;
-      if (srcRatio > 1) {
-        sw = img.height;
-        sx = (img.width - sw) / 2;
-      } else if (srcRatio < 1) {
-        sh = img.width;
-        sy = (img.height - sh) / 2;
-      }
-
-      if (deceased) ctx.filter = 'grayscale(65%) brightness(0.97)';
-      ctx.drawImage(img, sx, sy, sw, sh, 0, 0, 256, 256);
-
-      const tex = new THREE.CanvasTexture(canvas);
-      tex.colorSpace = THREE.SRGBColorSpace;
-      owned = tex;
+    // înlocuiește textura curentă; o pe cea veche o eliberăm cu puțină
+    // întârziere, ca să nu o ștergem cât timp mai e folosită într-un frame
+    const publish = (tex: THREE.Texture) => {
+      const old = currentRef.current;
+      currentRef.current = tex;
       setTexture(tex);
+      if (old && old !== tex) window.setTimeout(() => old.dispose(), 200);
     };
 
-    if (!imageUrl) {
-      applyFallback();
-      return () => owned?.dispose();
-    }
+    // până se încarcă poza (sau dacă nu există), arătăm literele
+    publish(makeInitialsTexture(initials, deceased));
 
-    (async () => {
-      try {
-        const res = await fetch(imageUrl, { credentials: 'include' });
-        if (!res.ok) throw new Error(`HTTP ${res.status}`);
-        const blob = await res.blob();
-        if (cancelled) return;
-        objectUrl = URL.createObjectURL(blob);
-
-        const img = new Image();
-        img.onload = () => {
+    if (imageUrl) {
+      loadPortraitImage(imageUrl)
+        .then((img) => {
           if (cancelled) return;
-          try {
-            drawCover(img);
-          } catch {
-            applyFallback();
+          publish(drawCoverTexture(img, deceased));
+        })
+        .catch((err) => {
+          if (import.meta.env.DEV) {
+            console.warn('[MemberCard3D] poza nu s-a putut încărca, rămân inițialele:', imageUrl, err);
           }
-        };
-        img.onerror = () => applyFallback();
-        img.src = objectUrl;
-      } catch {
-        try {
-          const img = new Image();
-          img.crossOrigin = 'anonymous';
-          img.onload = () => { if (!cancelled) drawCover(img); };
-          img.onerror = () => applyFallback();
-          img.src = imageUrl;
-        } catch {
-          applyFallback();
-        }
-      }
-    })();
+        });
+    }
 
     return () => {
       cancelled = true;
-      owned?.dispose();
-      if (objectUrl) URL.revokeObjectURL(objectUrl);
     };
   }, [member.imageUrl, member.firstName, member.lastName, deceased]);
 
   return texture;
 }
 
-const MemberCard3D: React.FC<Props> = ({ member, position, onOpen }) => {
+const MemberCard3D: React.FC<Props> = ({ member, position, onOpen, lite = false }) => {
   const { t } = useTranslation();
   const deceased = isDeceased(member.deathDate);
   const age = calculateAge(member.birthDate, member.deathDate);
@@ -144,11 +162,14 @@ const MemberCard3D: React.FC<Props> = ({ member, position, onOpen }) => {
 
   const accent = useMemo(() => getAccentColor(member.gender, deceased), [member.gender, deceased]);
 
-  const photoGeometry = useMemo(() => new THREE.CircleGeometry(PHOTO_RADIUS, 48), []);
-  const orbGeometry = useMemo(() => new THREE.SphereGeometry(ORB_RADIUS, 32, 32), []);
+  const photoGeometry = useMemo(() => new THREE.CircleGeometry(PHOTO_RADIUS, lite ? 32 : 48), [lite]);
+  const orbGeometry = useMemo(
+    () => new THREE.SphereGeometry(ORB_RADIUS, lite ? 20 : 32, lite ? 20 : 32),
+    [lite],
+  );
   const ringGeometry = useMemo(
-    () => new THREE.RingGeometry(PHOTO_RADIUS + 0.005, PHOTO_RADIUS + 0.03, 48),
-    [],
+    () => new THREE.RingGeometry(PHOTO_RADIUS + 0.005, PHOTO_RADIUS + 0.03, lite ? 32 : 48),
+    [lite],
   );
 
   useEffect(() => () => {
@@ -179,19 +200,32 @@ const MemberCard3D: React.FC<Props> = ({ member, position, onOpen }) => {
   return (
     <group position={position}>
       <mesh ref={orbRef} geometry={orbGeometry}>
-        <meshPhysicalMaterial
-          color={accent}
-          transparent
-          opacity={0.14}
-          roughness={0.25}
-          metalness={0}
-          transmission={0.55}
-          thickness={0.4}
-          clearcoat={0.6}
-          clearcoatRoughness={0.3}
-          side={THREE.DoubleSide}
-          depthWrite={false}
-        />
+        {lite ? (
+          // material ieftin: fără transmission (cel mai scump efect din scenă)
+          <meshStandardMaterial
+            color={accent}
+            transparent
+            opacity={0.18}
+            roughness={0.3}
+            metalness={0}
+            side={THREE.DoubleSide}
+            depthWrite={false}
+          />
+        ) : (
+          <meshPhysicalMaterial
+            color={accent}
+            transparent
+            opacity={0.14}
+            roughness={0.25}
+            metalness={0}
+            transmission={0.55}
+            thickness={0.4}
+            clearcoat={0.6}
+            clearcoatRoughness={0.3}
+            side={THREE.DoubleSide}
+            depthWrite={false}
+          />
+        )}
       </mesh>
 
       <Billboard>
@@ -214,6 +248,7 @@ const MemberCard3D: React.FC<Props> = ({ member, position, onOpen }) => {
         >
           <mesh geometry={photoGeometry} position={[0, 0, 0.001]}>
             <meshStandardMaterial
+              key={texture?.uuid ?? 'no-texture'}
               map={texture ?? undefined}
               color={texture ? '#ffffff' : '#e5ddc9'}
               roughness={0.55}

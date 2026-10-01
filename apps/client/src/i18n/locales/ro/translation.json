@@ -488,6 +488,8 @@
     "grandparent": "Bunic",
     "parent": "Părinte",
     "you": "Tu",
-    "child": "Copil"
+    "child": "Copil",
+    "desc2D": "Arbore clasic, pe generații",
+    "desc3D": "Arbore 3D, în rotație"
   }
 }

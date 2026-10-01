@@ -488,6 +488,8 @@
     "grandparent": "Großelternteil",
     "parent": "Elternteil",
     "you": "Du",
-    "child": "Kind"
+    "child": "Kind",
+    "desc2D": "Klassischer Stammbaum nach Generationen",
+    "desc3D": "3D-Stammbaum, der sich dreht"
   }
 }
