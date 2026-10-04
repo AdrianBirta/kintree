@@ -1,7 +1,7 @@
 // FamilyTree3D.tsx
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import * as THREE from 'three';
-import { Canvas, type RootState } from '@react-three/fiber';
+import { Canvas, useFrame, type RootState } from '@react-three/fiber';
 import { OrbitControls } from '@react-three/drei';
 import { useNavigate } from 'react-router-dom';
 import type { FamilyTreeData } from '../../types/family';
@@ -17,36 +17,51 @@ interface Props {
   // false = arbore doar de privit: fără rotire/zoom/pan manual și fără
   // să captureze scroll-ul paginii (pointer-events: none). Implicit true.
   interactive?: boolean;
+  // NOU — false = membrii nu pot fi apăsați și nu reacționează la hover.
+  // Implicit urmează `interactive`.
+  clickable?: boolean;
   // multiplicator pentru distanța camerei (<1 = mai aproape). Implicit 1.
   cameraZoom?: number;
   // true oprește complet randarea (ex. când canvas-ul e în afara ecranului)
   paused?: boolean;
-  // NOU — versiune ușoară (landing): fără umbre, fără transmission, dpr mic
+  // versiune ușoară (landing): fără umbre, fără transmission, dpr mic
   lite?: boolean;
 }
 
 const RANK_HEIGHT = 3.8;
 
 const ANGLE_STEP = 0.42;
-const ARC_SPAN = Math.PI * 1.5;
-const BASE_RADIUS = 1.4;
-const RADIUS_GROWTH = 1.15;
+const ARC_SPAN = Math.PI * 1.8;   // MODIFICAT — era 1.5π: inelele se umplu mai mult
+const BASE_RADIUS = 1.8;          // MODIFICAT — era 1.4: baza pâlniei ceva mai largă
+const RADIUS_GROWTH = 1.3;        // MODIFICAT — era 1.15: pâlnia se deschide mai tare
 const MIN_ARC_PER_MEMBER = 0.85;
 
 const CONNECTOR_GAP = 0.1;
 const MIN_CONNECTOR_LENGTH = 0.05;
 
-// NOU — dacă WebGL pierde contextul, încercăm să recreăm Canvas-ul de maxim
+// dacă WebGL pierde contextul, încercăm să recreăm Canvas-ul de maxim
 // atâtea ori (evităm bucla infinită pe dispozitive foarte slabe)
 const MAX_CONTEXT_RETRIES = 3;
 
+// setări cameră. Elevația (în radiani) e unghiul la care camera
+// "privește de sus" spre arbore: ~0.45 rad ≈ 26°.
+const CAMERA_ELEVATION = 0.45;
+const CAMERA_DISTANCE_FACTOR = 1.5;
+const CAMERA_DISTANCE_BASE = 14;
+const TARGET_HEIGHT_FACTOR = 0.45;
+
 type Vec3 = [number, number, number];
 
-// NOU — trunchiul e pe axa de rotație (0, 0). Toată scena (spirala, ținta
-// camerei, solul) se învârte în jurul aceleiași axe, deci piciorul arborelui
-// rămâne fix pe loc, iar rotația e un cerc perfect.
+// trunchiul e pe axa de rotație (0, 0). Toată scena se învârte în jurul
+// aceleiași axe, deci piciorul arborelui rămâne fix, iar rotația e un cerc perfect.
 const TRUNK_TOP: Vec3 = [0, 0, 0];
 const GROUND_Y = -0.9;
+
+// NOU — animația verticală a camerei (ciclu: centru → sus → centru → jos → centru → pauză)
+const SWEEP_UP_RAD = 0.5;      // cât se ridică în plus față de elevația de bază (privire de sus)
+const SWEEP_DOWN_RAD = 0.3;    // cât coboară față de elevația de bază (privire de la bază)
+const SWEEP_MOVE_SEC = 4;      // durata unei mișcări (centru → sus, sus → centru etc.)
+const SWEEP_PAUSE_SEC = 3;     // pauza la centru, înainte de a reîncepe
 
 interface ConnectorProps {
   from: Vec3;
@@ -138,7 +153,7 @@ function trimToOrbEdge(from: Vec3, to: Vec3, offset: number): { from: Vec3; to: 
   };
 }
 
-// NOU — ramura de la vârful trunchiului spre un membru din prima generație:
+// ramura de la vârful trunchiului spre un membru din prima generație:
 // tăiem doar capătul dinspre sferă (capătul dinspre trunchi rămâne lipit)
 function trimBranchEnd(from: Vec3, to: Vec3, offset: number): { from: Vec3; to: Vec3 } | null {
   const start = new THREE.Vector3(...from);
@@ -154,16 +169,70 @@ function trimBranchEnd(from: Vec3, to: Vec3, offset: number): { from: Vec3; to: 
 
 type ConnectorData = { id: string; from: Vec3; to: Vec3; radius: number; color: string; opacity?: number };
 
+const smoothstep = (x: number) => x * x * (3 - 2 * x);
+
+// offset de elevație (radiani) în funcție de timpul din ciclu
+function sweepOffset(time: number): number {
+  const move = SWEEP_MOVE_SEC;
+  const cycle = move * 4 + SWEEP_PAUSE_SEC;
+  const t = time % cycle;
+
+  if (t < move) return SWEEP_UP_RAD * smoothstep(t / move);                       // centru → sus
+  if (t < move * 2) return SWEEP_UP_RAD * (1 - smoothstep((t - move) / move));    // sus → centru
+  if (t < move * 3) return -SWEEP_DOWN_RAD * smoothstep((t - move * 2) / move);   // centru → jos
+  if (t < move * 4) return -SWEEP_DOWN_RAD * (1 - smoothstep((t - move * 3) / move)); // jos → centru
+  return 0;                                                                        // pauză la centru
+}
+
+const CameraSweep: React.FC<{ target: Vec3; baseElevation: number; enabled: boolean }> = ({
+  target,
+  baseElevation,
+  enabled,
+}) => {
+  const clockStart = useRef<number | null>(null);
+
+  useFrame((state) => {
+    if (!enabled) return;
+    if (clockStart.current === null) clockStart.current = state.clock.elapsedTime;
+    const time = state.clock.elapsedTime - clockStart.current;
+
+    const cam = state.camera;
+    const [tx, ty, tz] = target;
+
+    // păstrăm distanța și azimutul curente (setate de auto-rotate al OrbitControls)
+    const dx = cam.position.x - tx;
+    const dz = cam.position.z - tz;
+    const horizontal = Math.hypot(dx, dz);
+    const dy = cam.position.y - ty;
+    const distance = Math.hypot(horizontal, dy);
+    const azimuth = Math.atan2(dx, dz);
+
+    // elevația nouă = baza + offset-ul animat (limitată ca să nu treacă de poli)
+    const elevation = Math.max(0.05, Math.min(1.35, baseElevation + sweepOffset(time)));
+
+    cam.position.set(
+      tx + Math.sin(azimuth) * Math.cos(elevation) * distance,
+      ty + Math.sin(elevation) * distance,
+      tz + Math.cos(azimuth) * Math.cos(elevation) * distance,
+    );
+    cam.lookAt(tx, ty, tz);
+  });
+
+  return null;
+};
+
 const FamilyTree3D: React.FC<Props> = ({
   treeData,
   autoRotate = false,
-  autoRotateSpeed = 1.2,
+  autoRotateSpeed = 3.5,
   interactive = true,
+  clickable, // NOU — dacă nu e dat, urmează `interactive`
   cameraZoom = 1,
   paused = false,
   lite = false,
 }) => {
   const navigate = useNavigate();
+  const isClickable = clickable ?? interactive; // NOU
 
   // ── plasă de siguranță: dacă browserul pierde contextul WebGL, recreăm Canvas-ul ──
   const [canvasKey, setCanvasKey] = useState(0);
@@ -247,7 +316,7 @@ const FamilyTree3D: React.FC<Props> = ({
 
     const rankById = new Map(layout.members.map((m) => [m.id, m.rank]));
 
-    // NOU — ramuri de la trunchi spre fiecare membru din prima generație
+    // ramuri de la trunchi spre fiecare membru din prima generație
     layout.members
       .filter((m) => m.rank === rootRank)
       .forEach((m) => {
@@ -310,8 +379,16 @@ const FamilyTree3D: React.FC<Props> = ({
   // discul de la sol acoperă toată raza spiralei
   const groundRadius = BASE_RADIUS + maxRank * RADIUS_GROWTH + 1.4;
 
-  // memoizat ca să nu "resetăm" ținta camerei la fiecare re-render
-  const controlsTarget = useMemo<Vec3>(() => [0, totalHeight * 0.5, 0], [totalHeight]);
+  // ținta camerei; memoizat ca să nu "resetăm" ținta la fiecare re-render
+  const controlsTarget = useMemo<Vec3>(() => [0, totalHeight * TARGET_HEIGHT_FACTOR, 0], [totalHeight]);
+
+  // poziția camerei: mai departe + înclinată, ca să se vadă pâlnia.
+  // x = 0 → orbita rămâne un cerc perfect în jurul trunchiului.
+  const cameraDistance = (totalHeight * CAMERA_DISTANCE_FACTOR + CAMERA_DISTANCE_BASE) * cameraZoom;
+  const cameraPosition = useMemo<Vec3>(
+    () => [0, controlsTarget[1] + cameraDistance * Math.tan(CAMERA_ELEVATION), cameraDistance],
+    [controlsTarget, cameraDistance],
+  );
 
   return (
     <div
@@ -324,9 +401,8 @@ const FamilyTree3D: React.FC<Props> = ({
     >
       <Canvas
         key={canvasKey}
-        // x = 0: camera e exact pe axa Z, deci orbita e un cerc perfect în jurul trunchiului
         camera={{
-          position: [0, totalHeight * 0.55, (totalHeight * 1.25 + 12) * cameraZoom],
+          position: cameraPosition,
           fov: 42,
         }}
         dpr={lite ? [1, 1.5] : [1, 2]}
@@ -336,7 +412,7 @@ const FamilyTree3D: React.FC<Props> = ({
         onCreated={handleCreated}
       >
         <color attach="background" args={['#faf9f5']} />
-        <fog attach="fog" args={['#faf9f5', totalHeight * 1.7, totalHeight * 3.4 + 26]} />
+        <fog attach="fog" args={['#faf9f5', cameraDistance * 1.15, cameraDistance * 2.8 + 26]} />
 
         <ambientLight intensity={0.85} />
         <directionalLight
@@ -365,6 +441,12 @@ const FamilyTree3D: React.FC<Props> = ({
           autoRotateSpeed={autoRotateSpeed}
         />
 
+        <CameraSweep
+          target={controlsTarget}
+          baseElevation={CAMERA_ELEVATION}
+          enabled={autoRotate && !interactive && !paused}
+        />
+
         {/* solul — centrat pe axa de rotație, ca trunchiul */}
         <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, GROUND_Y - 0.01, 0]} receiveShadow={!lite}>
           <circleGeometry args={[groundRadius, 48]} />
@@ -387,6 +469,7 @@ const FamilyTree3D: React.FC<Props> = ({
                 position={pos}
                 member={m.member}
                 lite={lite}
+                clickable={isClickable}
                 onOpen={() => navigate(`/members/${m.id}`)}
               />
             </React.Fragment>

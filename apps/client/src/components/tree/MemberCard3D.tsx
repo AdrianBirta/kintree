@@ -11,9 +11,9 @@ interface Props {
   member: FamilyMember;
   position: [number, number, number];
   onOpen: () => void;
-  // NOU — versiune ușoară: material simplu (fără transmission/clearcoat),
-  // geometrie cu mai puține segmente
   lite?: boolean;
+  // false = card doar decorativ: fără click, hover, zoom sau cursor "pointer"
+  clickable?: boolean;
 }
 
 const PHOTO_RADIUS = 0.46;
@@ -154,7 +154,7 @@ function usePortraitTexture(member: FamilyMember, deceased: boolean): THREE.Text
   return texture;
 }
 
-const MemberCard3D: React.FC<Props> = ({ member, position, onOpen, lite = false }) => {
+const MemberCard3D: React.FC<Props> = ({ member, position, onOpen, lite = false, clickable = true }) => {
   const { t } = useTranslation();
   const deceased = isDeceased(member.deathDate);
   const age = calculateAge(member.birthDate, member.deathDate);
@@ -182,7 +182,7 @@ const MemberCard3D: React.FC<Props> = ({ member, position, onOpen, lite = false 
   const orbRef = useRef<THREE.Mesh>(null);
   const [hovered, setHovered] = useState(false);
   const targetScale = useRef(1);
-  targetScale.current = hovered ? 1.1 : 1;
+  targetScale.current = clickable && hovered ? 1.1 : 1;
 
   useFrame((state) => {
     if (billboardRef.current) {
@@ -196,6 +196,25 @@ const MemberCard3D: React.FC<Props> = ({ member, position, onOpen, lite = false 
   });
 
   useEffect(() => () => { document.body.style.cursor = 'auto'; }, []);
+
+  const interactionHandlers = clickable
+    ? {
+      onPointerOver: (e: any) => {
+        e.stopPropagation();
+        setHovered(true);
+        document.body.style.cursor = 'pointer';
+      },
+      onPointerOut: (e: any) => {
+        e.stopPropagation();
+        setHovered(false);
+        document.body.style.cursor = 'auto';
+      },
+      onClick: (e: any) => {
+        e.stopPropagation();
+        onOpen();
+      },
+    }
+    : {};
 
   return (
     <group position={position}>
@@ -229,23 +248,7 @@ const MemberCard3D: React.FC<Props> = ({ member, position, onOpen, lite = false 
       </mesh>
 
       <Billboard>
-        <group
-          ref={billboardRef}
-          onPointerOver={(e) => {
-            e.stopPropagation();
-            setHovered(true);
-            document.body.style.cursor = 'pointer';
-          }}
-          onPointerOut={(e) => {
-            e.stopPropagation();
-            setHovered(false);
-            document.body.style.cursor = 'auto';
-          }}
-          onClick={(e) => {
-            e.stopPropagation();
-            onOpen();
-          }}
-        >
+        <group ref={billboardRef} {...interactionHandlers}>
           <mesh geometry={photoGeometry} position={[0, 0, 0.001]}>
             <meshStandardMaterial
               key={texture?.uuid ?? 'no-texture'}

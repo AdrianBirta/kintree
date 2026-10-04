@@ -21,7 +21,7 @@ const LandingPage: React.FC = () => {
         {/* ÎNLOCUIT — fundal cu gradient, grilă de puncte, linii dashed și flow chart-uri */}
         <HeroBackground />
 
-        <div className="max-w-5xl mx-auto px-6 pt-16 sm:pt-24 pb-16 text-center relative">
+        <div className="max-w-5xl mx-auto px-6 pt-24 sm:pt-24 pb-16 text-center relative">
           {/* ÎNLOCUIT — fundal alb translucid + contur, ca să se vadă pe noul fundal */}
           <span className="inline-block bg-white/70 backdrop-blur-sm border border-earbore-200 text-earbore-700 text-xs font-semibold px-3 py-1.5 rounded-full mb-6 tracking-wide uppercase">
             {t('landing.badge')}

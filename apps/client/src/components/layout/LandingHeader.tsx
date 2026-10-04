@@ -52,7 +52,7 @@ const LandingHeader: React.FC = () => {
       {/* Pe mobil: header plutitor tip "pill", cu offset de sus și colțuri rotunjite.
           Pe desktop (sm+): aspectul vechi — bară sticky lipită sus, colțuri drepte,
           fără gap lateral, doar border-bottom. */}
-      <header className="sticky top-3 sm:top-0 z-40 px-3 sm:px-0">
+      <header className="fixed inset-x-0 top-3 sm:sticky sm:top-0 z-40 px-3 sm:px-0">
         <div
           className={`max-w-5xl sm:max-w-none mx-auto sm:mx-0 flex items-center justify-between gap-2 rounded-2xl sm:rounded-none border sm:border-0 sm:border-b transition-shadow duration-200 ${scrolled
             ? 'border-earbore-border shadow-[0_8px_28px_-8px_rgba(20,10,40,0.18)] sm:shadow-none'

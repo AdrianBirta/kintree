@@ -77,8 +77,9 @@ const LandingTreeShowcase: React.FC = () => {
               <FamilyTree3D
                 treeData={tree3D}
                 autoRotate={!reducedMotion}
-                autoRotateSpeed={1.6}
+                autoRotateSpeed={3.5}
                 interactive={false}
+                clickable={false}
                 cameraZoom={0.75}
                 paused={!inView}
                 lite
