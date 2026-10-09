@@ -1,7 +1,6 @@
 import apiClient from './apiClient';
 import axios from 'axios';
-
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000';
+import { API_BASE_URL } from '../i18n/config';
 
 export interface AppInvite {
   id: string;
@@ -20,5 +19,7 @@ export const invitesService = {
   remove: (id: string) => apiClient.delete(`/invites/${id}`),
   // public — nu folosește apiClient (fără JWT necesar)
   preview: (token: string) =>
-    axios.get<{ inviterName: string; email?: string | null }>(`${API_BASE_URL}/invites/public/${token}`).then((r) => r.data),
+    axios
+      .get<{ inviterName: string; email?: string | null }>(`${API_BASE_URL}/invites/public/${token}`)
+      .then((r) => r.data),
 };

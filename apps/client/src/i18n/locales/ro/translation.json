@@ -362,7 +362,16 @@
     "login": "Autentifică-te",
     "showPassword": "Arată parola",
     "hidePassword": "Ascunde parola",
-    "invitedBy": "Ai fost invitat de {{name}} să te alături familiei sale pe eArbore."
+    "invitedBy": "Ai fost invitat de {{name}} să te alături familiei sale pe eArbore.",
+    "orContinueWith": "sau continuă cu",
+    "continueWithGoogle": "Continuă cu Google",
+    "continueWithFacebook": "Continuă cu Facebook",
+    "continueWithYahoo": "Continuă cu Yahoo",
+    "socialErrors": {
+      "social_failed": "Autentificarea cu contul social nu a reușit. Încearcă din nou.",
+      "social_no_email": "Contul ales nu ne-a oferit o adresă de email. Folosește altă metodă sau creează un cont cu email.",
+      "social_email_unverified": "Adresa de email a contului ales nu este verificată de furnizor, deci nu o putem lega de un cont existent."
+    }
   },
   "dashboard": {
     "emptyTitle": "Arborele tău e gol deocamdată",
@@ -457,6 +466,51 @@
     "noReceived": "Nu ai primit încă acces la niciun alt arbore.",
     "viewingBanner": "Vizualizezi arborele lui {{name}}",
     "backToOwn": "Înapoi la arborele meu"
+  },
+  "emailVerification": {
+    "checkTitle": "Verifică-ți emailul",
+    "checkBody": "Am trimis un link de confirmare la {{email}}. Apasă-l pentru a-ți activa contul. Linkul e valabil 24 de ore. Verifică și folderul Spam.",
+    "resend": "Retrimite emailul",
+    "resendWait": "Poți retrimite peste {{seconds}} s",
+    "resent": "Email retrimis. Verifică-ți inbox-ul.",
+    "wrongEmail": "Ai greșit adresa? Înapoi la formular",
+    "verifying": "Se confirmă emailul...",
+    "invalidTitle": "Linkul de confirmare este invalid sau a expirat",
+    "invalidBody": "Creează din nou contul și îți trimitem un link nou.",
+    "registerAgain": "Înapoi la înregistrare",
+    "existsTitle": "Contul există deja",
+    "existsBody": "Există deja un cont cu acest email. Autentifică-te."
+  },
+  "legal": {
+    "privacyLink": "Politica de confidențialitate",
+    "termsLink": "Termeni și condiții",
+    "continueConsent": "Continuând, ești de acord cu <terms>Termenii și condițiile</terms> și cu <privacy>Politica de confidențialitate</privacy>.",
+    "backHome": "← Înapoi la pagina principală",
+    "lastUpdated": "Ultima actualizare: {{date}}"
+  },
+  "passwordReset": {
+    "forgotLink": "Ai uitat parola?",
+    "forgotTitle": "Ai uitat parola?",
+    "forgotSubtitle": "Introdu emailul contului și îți trimitem un link pentru a alege o parolă nouă.",
+    "sendLink": "Trimite linkul →",
+    "sending": "Se trimite...",
+    "sentTitle": "Verifică-ți emailul",
+    "sentBody": "Dacă există un cont pentru {{email}}, ți-am trimis un link de resetare. Linkul e valabil 1 oră. Verifică și folderul Spam.",
+    "backToLogin": "← Înapoi la autentificare",
+    "resetTitle": "Alege o parolă nouă",
+    "resetSubtitle": "Parola trebuie să aibă cel puțin 8 caractere.",
+    "newPassword": "Parolă nouă",
+    "confirmPassword": "Confirmă parola",
+    "resetButton": "Salvează parola →",
+    "resetting": "Se salvează...",
+    "resetSuccessTitle": "Parola a fost schimbată",
+    "resetSuccessBody": "Te poți autentifica acum cu noua parolă. Pentru siguranță, ai fost deconectat de pe toate dispozitivele.",
+    "goToLogin": "Autentifică-te →",
+    "mismatch": "Parolele nu coincid.",
+    "invalidLink": "Linkul de resetare este invalid sau a expirat.",
+    "requestNewLink": "Cere un link nou",
+    "tooMany": "Prea multe încercări. Încearcă din nou peste un minut.",
+    "genericError": "A apărut o eroare. Încearcă din nou."
   },
   "messages": {
     "title": "Mesaje",

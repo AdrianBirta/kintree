@@ -7,18 +7,20 @@ import { UsersModule } from './users/users.module';
 import { FamilyMembersModule } from './family-members/family-members.module';
 import { SharingModule } from 'src/sharing/sharing.module';
 import { InvitesModule } from 'src/invites/invites.module';
-import { MessagingModule } from 'src/messaging/messaging.module'; // ADĂUGAT
+import { MessagingModule } from 'src/messaging/messaging.module';
 import { DonationsModule } from './donations/donations.module';
+import { MailModule } from './mail/mail.module'; // NOU
 
 @Module({
   imports: [
     PrismaModule,
+    MailModule, // NOU (global: MailService e disponibil oriunde)
     AuthModule,
     UsersModule,
     FamilyMembersModule,
     SharingModule,
-    InvitesModule, // ADĂUGAT — deși funcționează și doar via AuthModule (e importat acolo), e mai curat să fie explicit aici
-    MessagingModule, // ADĂUGAT — asta rezolvă 404-ul
+    InvitesModule,
+    MessagingModule,
     DonationsModule,
   ],
   controllers: [AppController],

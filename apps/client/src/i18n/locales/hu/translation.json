@@ -362,7 +362,16 @@
     "login": "Jelentkezz be",
     "showPassword": "Jelszó megjelenítése",
     "hidePassword": "Jelszó elrejtése",
-    "invitedBy": "{{name}} meghívott, hogy csatlakozz a családjához az eArbore-on."
+    "invitedBy": "{{name}} meghívott, hogy csatlakozz a családjához az eArbore-on.",
+    "orContinueWith": "vagy folytasd ezzel",
+    "continueWithGoogle": "Folytatás Google-lel",
+    "continueWithFacebook": "Folytatás Facebookkal",
+    "continueWithYahoo": "Folytatás Yahoo-val",
+    "socialErrors": {
+      "social_failed": "A közösségi fiókos bejelentkezés nem sikerült. Próbáld újra.",
+      "social_no_email": "A kiválasztott fiók nem adott meg e-mail-címet. Használj másik módszert, vagy regisztrálj e-mail-címmel.",
+      "social_email_unverified": "A kiválasztott fiók e-mail-címét a szolgáltató nem ellenőrizte, ezért nem köthetjük meglévő fiókhoz."
+    }
   },
   "dashboard": {
     "emptyTitle": "A családfád még üres",
@@ -457,6 +466,51 @@
     "noReceived": "Még nem kaptál hozzáférést más családfához.",
     "viewingBanner": "{{name}} családfáját nézed",
     "backToOwn": "Vissza a saját családfámhoz"
+  },
+  "emailVerification": {
+    "checkTitle": "Nézd meg az e-mailjeidet",
+    "checkBody": "Megerősítő linket küldtünk a(z) {{email}} címre. Kattints rá a fiókod aktiválásához. A link 24 óráig érvényes. Nézd meg a Spam mappát is.",
+    "resend": "E-mail újraküldése",
+    "resendWait": "Újraküldhető {{seconds}} mp múlva",
+    "resent": "Az e-mail újra elküldve. Nézd meg a postafiókodat.",
+    "wrongEmail": "Rossz címet adtál meg? Vissza az űrlaphoz",
+    "verifying": "E-mail megerősítése...",
+    "invalidTitle": "A megerősítő link érvénytelen vagy lejárt",
+    "invalidBody": "Regisztrálj újra, és új linket küldünk.",
+    "registerAgain": "Vissza a regisztrációhoz",
+    "existsTitle": "A fiók már létezik",
+    "existsBody": "Ezzel az e-mail-címmel már létezik fiók. Jelentkezz be."
+  },
+  "legal": {
+    "privacyLink": "Adatvédelmi irányelvek",
+    "termsLink": "Felhasználási feltételek",
+    "continueConsent": "A folytatással elfogadod a <terms>Felhasználási feltételeket</terms> és az <privacy>Adatvédelmi irányelveket</privacy>.",
+    "backHome": "← Vissza a főoldalra",
+    "lastUpdated": "Utolsó frissítés: {{date}}"
+  },
+  "passwordReset": {
+    "forgotLink": "Elfelejtetted a jelszavad?",
+    "forgotTitle": "Elfelejtetted a jelszavad?",
+    "forgotSubtitle": "Add meg a fiókod e-mail-címét, és küldünk egy linket az új jelszó beállításához.",
+    "sendLink": "Link küldése →",
+    "sending": "Küldés...",
+    "sentTitle": "Nézd meg az e-mailjeidet",
+    "sentBody": "Ha létezik fiók a(z) {{email}} címen, elküldtük a visszaállító linket. A link 1 óráig érvényes. Nézd meg a Spam mappát is.",
+    "backToLogin": "← Vissza a bejelentkezéshez",
+    "resetTitle": "Add meg az új jelszót",
+    "resetSubtitle": "A jelszónak legalább 8 karakter hosszúnak kell lennie.",
+    "newPassword": "Új jelszó",
+    "confirmPassword": "Jelszó megerősítése",
+    "resetButton": "Jelszó mentése →",
+    "resetting": "Mentés...",
+    "resetSuccessTitle": "A jelszó megváltozott",
+    "resetSuccessBody": "Most már bejelentkezhetsz az új jelszóval. A biztonságod érdekében minden eszközről kijelentkeztettünk.",
+    "goToLogin": "Bejelentkezés →",
+    "mismatch": "A jelszavak nem egyeznek.",
+    "invalidLink": "A visszaállító link érvénytelen vagy lejárt.",
+    "requestNewLink": "Új link kérése",
+    "tooMany": "Túl sok próbálkozás. Próbáld újra egy perc múlva.",
+    "genericError": "Hiba történt. Próbáld újra."
   },
   "messages": {
     "title": "Üzenetek",

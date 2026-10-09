@@ -1,13 +1,16 @@
 import React, { useState, useEffect } from 'react';
-import { useSearchParams, useNavigate } from 'react-router-dom';
+import { useSearchParams, useNavigate, Link } from 'react-router-dom';
+import { useTranslation, Trans } from 'react-i18next';
 import LoginForm from '../components/auth/LoginForm';
 import RegisterForm from '../components/auth/RegisterForm';
 import LanguageSwitcher from '../components/common/LanguageSwitcher';
 import { useAuth } from '../hooks/useAuth';
 import { invitesService } from '../api/invitesService';
-import { t } from 'i18next';
+
+const KNOWN_SOCIAL_ERRORS = ['social_failed', 'social_no_email', 'social_email_unverified'];
 
 const AuthPage: React.FC = () => {
+  const { t } = useTranslation();
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const { user } = useAuth();
@@ -17,6 +20,9 @@ const AuthPage: React.FC = () => {
 
   const inviteToken = searchParams.get('invite') || undefined;
   const [invitePreview, setInvitePreview] = useState<{ inviterName: string } | null>(null);
+
+  const rawError = searchParams.get('error');
+  const socialError = rawError ? (KNOWN_SOCIAL_ERRORS.includes(rawError) ? rawError : 'social_failed') : null;
 
   useEffect(() => {
     if (!inviteToken) return;
@@ -48,6 +54,12 @@ const AuthPage: React.FC = () => {
           </div>
         )}
 
+        {socialError && (
+          <div className="mb-4 bg-red-50 border border-red-100 rounded-xl p-3 text-sm text-earbore-danger text-center">
+            {t(`auth.socialErrors.${socialError}`)}
+          </div>
+        )}
+
         <div className="bg-white rounded-2xl shadow-sm border border-earbore-border p-8">
           {mode === 'login' ? (
             <LoginForm onGoRegister={() => setMode('register')} />
@@ -55,6 +67,16 @@ const AuthPage: React.FC = () => {
             <RegisterForm onGoLogin={() => setMode('login')} inviteToken={inviteToken} />
           )}
         </div>
+
+        <p className="mt-5 text-center text-xs text-earbore-gray leading-relaxed">
+          <Trans
+            i18nKey="legal.continueConsent"
+            components={{
+              terms: <Link to="/terms" className="underline hover:text-earbore-700" />,
+              privacy: <Link to="/privacy" className="underline hover:text-earbore-700" />,
+            }}
+          />
+        </p>
       </div>
     </div>
   );

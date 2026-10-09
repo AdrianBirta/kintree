@@ -362,7 +362,16 @@
     "login": "Se connecter",
     "showPassword": "Afficher le mot de passe",
     "hidePassword": "Masquer le mot de passe",
-    "invitedBy": "Vous avez été invité par {{name}} à rejoindre sa famille sur eArbore."
+    "invitedBy": "Vous avez été invité par {{name}} à rejoindre sa famille sur eArbore.",
+    "orContinueWith": "ou continuer avec",
+    "continueWithGoogle": "Continuer avec Google",
+    "continueWithFacebook": "Continuer avec Facebook",
+    "continueWithYahoo": "Continuer avec Yahoo",
+    "socialErrors": {
+      "social_failed": "La connexion avec le compte social a échoué. Veuillez réessayer.",
+      "social_no_email": "Le compte choisi n'a pas fourni d'adresse e-mail. Utilisez une autre méthode ou inscrivez-vous par e-mail.",
+      "social_email_unverified": "L'adresse e-mail du compte choisi n'est pas vérifiée par le fournisseur, nous ne pouvons donc pas la lier à un compte existant."
+    }
   },
   "dashboard": {
     "emptyTitle": "Votre arbre est vide pour le moment",
@@ -457,6 +466,51 @@
     "noReceived": "Vous n'avez pas encore reçu l'accès à un autre arbre.",
     "viewingBanner": "Vous consultez l'arbre de {{name}}",
     "backToOwn": "Retour à mon arbre"
+  },
+  "emailVerification": {
+    "checkTitle": "Vérifiez votre boîte mail",
+    "checkBody": "Nous avons envoyé un lien de confirmation à {{email}}. Cliquez dessus pour activer votre compte. Il est valable 24 heures. Vérifiez aussi vos spams.",
+    "resend": "Renvoyer l'e-mail",
+    "resendWait": "Renvoi possible dans {{seconds}} s",
+    "resent": "E-mail renvoyé. Vérifiez votre boîte de réception.",
+    "wrongEmail": "Mauvaise adresse ? Retour au formulaire",
+    "verifying": "Confirmation de l'e-mail...",
+    "invalidTitle": "Le lien de confirmation est invalide ou a expiré",
+    "invalidBody": "Recréez votre compte et nous vous enverrons un nouveau lien.",
+    "registerAgain": "Retour à l'inscription",
+    "existsTitle": "Le compte existe déjà",
+    "existsBody": "Un compte existe déjà avec cet e-mail. Connectez-vous."
+  },
+  "legal": {
+    "privacyLink": "Politique de confidentialité",
+    "termsLink": "Conditions d'utilisation",
+    "continueConsent": "En continuant, vous acceptez les <terms>Conditions d'utilisation</terms> et la <privacy>Politique de confidentialité</privacy>.",
+    "backHome": "← Retour à l'accueil",
+    "lastUpdated": "Dernière mise à jour : {{date}}"
+  },
+  "passwordReset": {
+    "forgotLink": "Mot de passe oublié ?",
+    "forgotTitle": "Mot de passe oublié ?",
+    "forgotSubtitle": "Saisissez l'e-mail de votre compte et nous vous enverrons un lien pour choisir un nouveau mot de passe.",
+    "sendLink": "Envoyer le lien →",
+    "sending": "Envoi...",
+    "sentTitle": "Vérifiez votre boîte mail",
+    "sentBody": "Si un compte existe pour {{email}}, nous avons envoyé un lien de réinitialisation. Il est valable 1 heure. Vérifiez aussi vos spams.",
+    "backToLogin": "← Retour à la connexion",
+    "resetTitle": "Choisissez un nouveau mot de passe",
+    "resetSubtitle": "Le mot de passe doit contenir au moins 8 caractères.",
+    "newPassword": "Nouveau mot de passe",
+    "confirmPassword": "Confirmer le mot de passe",
+    "resetButton": "Enregistrer le mot de passe →",
+    "resetting": "Enregistrement...",
+    "resetSuccessTitle": "Mot de passe modifié",
+    "resetSuccessBody": "Vous pouvez maintenant vous connecter avec votre nouveau mot de passe. Par sécurité, vous avez été déconnecté de tous vos appareils.",
+    "goToLogin": "Se connecter →",
+    "mismatch": "Les mots de passe ne correspondent pas.",
+    "invalidLink": "Ce lien de réinitialisation est invalide ou a expiré.",
+    "requestNewLink": "Demander un nouveau lien",
+    "tooMany": "Trop de tentatives. Réessayez dans une minute.",
+    "genericError": "Une erreur s'est produite. Veuillez réessayer."
   },
   "messages": {
     "title": "Messages",

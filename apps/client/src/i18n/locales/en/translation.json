@@ -362,7 +362,16 @@
     "login": "Sign in",
     "showPassword": "Show password",
     "hidePassword": "Hide password",
-    "invitedBy": "You were invited by {{name}} to join their family on eArbore."
+    "invitedBy": "You were invited by {{name}} to join their family on eArbore.",
+    "orContinueWith": "or continue with",
+    "continueWithGoogle": "Continue with Google",
+    "continueWithFacebook": "Continue with Facebook",
+    "continueWithYahoo": "Continue with Yahoo",
+    "socialErrors": {
+      "social_failed": "Social sign-in failed. Please try again.",
+      "social_no_email": "The selected account didn't share an email address. Use another method or sign up with email.",
+      "social_email_unverified": "The email of the selected account isn't verified by the provider, so we can't link it to an existing account."
+    }
   },
   "dashboard": {
     "emptyTitle": "Your tree is empty for now",
@@ -457,6 +466,51 @@
     "noReceived": "You haven't been given access to any other tree yet.",
     "viewingBanner": "You're viewing {{name}}'s tree",
     "backToOwn": "Back to my tree"
+  },
+  "emailVerification": {
+    "checkTitle": "Check your email",
+    "checkBody": "We sent a confirmation link to {{email}}. Click it to activate your account. The link is valid for 24 hours. Check your Spam folder too.",
+    "resend": "Resend email",
+    "resendWait": "You can resend in {{seconds}}s",
+    "resent": "Email sent again. Check your inbox.",
+    "wrongEmail": "Wrong address? Back to the form",
+    "verifying": "Confirming your email...",
+    "invalidTitle": "This confirmation link is invalid or has expired",
+    "invalidBody": "Create your account again and we'll send you a new link.",
+    "registerAgain": "Back to sign up",
+    "existsTitle": "Account already exists",
+    "existsBody": "An account with this email already exists. Please sign in."
+  },
+  "legal": {
+    "privacyLink": "Privacy Policy",
+    "termsLink": "Terms and Conditions",
+    "continueConsent": "By continuing, you agree to the <terms>Terms and Conditions</terms> and the <privacy>Privacy Policy</privacy>.",
+    "backHome": "← Back to home",
+    "lastUpdated": "Last updated: {{date}}"
+  },
+  "passwordReset": {
+    "forgotLink": "Forgot password?",
+    "forgotTitle": "Forgot your password?",
+    "forgotSubtitle": "Enter your account email and we'll send you a link to choose a new password.",
+    "sendLink": "Send link →",
+    "sending": "Sending...",
+    "sentTitle": "Check your email",
+    "sentBody": "If an account exists for {{email}}, we've sent a reset link. The link is valid for 1 hour. Check your Spam folder too.",
+    "backToLogin": "← Back to sign in",
+    "resetTitle": "Choose a new password",
+    "resetSubtitle": "Your password must be at least 8 characters.",
+    "newPassword": "New password",
+    "confirmPassword": "Confirm password",
+    "resetButton": "Save password →",
+    "resetting": "Saving...",
+    "resetSuccessTitle": "Password changed",
+    "resetSuccessBody": "You can now sign in with your new password. For your safety, you've been signed out of all devices.",
+    "goToLogin": "Sign in →",
+    "mismatch": "Passwords don't match.",
+    "invalidLink": "This reset link is invalid or has expired.",
+    "requestNewLink": "Request a new link",
+    "tooMany": "Too many attempts. Please try again in a minute.",
+    "genericError": "Something went wrong. Please try again."
   },
   "messages": {
     "title": "Messages",

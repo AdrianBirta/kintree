@@ -362,7 +362,16 @@
     "login": "Accedi",
     "showPassword": "Mostra password",
     "hidePassword": "Nascondi password",
-    "invitedBy": "Sei stato invitato da {{name}} a unirti alla sua famiglia su eArbore."
+    "invitedBy": "Sei stato invitato da {{name}} a unirti alla sua famiglia su eArbore.",
+    "orContinueWith": "oppure continua con",
+    "continueWithGoogle": "Continua con Google",
+    "continueWithFacebook": "Continua con Facebook",
+    "continueWithYahoo": "Continua con Yahoo",
+    "socialErrors": {
+      "social_failed": "Accesso con l'account social non riuscito. Riprova.",
+      "social_no_email": "L'account scelto non ha fornito un indirizzo email. Usa un altro metodo o registrati con l'email.",
+      "social_email_unverified": "L'email dell'account scelto non è verificata dal provider, quindi non possiamo collegarla a un account esistente."
+    }
   },
   "dashboard": {
     "emptyTitle": "Il tuo albero è ancora vuoto",
@@ -457,6 +466,51 @@
     "noReceived": "Non hai ancora ricevuto accesso ad altri alberi.",
     "viewingBanner": "Stai visualizzando l'albero di {{name}}",
     "backToOwn": "Torna al mio albero"
+  },
+  "emailVerification": {
+    "checkTitle": "Controlla la tua email",
+    "checkBody": "Abbiamo inviato un link di conferma a {{email}}. Cliccaci per attivare il tuo account. È valido per 24 ore. Controlla anche la cartella Spam.",
+    "resend": "Reinvia l'email",
+    "resendWait": "Potrai reinviare tra {{seconds}} s",
+    "resent": "Email reinviata. Controlla la posta in arrivo.",
+    "wrongEmail": "Indirizzo sbagliato? Torna al modulo",
+    "verifying": "Conferma dell'email in corso...",
+    "invalidTitle": "Il link di conferma non è valido o è scaduto",
+    "invalidBody": "Crea di nuovo il tuo account e ti invieremo un nuovo link.",
+    "registerAgain": "Torna alla registrazione",
+    "existsTitle": "L'account esiste già",
+    "existsBody": "Esiste già un account con questa email. Accedi."
+  },
+  "legal": {
+    "privacyLink": "Informativa sulla privacy",
+    "termsLink": "Termini e condizioni",
+    "continueConsent": "Continuando, accetti i <terms>Termini e condizioni</terms> e l'<privacy>Informativa sulla privacy</privacy>.",
+    "backHome": "← Torna alla home",
+    "lastUpdated": "Ultimo aggiornamento: {{date}}"
+  },
+  "passwordReset": {
+    "forgotLink": "Password dimenticata?",
+    "forgotTitle": "Hai dimenticato la password?",
+    "forgotSubtitle": "Inserisci l'email del tuo account e ti invieremo un link per scegliere una nuova password.",
+    "sendLink": "Invia il link →",
+    "sending": "Invio in corso...",
+    "sentTitle": "Controlla la tua email",
+    "sentBody": "Se esiste un account per {{email}}, abbiamo inviato un link di reimpostazione. È valido per 1 ora. Controlla anche la cartella Spam.",
+    "backToLogin": "← Torna all'accesso",
+    "resetTitle": "Scegli una nuova password",
+    "resetSubtitle": "La password deve contenere almeno 8 caratteri.",
+    "newPassword": "Nuova password",
+    "confirmPassword": "Conferma password",
+    "resetButton": "Salva la password →",
+    "resetting": "Salvataggio...",
+    "resetSuccessTitle": "Password modificata",
+    "resetSuccessBody": "Ora puoi accedere con la nuova password. Per sicurezza, sei stato disconnesso da tutti i dispositivi.",
+    "goToLogin": "Accedi →",
+    "mismatch": "Le password non coincidono.",
+    "invalidLink": "Il link di reimpostazione non è valido o è scaduto.",
+    "requestNewLink": "Richiedi un nuovo link",
+    "tooMany": "Troppi tentativi. Riprova tra un minuto.",
+    "genericError": "Si è verificato un errore. Riprova."
   },
   "messages": {
     "title": "Messaggi",

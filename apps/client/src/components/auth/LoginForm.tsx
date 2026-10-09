@@ -1,9 +1,11 @@
 import React, { useState } from 'react';
+import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../../hooks/useAuth';
 import { IconButton } from '@mui/material';
 import VisibilityIcon from '@mui/icons-material/Visibility';
 import VisibilityOffIcon from '@mui/icons-material/VisibilityOff';
+import SocialAuthButtons from './SocialAuthButtons';
 
 interface Props {
   onGoRegister: () => void;
@@ -53,9 +55,17 @@ const LoginForm: React.FC<Props> = ({ onGoRegister }) => {
         </div>
 
         <div>
-          <label htmlFor="password" className="block text-xs font-semibold text-earbore-gray uppercase tracking-wider mb-1.5">
-            {t('auth.password')}
-          </label>
+          <div className="flex items-center justify-between mb-1.5">
+            <label htmlFor="password" className="block text-xs font-semibold text-earbore-gray uppercase tracking-wider">
+              {t('auth.password')}
+            </label>
+            <Link
+              to="/forgot-password"
+              className="text-xs font-semibold text-earbore-600 hover:text-earbore-700"
+            >
+              {t('passwordReset.forgotLink')}
+            </Link>
+          </div>
           <div className="relative">
             <input
               type={showPassword ? 'text' : 'password'}
@@ -100,6 +110,8 @@ const LoginForm: React.FC<Props> = ({ onGoRegister }) => {
           {isLoggingIn ? t('auth.loggingIn') : t('auth.loginButton')}
         </button>
       </form>
+
+      <SocialAuthButtons />
 
       <p className="mt-6 text-center text-sm text-earbore-gray">
         {t('auth.noAccount')}{' '}

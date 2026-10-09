@@ -362,7 +362,16 @@
     "login": "Iniciar sesión",
     "showPassword": "Mostrar contraseña",
     "hidePassword": "Ocultar contraseña",
-    "invitedBy": "Fuiste invitado por {{name}} a unirte a su familia en eArbore."
+    "invitedBy": "Fuiste invitado por {{name}} a unirte a su familia en eArbore.",
+    "orContinueWith": "o continúa con",
+    "continueWithGoogle": "Continuar con Google",
+    "continueWithFacebook": "Continuar con Facebook",
+    "continueWithYahoo": "Continuar con Yahoo",
+    "socialErrors": {
+      "social_failed": "No se pudo iniciar sesión con la cuenta social. Inténtalo de nuevo.",
+      "social_no_email": "La cuenta elegida no compartió una dirección de correo. Usa otro método o regístrate con correo.",
+      "social_email_unverified": "El correo de la cuenta elegida no está verificado por el proveedor, así que no podemos vincularlo a una cuenta existente."
+    }
   },
   "dashboard": {
     "emptyTitle": "Tu árbol está vacío por ahora",
@@ -457,6 +466,51 @@
     "noReceived": "Aún no has recibido acceso a ningún otro árbol.",
     "viewingBanner": "Estás viendo el árbol de {{name}}",
     "backToOwn": "Volver a mi árbol"
+  },
+  "emailVerification": {
+    "checkTitle": "Revisa tu correo",
+    "checkBody": "Hemos enviado un enlace de confirmación a {{email}}. Púlsalo para activar tu cuenta. Es válido durante 24 horas. Revisa también la carpeta de spam.",
+    "resend": "Reenviar correo",
+    "resendWait": "Podrás reenviar en {{seconds}} s",
+    "resent": "Correo reenviado. Revisa tu bandeja de entrada.",
+    "wrongEmail": "¿Dirección equivocada? Volver al formulario",
+    "verifying": "Confirmando el correo...",
+    "invalidTitle": "El enlace de confirmación no es válido o ha caducado",
+    "invalidBody": "Vuelve a crear tu cuenta y te enviaremos un enlace nuevo.",
+    "registerAgain": "Volver al registro",
+    "existsTitle": "La cuenta ya existe",
+    "existsBody": "Ya existe una cuenta con este correo. Inicia sesión."
+  },
+  "legal": {
+    "privacyLink": "Política de privacidad",
+    "termsLink": "Términos y condiciones",
+    "continueConsent": "Al continuar, aceptas los <terms>Términos y condiciones</terms> y la <privacy>Política de privacidad</privacy>.",
+    "backHome": "← Volver al inicio",
+    "lastUpdated": "Última actualización: {{date}}"
+  },
+  "passwordReset": {
+    "forgotLink": "¿Olvidaste tu contraseña?",
+    "forgotTitle": "¿Olvidaste tu contraseña?",
+    "forgotSubtitle": "Introduce el correo de tu cuenta y te enviaremos un enlace para elegir una nueva contraseña.",
+    "sendLink": "Enviar enlace →",
+    "sending": "Enviando...",
+    "sentTitle": "Revisa tu correo",
+    "sentBody": "Si existe una cuenta para {{email}}, te hemos enviado un enlace de restablecimiento. Es válido durante 1 hora. Revisa también la carpeta de spam.",
+    "backToLogin": "← Volver a iniciar sesión",
+    "resetTitle": "Elige una nueva contraseña",
+    "resetSubtitle": "La contraseña debe tener al menos 8 caracteres.",
+    "newPassword": "Nueva contraseña",
+    "confirmPassword": "Confirmar contraseña",
+    "resetButton": "Guardar contraseña →",
+    "resetting": "Guardando...",
+    "resetSuccessTitle": "Contraseña cambiada",
+    "resetSuccessBody": "Ya puedes iniciar sesión con tu nueva contraseña. Por seguridad, se ha cerrado tu sesión en todos los dispositivos.",
+    "goToLogin": "Iniciar sesión →",
+    "mismatch": "Las contraseñas no coinciden.",
+    "invalidLink": "El enlace de restablecimiento no es válido o ha caducado.",
+    "requestNewLink": "Solicitar un nuevo enlace",
+    "tooMany": "Demasiados intentos. Inténtalo de nuevo en un minuto.",
+    "genericError": "Ocurrió un error. Inténtalo de nuevo."
   },
   "messages": {
     "title": "Mensajes",

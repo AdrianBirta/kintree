@@ -14,20 +14,24 @@ enum Role {
 }
 
 model User {
-  id            String         @id @default(uuid())
-  email         String         @unique
-  password      String
-  firstName     String
-  lastName      String
-  role          Role           @default(USER)
-  createdAt     DateTime       @default(now())
-  updatedAt     DateTime       @updatedAt
+  id        String   @id @default(uuid())
+  email     String   @unique
+  password  String? // NOU: null pentru conturile create doar prin social login
+  firstName String
+  lastName  String
+  role      Role     @default(USER)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // NOU: conturi sociale
+  googleId   String? @unique
+  facebookId String? @unique
+  yahooId    String? @unique
+  avatarUrl  String?
+
   familyMembers FamilyMember[]
   refreshTokens RefreshToken[]
 
-  // NOU — leagă acest user de UN SINGUR FamilyMember, care reprezintă
-  // "eu" în arborele lui. @unique garantează că un membru nu poate fi
-  // "eu" pentru doi useri diferiți simultan.
   selfMemberId String?       @unique
   selfMember   FamilyMember? @relation("SelfMember", fields: [selfMemberId], references: [id], onDelete: SetNull)
 
@@ -39,6 +43,8 @@ model User {
 
   conversationParticipants ConversationParticipant[]
   sentMessages             Message[]
+
+  passwordResetTokens PasswordResetToken[]
 
   @@map("users")
 }
@@ -262,4 +268,31 @@ model DonationClick {
   createdAt DateTime @default(now())
 
   @@map("donation_clicks")
+}
+
+model PasswordResetToken {
+  id        String   @id @default(uuid())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId    String
+  tokenHash String   @unique
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+  @@map("password_reset_tokens")
+}
+
+model PendingRegistration {
+  id           String   @id @default(uuid())
+  email        String
+  passwordHash String
+  firstName    String
+  lastName     String
+  inviteToken  String?
+  tokenHash    String   @unique
+  expiresAt    DateTime
+  createdAt    DateTime @default(now())
+
+  @@index([email])
+  @@map("pending_registrations")
 }

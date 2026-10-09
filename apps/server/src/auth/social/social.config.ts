@@ -1,0 +1,2 @@
+export const frontendUrl = () => (process.env.FRONTEND_URL ?? 'http://localhost:5173').replace(/\/+$/, '');
+export const apiPublicUrl = () => (process.env.API_PUBLIC_URL ?? 'http://localhost:3000').replace(/\/+$/, '');

@@ -1,5 +1,5 @@
 import React from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import LandingHeader from '../components/layout/LandingHeader';
 import LandingTreeShowcase from '../components/landing/LandingTreeShowcase';
@@ -232,6 +232,10 @@ const LandingPage: React.FC = () => {
         <div className="flex items-center justify-center gap-1.5">
           <img src="/assets/favicon.svg" alt="" className="h-4 w-4 opacity-70" />
           <span>© {new Date().getFullYear()} eArbore. {t('landing.footer')}</span>
+        </div>
+        <div className="mt-2 flex items-center justify-center gap-4 text-xs">
+          <Link to="/privacy" className="hover:text-earbore-700 underline">{t('legal.privacyLink')}</Link>
+          <Link to="/terms" className="hover:text-earbore-700 underline">{t('legal.termsLink')}</Link>
         </div>
       </footer>
     </div>
