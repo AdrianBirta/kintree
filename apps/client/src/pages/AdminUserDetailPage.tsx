@@ -87,7 +87,7 @@ const AdminUserDetailPage: React.FC = () => {
     );
   }
 
-  const { user, stats, members, shareLinks, accessGiven, accessReceived, donations } = data;
+  const { user, stats, shareLinks, accessGiven, accessReceived, donations } = data;
   const isAdminUser = user.role === 'ADMIN';
 
   const donationTotals = donations.reduce<Record<string, number>>((acc, d) => {
