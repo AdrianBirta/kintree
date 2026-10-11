@@ -251,7 +251,12 @@
     "logoutConfirmButton": "Esci",
     "sharing": "Condivisione",
     "trees": "Alberi",
-    "messages": "Messaggi"
+    "messages": "Messaggi",
+    "donate": "Sostieni il progetto",
+    "admin": "Pannello amministrazione"
+  },
+  "donate": {
+    "tooltip": "Sostieni eArbore — resta gratuito grazie a te"
   },
   "landingHeader": {
     "howItWorks": "Come funziona",

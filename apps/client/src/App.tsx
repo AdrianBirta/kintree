@@ -5,8 +5,8 @@ import LandingPage from './pages/LandingPage';
 import AuthPage from './pages/AuthPage';
 import ForgotPasswordPage from './pages/ForgotPasswordPage';
 import ResetPasswordPage from './pages/ResetPasswordPage';
-import VerifyEmailPage from './pages/VerifyEmailPage'; // NOU
-import LegalPage from './pages/LegalPage'; // NOU
+import VerifyEmailPage from './pages/VerifyEmailPage';
+import LegalPage from './pages/LegalPage';
 import SocialCallbackPage from './pages/SocialCallbackPage';
 import DashboardPage from './pages/DashboardPage';
 import MemberDetailPage from './pages/MemberDetailPage';
@@ -14,9 +14,12 @@ import MembersListPage from './pages/MembersListPage';
 import ProfilePage from './pages/ProfilePage';
 import PrivateRoute from './components/auth/PrivateRoute';
 import PublicRoute from './components/auth/PublicRoute';
+import AdminRoute from './components/auth/AdminRoute'; // NOU
 import GuestSharePage from './pages/GuestSharePage';
 import TreesPage from './pages/TreesPage';
 import MessagesPage from './pages/MessagesPage';
+import AdminDashboardPage from './pages/AdminDashboardPage'; // NOU
+import AdminUserDetailPage from './pages/AdminUserDetailPage'; // NOU
 import BrandedLoader from './components/common/BrandedLoader';
 
 function App() {
@@ -59,6 +62,12 @@ function App() {
           <Route path="/profile" element={<ProfilePage />} />
           <Route path="/trees" element={<TreesPage />} />
           <Route path="/messages" element={<MessagesPage />} />
+
+          {/* NOU — doar ADMIN */}
+          <Route element={<AdminRoute />}>
+            <Route path="/admin" element={<AdminDashboardPage />} />
+            <Route path="/admin/users/:id" element={<AdminUserDetailPage />} />
+          </Route>
         </Route>
       </Routes>
     </BrowserRouter>

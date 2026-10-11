@@ -9,12 +9,13 @@ import { SharingModule } from 'src/sharing/sharing.module';
 import { InvitesModule } from 'src/invites/invites.module';
 import { MessagingModule } from 'src/messaging/messaging.module';
 import { DonationsModule } from './donations/donations.module';
-import { MailModule } from './mail/mail.module'; // NOU
+import { MailModule } from './mail/mail.module';
+import { AdminModule } from './admin/admin.module'; // NOU
 
 @Module({
   imports: [
     PrismaModule,
-    MailModule, // NOU (global: MailService e disponibil oriunde)
+    MailModule, // global: MailService e disponibil oriunde
     AuthModule,
     UsersModule,
     FamilyMembersModule,
@@ -22,6 +23,7 @@ import { MailModule } from './mail/mail.module'; // NOU
     InvitesModule,
     MessagingModule,
     DonationsModule,
+    AdminModule, // NOU
   ],
   controllers: [AppController],
   providers: [AppService],

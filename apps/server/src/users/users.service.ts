@@ -24,6 +24,11 @@ export class UsersService {
     return this.prisma.user.findUnique({ where: { id } });
   }
 
+  // NOU — marchează ultima autentificare (afișată în panoul de admin)
+  touchLastLogin(userId: string) {
+    return this.prisma.user.update({ where: { id: userId }, data: { lastLoginAt: new Date() } });
+  }
+
   findBySocialId(field: SocialIdField, providerId: string) {
     return this.prisma.user.findFirst({ where: { [field]: providerId } as Prisma.UserWhereInput });
   }

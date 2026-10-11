@@ -3,6 +3,7 @@ import {
   UnauthorizedException,
   ConflictException,
   BadRequestException,
+  ForbiddenException,
   Logger,
 } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
@@ -85,6 +86,13 @@ export class AuthService {
 
   private toPublicUser(user: { id: string; email: string; firstName: string; lastName: string; role: Role }) {
     return { id: user.id, email: user.email, firstName: user.firstName, lastName: user.lastName, role: user.role };
+  }
+
+  // NOU — un cont dezactivat de admin nu se mai poate autentifica
+  private assertActive(user: { disabled: boolean }) {
+    if (user.disabled) {
+      throw new ForbiddenException('Contul tău a fost dezactivat. Contactează administratorul.');
+    }
   }
 
   // ─────────── ÎNREGISTRARE + CONFIRMARE EMAIL ───────────
@@ -177,6 +185,8 @@ export class AuthService {
       }
     }
 
+    await this.usersService.touchLastLogin(user.id);
+
     const tokens = await this.generateTokens(user.id, user.email, user.role);
     await this.storeRefreshToken(user.id, tokens.refreshToken);
 
@@ -226,6 +236,10 @@ export class AuthService {
       throw new UnauthorizedException('Email sau parolă incorecte.');
     }
 
+    // verificăm DUPĂ parolă, ca să nu dezvăluim cuiva care nu are parola că un cont e dezactivat
+    this.assertActive(user);
+    await this.usersService.touchLastLogin(user.id);
+
     const tokens = await this.generateTokens(user.id, user.email, user.role);
     await this.storeRefreshToken(user.id, tokens.refreshToken);
 
@@ -234,7 +248,7 @@ export class AuthService {
 
   async refresh(userId: string, refreshToken: string) {
     const user = await this.usersService.findById(userId);
-    if (!user) {
+    if (!user || user.disabled) {
       throw new UnauthorizedException('Sesiune invalidă.');
     }
 
@@ -376,6 +390,9 @@ export class AuthService {
   async createSocialLoginCode(profile: SocialProfile, inviteToken?: string): Promise<string> {
     const user = await this.findOrCreateSocialUser(profile, inviteToken);
 
+    // NOU — cont dezactivat: tratat ca eroare generică de social login
+    if (user.disabled) throw new SocialLoginError('social_failed');
+
     const now = Date.now();
     for (const [key, value] of this.socialCodes) {
       if (value.expiresAt < now) this.socialCodes.delete(key);
@@ -397,6 +414,9 @@ export class AuthService {
 
     const user = await this.usersService.findById(entry.userId);
     if (!user) throw new UnauthorizedException('Cont inexistent.');
+    this.assertActive(user);
+
+    await this.usersService.touchLastLogin(user.id);
 
     const tokens = await this.generateTokens(user.id, user.email, user.role);
     await this.storeRefreshToken(user.id, tokens.refreshToken);

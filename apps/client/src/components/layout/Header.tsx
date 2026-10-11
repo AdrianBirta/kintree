@@ -2,7 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { useAuth } from '../../hooks/useAuth';
+import { useAuth, useIsAdmin } from '../../hooks/useAuth';
 import { useTreeQuery } from '../../hooks/queries/useFamilyQueries';
 import AccountTreeIcon from '@mui/icons-material/AccountTree';
 import TableRowsIcon from '@mui/icons-material/TableRows';
@@ -13,9 +13,11 @@ import { IconButton, useMediaQuery, useTheme, Menu, MenuItem, ListItemIcon, List
 import MembersAccordionMenu from './MembersAccordionMenu';
 import ConfirmDialog from '../common/ConfirmDialog';
 import LanguageSwitcher from '../common/LanguageSwitcher';
+import DonateButton from '../common/DonateButton';
 import ShareManagementModal from '../sharing/ShareManagementModal';
 import { usePermissions } from '../../hooks/usePermissions';
 import { useActiveTreeStore } from '../../store/activeTreeStore';
+import { DONATE_URL, trackDonateClick } from '../../lib/donate';
 
 const ChatBubbleOutlineIcon: React.FC<{ fontSize?: 'small' }> = () => (
   <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
@@ -28,9 +30,10 @@ const Header: React.FC = () => {
   const location = useLocation();
   const { t } = useTranslation();
   const { user, logout } = useAuth();
+  const isAdmin = useIsAdmin(); // NOU
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
-  // NOU — sub 400px, navigarea principală (Arbore/Tabel/Mesaje) nu mai
+  // sub 400px, navigarea principală (Arbore/Tabel/Mesaje) nu mai
   // încape lângă restul header-ului (membri, limbă, avatar), deci o
   // colapsăm într-un singur buton cu meniu dropdown.
   const isCompactNav = useMediaQuery(theme.breakpoints.down(400));
@@ -47,7 +50,6 @@ const Header: React.FC = () => {
   const userMenuRef = useRef<HTMLDivElement>(null);
   const membersMenuRef = useRef<HTMLDivElement>(null);
 
-  // NOU — anchor pentru meniul de navigare colapsat
   const [navMenuAnchor, setNavMenuAnchor] = useState<HTMLElement | null>(null);
 
   const [confirmLogoutOpen, setConfirmLogoutOpen] = useState(false);
@@ -106,8 +108,6 @@ const Header: React.FC = () => {
       : 'text-earbore-gray hover:text-earbore-700 hover:bg-earbore-50'
     }`;
 
-  // NOU — cele trei destinații de navigare, reutilizate atât pentru
-  // butoanele normale cât și pentru meniul dropdown colapsat
   const navItems = [
     { key: 'tree', icon: <AccountTreeIcon fontSize="small" />, label: t('header.tree'), active: isTreeActive, onClick: () => navigate('/dashboard') },
     { key: 'membersTable', icon: <TableRowsIcon fontSize="small" />, label: t('header.membersTable'), active: isTableActive, onClick: () => navigate('/members') },
@@ -118,6 +118,9 @@ const Header: React.FC = () => {
     setNavMenuAnchor(null);
     onClick();
   };
+
+  const menuItemClass =
+    'w-full text-left px-4 py-2 text-sm text-earbore-ink hover:bg-earbore-50 transition-colors cursor-pointer';
 
   return (
     <>
@@ -132,8 +135,6 @@ const Header: React.FC = () => {
 
           <div className="flex items-center gap-1 sm:gap-2 min-w-0">
             {isCompactNav ? (
-              // NOU — sub 400px: un singur buton care deschide dropdown-ul
-              // cu cele trei destinații, în loc de trei butoane separate
               <>
                 <IconButton
                   onClick={(e) => setNavMenuAnchor(e.currentTarget)}
@@ -170,7 +171,6 @@ const Header: React.FC = () => {
                 </Menu>
               </>
             ) : (
-              // comportamentul normal — trei butoane vizibile
               navItems.map((item) => (
                 <button key={item.key} onClick={item.onClick} className={navButtonClass(item.active)}>
                   {item.icon}
@@ -197,6 +197,9 @@ const Header: React.FC = () => {
               )}
             </div>
 
+            {/* NOU — inimă discretă de donație (pe ecrane foarte înguste rămâne doar în meniul userului) */}
+            {!isCompactNav && <DonateButton source="header" />}
+
             <LanguageSwitcher variant="icon" />
 
             <div className="relative flex-shrink-0" ref={userMenuRef}>
@@ -215,24 +218,47 @@ const Header: React.FC = () => {
                   </div>
                   <button
                     onClick={() => { setUserMenuOpen(false); navigate('/profile'); }}
-                    className="w-full text-left px-4 py-2 text-sm text-earbore-ink hover:bg-earbore-50 transition-colors cursor-pointer"
+                    className={menuItemClass}
                   >
                     {t('header.myProfile')}
                   </button>
 
                   <button
                     onClick={() => { setUserMenuOpen(false); setShareModalOpen(true); }}
-                    className="w-full text-left px-4 py-2 text-sm text-earbore-ink hover:bg-earbore-50 transition-colors cursor-pointer"
+                    className={menuItemClass}
                   >
                     {t('header.sharing')}
                   </button>
 
                   <button
                     onClick={() => { setUserMenuOpen(false); navigate('/trees'); }}
-                    className="w-full text-left px-4 py-2 text-sm text-earbore-ink hover:bg-earbore-50 transition-colors cursor-pointer"
+                    className={menuItemClass}
                   >
                     {t('header.trees')}
                   </button>
+
+                  {/* NOU — vizibil doar pentru ADMIN */}
+                  {isAdmin && (
+                    <button
+                      onClick={() => { setUserMenuOpen(false); navigate('/admin'); }}
+                      className={`${menuItemClass} font-semibold !text-earbore-700`}
+                    >
+                      🛡️ {t('header.admin')}
+                    </button>
+                  )}
+
+                  {/* NOU — îndemn discret la donație */}
+                  <a
+                    href={DONATE_URL}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    onClick={() => { trackDonateClick('menu'); setUserMenuOpen(false); }}
+                    className="block w-full px-4 py-2 text-sm text-earbore-ink hover:bg-earbore-50 transition-colors cursor-pointer"
+                  >
+                    <span className="text-earbore-danger">♥</span> {t('header.donate')}
+                  </a>
+
+                  <div className="my-1 border-t border-earbore-border" />
 
                   <button
                     onClick={handleLogoutRequest}

@@ -251,7 +251,12 @@
     "logoutConfirmButton": "Kijelentkezés",
     "sharing": "Megosztás",
     "trees": "Családfák",
-    "messages": "Üzenetek"
+    "messages": "Üzenetek",
+    "donate": "Támogasd a projektet",
+    "admin": "Admin panel"
+  },
+  "donate": {
+    "tooltip": "Támogasd az eArbore-t — neked köszönhetően marad ingyenes"
   },
   "landingHeader": {
     "howItWorks": "Hogyan működik",

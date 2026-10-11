@@ -251,7 +251,12 @@
     "logoutConfirmButton": "Déconnexion",
     "sharing": "Partage",
     "trees": "Arbres",
-    "messages": "Messages"
+    "messages": "Messages",
+    "donate": "Soutenir le projet",
+    "admin": "Panneau d'administration"
+  },
+  "donate": {
+    "tooltip": "Soutenez eArbore — il reste gratuit grâce à vous"
   },
   "landingHeader": {
     "howItWorks": "Comment ça marche",
