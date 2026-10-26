@@ -38,7 +38,7 @@ function App() {
 
         <Route path="/share/:token" element={<GuestSharePage />} />
 
-        {/* finalizarea login-ului social (schimbă codul pe token-uri) */}
+        {/* finalizarea login-ului social (schimbă codul pe token-uri)s */}
         <Route path="/auth/callback" element={<SocialCallbackPage />} />
 
         {/* linkurile din emailuri trebuie să meargă indiferent dacă ești logat sau nu */}
