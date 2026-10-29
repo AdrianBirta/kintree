@@ -10,7 +10,7 @@ export class CreateDonationDto {
   // pentru donatori fără cont
   @IsOptional()
   @IsString()
-  @MaxLength(120)
+  @MaxLength(121)
   donorName?: string;
 
   @Type(() => Number)
